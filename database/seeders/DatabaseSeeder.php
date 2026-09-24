@@ -14,6 +14,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             RbacSeeder::class,
             AssessmentRbacSeeder::class,
+            FollowUpRbacSeeder::class,
             SuperAdminSeeder::class,
         ]);
     }

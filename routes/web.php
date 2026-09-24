@@ -4,6 +4,7 @@ use App\Http\Controllers\AssessmentController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\ContactNoteController;
 use App\Http\Controllers\OrganizationController;
+use App\Http\Controllers\FollowUpController;
 use App\Http\Controllers\StaffController;
 use Illuminate\Support\Facades\Route;
 
@@ -48,6 +49,10 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::resource('assessments', AssessmentController::class)
         ->except(['destroy'])
         ->names('assessments');
+
+    Route::resource('follow-ups', FollowUpController::class)
+        ->except(['destroy'])
+        ->names('follow-ups');
 
     Route::delete(
         '/contacts/{contact}',

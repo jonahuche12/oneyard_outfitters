@@ -163,11 +163,124 @@
             </div>
         </div>
 
-        <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 class="text-lg font-semibold text-slate-900">Contact Activity</h2>
-            <p class="mt-1 text-sm text-slate-500">
-                Historical interaction notes will be managed here through the Contact Notes module.
-            </p>
+        <div class="rounded-xl border border-slate-200 bg-white shadow-sm">
+            <div class="flex flex-col gap-4 border-b border-slate-200 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <h2 class="text-lg font-semibold text-slate-900">
+                        Follow-ups
+                    </h2>
+
+                    <p class="mt-1 text-sm text-slate-500">
+                        Historical interactions and next actions involving this contact.
+                    </p>
+                </div>
+
+                @can('create', App\Models\FollowUp::class)
+                    <a
+                        href="{{ route('follow-ups.create', ['contact_id' => $contact->id]) }}"
+                        class="inline-flex items-center justify-center rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
+                    >
+                        Record Follow-up
+                    </a>
+                @endcan
+            </div>
+
+            @php
+                $contactFollowUps = $contact->followUps()
+                    ->with('recordedBy')
+                    ->latest('follow_up_date')
+                    ->latest('id')
+                    ->limit(5)
+                    ->get();
+            @endphp
+
+            @if($contactFollowUps->isNotEmpty())
+                <div class="divide-y divide-slate-200">
+                    @foreach($contactFollowUps as $followUp)
+                        <div class="flex flex-col gap-4 px-6 py-5 sm:flex-row sm:items-start sm:justify-between">
+                            <div class="min-w-0">
+                                <div class="flex flex-wrap items-center gap-2">
+                                    @can('view', $followUp)
+                                        <a
+                                            href="{{ route('follow-ups.show', $followUp) }}"
+                                            class="font-medium text-slate-900 hover:text-emerald-700"
+                                        >
+                                            {{ $followUp->subject }}
+                                        </a>
+                                    @else
+                                        <span class="font-medium text-slate-900">
+                                            {{ $followUp->subject }}
+                                        </span>
+                                    @endcan
+
+                                    @if($followUp->status === 'completed')
+                                        <span class="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-700">
+                                            Completed
+                                        </span>
+                                    @elseif($followUp->status === 'cancelled')
+                                        <span class="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
+                                            Cancelled
+                                        </span>
+                                    @else
+                                        <span class="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-700">
+                                            Open
+                                        </span>
+                                    @endif
+                                </div>
+
+                                <p class="mt-2 line-clamp-2 text-sm leading-6 text-slate-600">
+                                    {{ $followUp->outcome }}
+                                </p>
+
+                                <div class="mt-2 text-xs text-slate-500">
+                                    {{ ucfirst($followUp->type) }}
+                                    <span class="mx-1 text-slate-300">•</span>
+                                    {{ $followUp->follow_up_date->format('d M Y, h:i A') }}
+                                </div>
+                            </div>
+
+                            <div class="flex shrink-0 gap-2">
+                                @can('view', $followUp)
+                                    <a
+                                        href="{{ route('follow-ups.show', $followUp) }}"
+                                        class="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                                    >
+                                        View
+                                    </a>
+                                @endcan
+
+                                @can('update', $followUp)
+                                    <a
+                                        href="{{ route('follow-ups.edit', $followUp) }}"
+                                        class="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                                    >
+                                        Edit
+                                    </a>
+                                @endcan
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            @else
+                <div class="px-6 py-10 text-center">
+                    <p class="text-sm font-medium text-slate-900">
+                        No follow-ups recorded.
+                    </p>
+
+                    <p class="mt-1 text-sm text-slate-500">
+                        Record the first interaction with this contact.
+                    </p>
+
+                    @can('create', App\Models\FollowUp::class)
+                        <a
+                            href="{{ route('follow-ups.create', ['contact_id' => $contact->id]) }}"
+                            class="mt-4 inline-flex items-center justify-center rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-slate-800"
+                        >
+                            Record First Follow-up
+                        </a>
+                    @endcan
+                </div>
+            @endif
         </div>
     </div>
 @endsection
