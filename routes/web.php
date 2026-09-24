@@ -5,6 +5,8 @@ use App\Http\Controllers\ContactController;
 use App\Http\Controllers\ContactNoteController;
 use App\Http\Controllers\OrganizationController;
 use App\Http\Controllers\FollowUpController;
+use App\Http\Controllers\ProductSpecificationController;
+use App\Http\Controllers\ProductSpecificationArtifactController;
 use App\Http\Controllers\StaffController;
 use Illuminate\Support\Facades\Route;
 
@@ -42,6 +44,12 @@ Route::middleware(['auth', 'active'])->group(function () {
     )->name('organizations.deactivate');
 
 
+    Route::get(
+        '/organizations/{organization}/export-intelligence',
+        [OrganizationController::class, 'exportIntelligenceData']
+    )->name('organizations.export-intelligence');
+
+
     Route::resource('contacts', ContactController::class)
         ->except(['destroy'])
         ->names('contacts');
@@ -53,6 +61,31 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::resource('follow-ups', FollowUpController::class)
         ->except(['destroy'])
         ->names('follow-ups');
+
+    Route::resource(
+        'product-specifications',
+        ProductSpecificationController::class
+    )->except(['destroy']);
+
+    Route::post(
+        '/product-specifications/{productSpecification}/artifacts',
+        [ProductSpecificationArtifactController::class, 'store']
+    )->name('product-specification-artifacts.store');
+
+    Route::get(
+        '/product-specification-artifacts/{productSpecificationArtifact}/preview',
+        [ProductSpecificationArtifactController::class, 'preview']
+    )->name('product-specification-artifacts.preview');
+
+    Route::get(
+        '/product-specification-artifacts/{productSpecificationArtifact}/download',
+        [ProductSpecificationArtifactController::class, 'download']
+    )->name('product-specification-artifacts.download');
+
+    Route::delete(
+        '/product-specification-artifacts/{productSpecificationArtifact}',
+        [ProductSpecificationArtifactController::class, 'destroy']
+    )->name('product-specification-artifacts.destroy');
 
     Route::delete(
         '/contacts/{contact}',

@@ -594,18 +594,192 @@
         </section>
 
 
+        <!-- PRODUCT_SPECIFICATIONS_SECTION -->
+        {{-- Product Specifications --}}
+        <div class="oy-card">
+            <div class="oy-card-header">
+                <div>
+                    <h2 class="oy-card-title">Product Specifications</h2>
+                    <p class="oy-card-description">
+                        Production requirements collected from this organization.
+                    </p>
+                </div>
+
+                <div class="oy-page-actions">
+                    @can('viewAny', App\Models\ProductSpecification::class)
+                        <a
+                            href="{{ route('product-specifications.index', ['search' => $organization->organization_code]) }}"
+                            class="oy-btn oy-btn-sm oy-btn-secondary"
+                        >
+                            View All
+                        </a>
+                    @endcan
+
+                    @can('create', App\Models\ProductSpecification::class)
+                        <a
+                            href="{{ route('product-specifications.create', ['organization_id' => $organization->id]) }}"
+                            class="oy-btn oy-btn-sm oy-btn-primary"
+                        >
+                            Add Specification
+                        </a>
+                    @endcan
+                </div>
+            </div>
+
+            @php
+                $organizationProductSpecifications = $organization->productSpecifications()
+                    ->withCount('artifacts')
+                    ->latest('specification_date')
+                    ->latest('id')
+                    ->limit(5)
+                    ->get();
+            @endphp
+
+            @if ($organizationProductSpecifications->isNotEmpty())
+                <div class="overflow-x-auto">
+                    <table class="oy-table">
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th>Type</th>
+                                <th>Date</th>
+                                <th>Unit Price</th>
+                                <th>Artifacts</th>
+                                <th>Status</th>
+                                <th class="text-right">Actions</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            @foreach ($organizationProductSpecifications as $specification)
+                                <tr>
+                                    <td>
+                                        <div class="font-medium text-slate-900">
+                                            {{ $specification->item_name }}
+                                        </div>
+
+                                        <div class="text-xs text-slate-500">
+                                            {{ $specification->unit }}
+                                        </div>
+                                    </td>
+
+                                    <td>
+                                        {{ ucwords(str_replace('_', ' ', $specification->product_type)) }}
+                                    </td>
+
+                                    <td>
+                                        {{ $specification->specification_date?->format('d M Y') }}
+                                    </td>
+
+                                    <td>
+                                        {{ number_format((float) $specification->unit_price, 2) }}
+                                    </td>
+
+                                    <td>
+                                        {{ $specification->artifacts_count }}
+                                    </td>
+
+                                    <td>
+                                        @if ($specification->status === 'confirmed')
+                                            <span class="oy-badge oy-badge-success">
+                                                Confirmed
+                                            </span>
+                                        @elseif ($specification->status === 'cancelled')
+                                            <span class="oy-badge oy-badge-danger">
+                                                Cancelled
+                                            </span>
+                                        @else
+                                            <span class="oy-badge oy-badge-warning">
+                                                Draft
+                                            </span>
+                                        @endif
+                                    </td>
+
+                                    <td>
+                                        <div class="flex justify-end gap-2">
+                                            @can('view', $specification)
+                                                <a
+                                                    href="{{ route('product-specifications.show', $specification) }}"
+                                                    class="oy-btn oy-btn-sm oy-btn-secondary"
+                                                >
+                                                    View
+                                                </a>
+                                            @endcan
+
+                                            @can('update', $specification)
+                                                <a
+                                                    href="{{ route('product-specifications.edit', $specification) }}"
+                                                    class="oy-btn oy-btn-sm oy-btn-ghost"
+                                                >
+                                                    Edit
+                                                </a>
+                                            @endcan
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+
+                @if ($organization->productSpecifications()->exists())
+                    <div class="oy-card-footer">
+                        @can('viewAny', App\Models\ProductSpecification::class)
+                            <a
+                                href="{{ route('product-specifications.index', ['search' => $organization->organization_code]) }}"
+                                class="oy-btn oy-btn-secondary"
+                            >
+                                View All Specifications
+                            </a>
+                        @endcan
+                    </div>
+                @endif
+            @else
+                <div class="oy-card-body">
+                    <div class="oy-empty-state">
+                        <h3 class="oy-empty-state-title">
+                            No production specifications recorded
+                        </h3>
+
+                        <p class="oy-empty-state-description">
+                            Capture the organization's product requirements, materials,
+                            designs, sizing, branding and quality requirements before production.
+                        </p>
+
+                        @can('create', App\Models\ProductSpecification::class)
+                            <a
+                                href="{{ route('product-specifications.create', ['organization_id' => $organization->id]) }}"
+                                class="oy-btn oy-btn-primary"
+                            >
+                                Record First Specification
+                            </a>
+                        @endcan
+                    </div>
+                </div>
+            @endif
+        </div>
+
         {{-- Organization Actions --}}
-        @canany(['activate', 'deactivate'], $organization)
+        @canany(['activate', 'deactivate', 'export'], $organization)
             <section class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
                 <h2 class="text-sm font-semibold text-slate-900">
                     Organization Actions
                 </h2>
 
                 <p class="mt-1 text-sm text-slate-500">
-                    Control whether this organization is currently active.
+                    Manage organization status and export structured intelligence data for analysis.
                 </p>
 
                 <div class="mt-5 flex flex-wrap gap-3">
+                    @can('export', $organization)
+                        <a
+                            href="{{ route('organizations.export-intelligence', $organization) }}"
+                            class="oy-btn oy-btn-secondary"
+                            title="Download organization data without images or artifact files"
+                        >
+                            Export Intelligence Data
+                        </a>
+                    @endcan
 
                     @can('activate', $organization)
                         @if (! $organization->is_active)

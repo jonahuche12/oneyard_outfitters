@@ -22,6 +22,11 @@ class OrganizationPolicy
         return $user->hasPermission('organizations.create');
     }
 
+    public function export(User $user, Organization $organization): bool
+    {
+        return $user->hasPermission('organizations.export');
+    }
+
     public function update(User $user, Organization $organization): bool
     {
         return $user->hasPermission('organizations.update');

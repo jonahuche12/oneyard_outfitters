@@ -149,7 +149,7 @@
         @endif
 
         {{-- Page Content --}}
-        <main class="oy-content flex-1">
+        <main class="oy-content min-h-0 flex-1">
 
             {{ $slot ?? '' }}
 

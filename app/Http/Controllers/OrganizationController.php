@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\Organization\StoreOrganizationRequest;
+use App\Actions\Organizations\ExportOrganizationData;
 use App\Http\Requests\Organization\UpdateOrganizationRequest;
 use App\Models\Organization;
 use Illuminate\Http\RedirectResponse;
@@ -89,9 +90,46 @@ class OrganizationController extends Controller
             'productSpecifications',
         ]);
 
+        $organization->load([
+            'productSpecifications' => fn ($query) => $query
+                ->withCount('artifacts')
+                ->latest('specification_date')
+                ->latest('id')
+                ->limit(5),
+        ]);
+
         return view('organizations.show', [
             'organization' => $organization,
         ]);
+    }
+
+    public function exportIntelligenceData(
+        Organization $organization,
+        ExportOrganizationData $exportOrganizationData
+    ) {
+        Gate::authorize('export', $organization);
+
+        $data = $exportOrganizationData->execute($organization);
+
+        $filename = strtolower(
+            $organization->organization_code
+            . '-intelligence-export.json'
+        );
+
+        return response()->streamDownload(
+            function () use ($data): void {
+                echo json_encode(
+                    $data,
+                    JSON_PRETTY_PRINT
+                    | JSON_UNESCAPED_SLASHES
+                    | JSON_UNESCAPED_UNICODE
+                );
+            },
+            $filename,
+            [
+                'Content-Type' => 'application/json; charset=UTF-8',
+            ]
+        );
     }
 
     public function edit(Organization $organization): View

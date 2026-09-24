@@ -1988,3 +1988,242 @@ Follow-up module is working and verified.
 
 ### Next Production Stage
 Continue Follow-up UI integration and operational visibility from Organization and Contact accounts, then proceed toward Product Specifications.
+
+## Production Specification Stage — Existing Architecture Discovery
+
+### Status
+Milestone in progress. No new Production Specification implementation was created during this checkpoint.
+
+### Purpose
+Before continuing the Production Specification stage, the existing application was inspected to determine what backend structures had already been created and to prevent duplicate architecture.
+
+### Discovery
+The application already contains a Product Specification foundation:
+- `ProductSpecification` model exists.
+- `ProductSpecificationArtifact` model exists.
+- `product_specifications` migration exists.
+- `product_specification_artifacts` migration exists.
+- `StoreProductSpecificationRequest` exists.
+- `UpdateProductSpecificationRequest` exists.
+- `ProductSpecificationPolicy` exists.
+- `CreateProductSpecification` and `UpdateProductSpecification` actions exist.
+- Factories exist for both specifications and specification artifacts.
+- Organization has a `productSpecifications()` relationship.
+- Contact has a `productSpecifications()` relationship.
+- User tracks specifications created and specification artifacts uploaded.
+- Organization show already loads/counts product specifications.
+- Feature tests already cover Product Specification and Product Specification Artifact relationships and behavior.
+
+### Artifact Architecture Already Present
+Product artifacts are already modeled separately from the specification through:
+
+`ProductSpecification -> artifacts -> ProductSpecificationArtifact`
+
+Artifact records currently support:
+- artifact type
+- title
+- description
+- file path
+- original filename
+- MIME type
+- file size
+- uploader
+- current-version flag
+- soft deletion
+
+### Important Finding
+The Production Specification stage therefore requires completion and integration of an existing foundation, not creation of a new specification architecture from scratch.
+
+The existing backend also shows that specification capture already includes product-specific fields such as:
+- item name
+- product type
+- description
+- unit
+- unit price
+- material
+- material details
+- design details
+- size details
+- branding details
+- quality requirements
+- special instructions
+- status
+- notes
+
+### Current Gap Identified
+No Product Specification controller or specification views were found in the inspected application structure. File-upload handling was also not yet found in the existing controllers/resources.
+
+Therefore, the next implementation work should focus on completing the application layer around the existing models and migrations, including specification UI, artifact upload handling, authorization integration, organization-account integration, and appropriate verification.
+
+### Scope Decision
+Product artifacts are a required part of the Production Specification workflow and must be implemented together with the specification experience rather than treated as a later unrelated feature.
+
+### Next
+Inspect the existing Product Specification actions, factories, RBAC definitions, routes, tests, and the exact migration/request behavior before implementing the missing application layer.
+
+## Product Specification Authorization Correction — viewAny / view Separation
+
+### Issue Identified
+- Product Specification collection-level authorization was incorrectly calling:
+  - `view` with `ProductSpecification::class`
+- `ProductSpecificationPolicy::view()` requires a concrete `ProductSpecification` instance.
+- Laravel therefore attempted to call the policy method with only the authenticated user and raised:
+  - `ArgumentCountError`
+  - Too few arguments to `ProductSpecificationPolicy::view()`
+
+### Correction
+- Added `viewAny(User $user)` to `ProductSpecificationPolicy`.
+- `viewAny` uses the existing `specifications.view` permission.
+- Product Specification index authorization now uses:
+  - `Gate::authorize('viewAny', ProductSpecification::class)`
+- Organization account collection-level checks now use:
+  - `@can('viewAny', App\Models\ProductSpecification::class)`
+- Individual specification checks continue to use:
+  - `@can('view', $specification)`
+- Existing permission slugs were not changed.
+
+### Authorization Structure
+- `viewAny` — access to Product Specification collections/lists.
+- `view` — access to an individual specification.
+- `create` — create a specification.
+- `update` — modify a specification and manage its production artifacts.
+
+### Verification
+- Correction implemented after identifying the policy argument mismatch.
+- Blade and authorization verification to continue after the correction.
+
+### Status
+Product Specification authorization architecture corrected.
+
+---
+
+## Product Specification Artifacts — Operational Handling Started
+
+### Scope
+Production artifacts are being treated as an integral part of the Product Specification workflow.
+
+### Existing Artifact Architecture
+`ProductSpecification -> artifacts -> ProductSpecificationArtifact`
+
+Artifact records support:
+- artifact type
+- title
+- description
+- private file path
+- original filename
+- MIME type
+- file size
+- uploader
+- current-version flag
+- soft deletion
+
+### Current Operational Handling
+The Product Specification account now provides an artifact workspace for:
+- viewing artifact history
+- identifying the current artifact version
+- identifying archived versions
+- uploading new artifacts
+- downloading stored artifacts
+- removing artifacts
+- recording uploader and file metadata
+
+### Supported Artifact Types
+- design
+- material
+- logo
+- branding
+- sample
+- size chart
+- measurement
+- reference
+- other
+
+### Supported Files
+- JPG
+- JPEG
+- PNG
+- WEBP
+- PDF
+
+Maximum upload size:
+- 10 MB
+
+### Authorization
+Artifact operations use the parent Product Specification authorization:
+- View/download requires `specifications.view`.
+- Upload/remove requires `specifications.update`.
+
+No separate artifact permission system is introduced at this stage because artifacts are subordinate records of a Product Specification.
+
+### Version Handling
+Uploading a new artifact of the same artifact type marks the previous current artifact of that type as non-current before creating the new current artifact.
+
+This preserves the historical artifact record rather than overwriting it.
+
+### Storage
+Artifacts are stored on the application's private local storage and are served through an authorized download action rather than public file URLs.
+
+### Status
+Artifact handling has entered the active Product Specification production stage.
+
+### Next
+Verify the artifact upload/version/download lifecycle with minimal targeted verification, then complete Product Specification integration across Organization and Contact accounts.
+
+## Product Specification Artifact Lifecycle Verification — Completed
+
+- Added one focused feature test covering the complete Product Specification Artifact lifecycle.
+- Verified authenticated artifact upload through the production route.
+- Verified uploaded artifact metadata and private local storage.
+- Verified same-type versioning: uploading a replacement marks the previous artifact as archived (`is_current = false`) while the new artifact becomes current.
+- Verified artifact history is preserved rather than overwritten.
+- Verified authorized artifact download succeeds through the protected download route.
+- Verified artifact removal uses soft deletion.
+- Verified the underlying stored file remains available after soft deletion, preserving the physical artifact independently from the database lifecycle.
+- No separate artifact permission layer was introduced; artifact operations remain governed by the parent Product Specification permissions.
+- Verification scope was intentionally limited to this critical lifecycle rather than broad regression testing.
+- Status: Product Specification Artifact handling verified and operational.
+
+
+## Product Specification Artifact Lifecycle Verification — Completed
+
+- Completed focused verification of the Product Specification Artifact lifecycle.
+- Test: `ProductSpecificationArtifactTest`
+- Result: 1 test passed, 19 assertions passed.
+- Verified artifact upload through the multipart request.
+- Verified artifact metadata persistence.
+- Verified same-type versioning: uploading a new artifact marks the previous artifact as archived (`is_current = false`) while retaining its record and file.
+- Verified current artifact remains marked `is_current = true`.
+- Verified authorized artifact download returns successfully.
+- Verified artifact soft deletion.
+- Verified deleted artifact's physical file remains preserved.
+- Verified historical artifact record remains available after the current artifact is removed.
+- This confirms the artifact workflow is operational at the application-test level.
+- Next verification: perform one real browser upload and confirm the resulting file exists under the private storage directory.
+
+## 2026-09-24 — Organization Intelligence Export HTTP Verification
+
+### Completed
+- Added feature coverage for the organization intelligence export workflow.
+- Verified an authorized Super Admin can download organization intelligence data.
+- Verified the organization account exposes the Export Intelligence Data action.
+- Verified the export endpoint returns HTTP 200.
+- Verified the response is delivered as a JSON attachment.
+- Verified the generated export contains:
+  - Organization data
+  - Contacts
+  - Assessments
+  - Follow-ups
+  - Product specifications
+- Verified product specification artifact files are excluded from the export payload.
+
+### Verification
+- Test: `OrganizationIntelligenceExportTest`
+- Result: 1 test passed
+- Assertions: 17
+- Status: Passed
+
+### Feature Status
+Organization Intelligence Export is now verified at the HTTP/application level and can be treated as a completed production feature.
+
+### Next Checkpoint
+Review the current repository status and commit the completed Organization Intelligence Export work before proceeding to the next production feature.

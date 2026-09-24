@@ -71,6 +71,11 @@ class RbacSeeder extends Seeder
                 'slug' => 'organizations.delete',
                 'description' => 'Delete organization records.',
             ],
+            [
+                'name' => 'Export Organization Data',
+                'slug' => 'organizations.export',
+                'description' => 'Export organization intelligence data for authorized analysis.',
+            ],
 
             /*
              * Contacts
@@ -395,6 +400,7 @@ class RbacSeeder extends Seeder
                     'organizations.view',
                     'organizations.create',
                     'organizations.update',
+                    'organizations.export',
 
                     'contacts.view',
                     'contacts.create',
@@ -463,6 +469,7 @@ class RbacSeeder extends Seeder
                     'organizations.view',
                     'organizations.create',
                     'organizations.update',
+                    'organizations.export',
 
                     'contacts.view',
                     'contacts.create',
