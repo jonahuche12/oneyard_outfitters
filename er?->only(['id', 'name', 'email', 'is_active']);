@@ -1,0 +1,30 @@
+[90m= [39m[34;4mApp\Models\User[39;24m {#8831
+    [34mid[39m: [35m1[39m,
+    [34mname[39m: [32m"[39m[32mSuper Administrator[39m[32m"[39m,
+    [34memail[39m: [32m"[39m[32madmin@oneyard.test[39m[32m"[39m,
+    [34memail_verified_at[39m: [36mnull[39m,
+    #[33mpassword[39m: [32m"[39m\$[32m2y[39m\$[32m12[39m\$[32miU04dMVNVRL0P1ShXl9mYezCUUQGEJVaqMbSbPwLRowAEjVSbYFk6[39m[32m"[39m,
+    [34mis_active[39m: [35m1[39m,
+    [34mtwo_factor_secret[39m: [36mnull[39m,
+    [34mtwo_factor_recovery_codes[39m: [36mnull[39m,
+    [34mtwo_factor_confirmed_at[39m: [36mnull[39m,
+    #[33mremember_token[39m: [36mnull[39m,
+    [34mcreated_at[39m: [32m"[39m[32m2026-09-22 18:02:47[39m[32m"[39m,
+    [34mupdated_at[39m: [32m"[39m[32m2026-09-22 18:02:47[39m[32m"[39m,
+    [34mroles[39m: [34;4mIlluminate\Database\Eloquent\Collection[39;24m {#8315
+      [34mall[39m: [
+        [34;4mApp\Models\Role[39;24m {#8384
+          [34mid[39m: [35m1[39m,
+          [34mname[39m: [32m"[39m[32mSuper Admin[39m[32m"[39m,
+          [34mslug[39m: [32m"[39m[32msuper-admin[39m[32m"[39m,
+          [34mdescription[39m: [32m"[39m[32mFull system administration access.[39m[32m"[39m,
+          [34mcreated_at[39m: [32m"[39m[32m2026-09-21 18:48:49[39m[32m"[39m,
+          [34mupdated_at[39m: [32m"[39m[32m2026-09-21 18:48:49[39m[32m"[39m,
+          [34mpivot[39m: [34;4mIlluminate\Database\Eloquent\Relations\Pivot[39;24m {#8390
+            [34muser_id[39m: [35m1[39m,
+            [34mrole_id[39m: [35m1[39m,
+          },
+        },
+      ],
+    },
+  }

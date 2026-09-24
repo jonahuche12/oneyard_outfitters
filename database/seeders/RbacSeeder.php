@@ -1,0 +1,643 @@
+<?php
+
+namespace Database\Seeders;
+
+use App\Models\Permission;
+use App\Models\Role;
+use Illuminate\Database\Seeder;
+
+class RbacSeeder extends Seeder
+{
+    /**
+     * Seed the application's initial roles and permissions.
+     */
+    public function run(): void
+    {
+        $permissions = [
+            /*
+             * Staff / User Management
+             */
+            [
+                'name' => 'View Users',
+                'slug' => 'users.view',
+                'description' => 'View internal staff user accounts.',
+            ],
+            [
+                'name' => 'Create Users',
+                'slug' => 'users.create',
+                'description' => 'Create internal staff user accounts.',
+            ],
+            [
+                'name' => 'Update Users',
+                'slug' => 'users.update',
+                'description' => 'Update internal staff user accounts.',
+            ],
+            [
+                'name' => 'Activate Users',
+                'slug' => 'users.activate',
+                'description' => 'Activate inactive staff user accounts.',
+            ],
+            [
+                'name' => 'Deactivate Users',
+                'slug' => 'users.deactivate',
+                'description' => 'Deactivate active staff user accounts.',
+            ],
+            [
+                'name' => 'Assign User Roles',
+                'slug' => 'users.assign-roles',
+                'description' => 'Assign existing roles to staff user accounts.',
+            ],
+
+            /*
+             * Organizations
+             */
+            [
+                'name' => 'View Organizations',
+                'slug' => 'organizations.view',
+                'description' => 'View organization records.',
+            ],
+            [
+                'name' => 'Create Organizations',
+                'slug' => 'organizations.create',
+                'description' => 'Create organization records.',
+            ],
+            [
+                'name' => 'Update Organizations',
+                'slug' => 'organizations.update',
+                'description' => 'Update organization records.',
+            ],
+            [
+                'name' => 'Delete Organizations',
+                'slug' => 'organizations.delete',
+                'description' => 'Delete organization records.',
+            ],
+
+            /*
+             * Contacts
+             */
+            [
+                'name' => 'View Contacts',
+                'slug' => 'contacts.view',
+                'description' => 'View organization contact records.',
+            ],
+            [
+                'name' => 'Create Contacts',
+                'slug' => 'contacts.create',
+                'description' => 'Create organization contact records.',
+            ],
+            [
+                'name' => 'Update Contacts',
+                'slug' => 'contacts.update',
+                'description' => 'Update organization contact records.',
+            ],
+            [
+                'name' => 'Update Contact Notes',
+                'slug' => 'contacts.update-notes',
+                'description' => 'Update the current notes field on organization contact records.',
+            ],
+            [
+                'name' => 'Activate Contacts',
+                'slug' => 'contacts.activate',
+                'description' => 'Activate organization contact records.',
+            ],
+            [
+                'name' => 'Deactivate Contacts',
+                'slug' => 'contacts.deactivate',
+                'description' => 'Deactivate organization contact records.',
+            ],
+            [
+                'name' => 'Delete Contacts',
+                'slug' => 'contacts.delete',
+                'description' => 'Delete organization contact records.',
+            ],
+            [
+                'name' => 'View Contact Notes',
+                'slug' => 'contact-notes.view',
+                'description' => 'View historical interaction notes for organization contacts.',
+            ],
+            [
+                'name' => 'Create Contact Notes',
+                'slug' => 'contact-notes.create',
+                'description' => 'Record historical interaction notes for organization contacts.',
+            ],
+            [
+                'name' => 'Update Contact Notes',
+                'slug' => 'contact-notes.update',
+                'description' => 'Update historical interaction notes for organization contacts.',
+            ],
+            [
+                'name' => 'Delete Contact Notes',
+                'slug' => 'contact-notes.delete',
+                'description' => 'Delete historical interaction notes for organization contacts.',
+            ],
+
+            /*
+             * Requirements
+             */
+            [
+                'name' => 'View Requirements',
+                'slug' => 'requirements.view',
+                'description' => 'View organization requirements and specifications.',
+            ],
+            [
+                'name' => 'Create Requirements',
+                'slug' => 'requirements.create',
+                'description' => 'Create organization requirements and specifications.',
+            ],
+            [
+                'name' => 'Update Requirements',
+                'slug' => 'requirements.update',
+                'description' => 'Update organization requirements and specifications.',
+            ],
+
+            /*
+             * Quotations
+             */
+            [
+                'name' => 'View Quotations',
+                'slug' => 'quotations.view',
+                'description' => 'View quotations.',
+            ],
+            [
+                'name' => 'Create Quotations',
+                'slug' => 'quotations.create',
+                'description' => 'Create quotations.',
+            ],
+            [
+                'name' => 'Update Quotations',
+                'slug' => 'quotations.update',
+                'description' => 'Update quotations.',
+            ],
+            [
+                'name' => 'Send Quotations',
+                'slug' => 'quotations.send',
+                'description' => 'Send quotations to organizations.',
+            ],
+            [
+                'name' => 'Cancel Quotations',
+                'slug' => 'quotations.cancel',
+                'description' => 'Cancel quotations.',
+            ],
+
+            /*
+             * Orders
+             */
+            [
+                'name' => 'View Orders',
+                'slug' => 'orders.view',
+                'description' => 'View orders.',
+            ],
+            [
+                'name' => 'Create Orders',
+                'slug' => 'orders.create',
+                'description' => 'Create orders.',
+            ],
+            [
+                'name' => 'Update Orders',
+                'slug' => 'orders.update',
+                'description' => 'Update orders.',
+            ],
+            [
+                'name' => 'Approve Orders',
+                'slug' => 'orders.approve',
+                'description' => 'Approve orders for fulfillment.',
+            ],
+
+            /*
+             * Suppliers
+             */
+            [
+                'name' => 'View Suppliers',
+                'slug' => 'suppliers.view',
+                'description' => 'View supplier records.',
+            ],
+            [
+                'name' => 'Create Suppliers',
+                'slug' => 'suppliers.create',
+                'description' => 'Create supplier records.',
+            ],
+            [
+                'name' => 'Update Suppliers',
+                'slug' => 'suppliers.update',
+                'description' => 'Update supplier records.',
+            ],
+
+            /*
+             * Procurement
+             */
+            [
+                'name' => 'View Procurement',
+                'slug' => 'procurement.view',
+                'description' => 'View procurement requirements and records.',
+            ],
+            [
+                'name' => 'Manage Procurement',
+                'slug' => 'procurement.manage',
+                'description' => 'Create and manage procurement activities.',
+            ],
+
+            /*
+             * Production
+             */
+            [
+                'name' => 'View Production',
+                'slug' => 'production.view',
+                'description' => 'View production records and progress.',
+            ],
+            [
+                'name' => 'Manage Production',
+                'slug' => 'production.manage',
+                'description' => 'Create and manage production activities.',
+            ],
+
+            /*
+             * Quality Control
+             */
+            [
+                'name' => 'View Quality Control',
+                'slug' => 'quality-control.view',
+                'description' => 'View quality-control records.',
+            ],
+            [
+                'name' => 'Inspect Quality',
+                'slug' => 'quality-control.inspect',
+                'description' => 'Perform quality-control inspections.',
+            ],
+            [
+                'name' => 'Approve Quality',
+                'slug' => 'quality-control.approve',
+                'description' => 'Approve quality-control results.',
+            ],
+
+            /*
+             * Deliveries
+             */
+            [
+                'name' => 'View Deliveries',
+                'slug' => 'deliveries.view',
+                'description' => 'View delivery records.',
+            ],
+            [
+                'name' => 'Create Deliveries',
+                'slug' => 'deliveries.create',
+                'description' => 'Create delivery records.',
+            ],
+            [
+                'name' => 'Confirm Deliveries',
+                'slug' => 'deliveries.confirm',
+                'description' => 'Confirm completed deliveries.',
+            ],
+
+            /*
+             * Payments
+             */
+            [
+                'name' => 'View Payments',
+                'slug' => 'payments.view',
+                'description' => 'View payment records.',
+            ],
+            [
+                'name' => 'Create Payments',
+                'slug' => 'payments.create',
+                'description' => 'Record payments.',
+            ],
+            [
+                'name' => 'Update Payments',
+                'slug' => 'payments.update',
+                'description' => 'Update permitted payment records.',
+            ],
+            [
+                'name' => 'Reverse Payments',
+                'slug' => 'payments.reverse',
+                'description' => 'Reverse or void permitted payment records.',
+            ],
+
+            /*
+             * Follow-ups
+             */
+            [
+                'name' => 'View Follow-ups',
+                'slug' => 'follow-ups.view',
+                'description' => 'View organization follow-up records.',
+            ],
+            [
+                'name' => 'Create Follow-ups',
+                'slug' => 'follow-ups.create',
+                'description' => 'Create organization follow-up records.',
+            ],
+            [
+                'name' => 'Update Follow-ups',
+                'slug' => 'follow-ups.update',
+                'description' => 'Update organization follow-up records.',
+            ],
+
+            /*
+             * Product Specifications
+             */
+            [
+                'name' => 'View Product Specifications',
+                'slug' => 'specifications.view',
+                'description' => 'View organization product specifications.',
+            ],
+            [
+                'name' => 'Create Product Specifications',
+                'slug' => 'specifications.create',
+                'description' => 'Create product specifications for organizations.',
+            ],
+            [
+                'name' => 'Update Product Specifications',
+                'slug' => 'specifications.update',
+                'description' => 'Update organization product specifications.',
+            ],
+        ];
+
+        /*
+         * Create or update permissions first.
+         *
+         * The permission definitions above are the source of truth.
+         * updateOrCreate keeps this seeder idempotent.
+         */
+        foreach ($permissions as $permission) {
+            Permission::updateOrCreate(
+                ['slug' => $permission['slug']],
+                [
+                    'name' => $permission['name'],
+                    'description' => $permission['description'],
+                ]
+            );
+        }
+
+        $roles = [
+            /*
+             * Super Admin
+             *
+             * Receives every permission defined above.
+             */
+            [
+                'name' => 'Super Admin',
+                'slug' => 'super-admin',
+                'description' => 'Full system administration access.',
+                'permissions' => array_column($permissions, 'slug'),
+            ],
+
+            /*
+             * Administrator
+             *
+             * General operational administration.
+             * Staff-account administration remains Super Admin controlled
+             * in this first version.
+             */
+            [
+                'name' => 'Administrator',
+                'slug' => 'admin',
+                'description' => 'General operational administration.',
+                'permissions' => [
+                    'organizations.view',
+                    'organizations.create',
+                    'organizations.update',
+
+                    'contacts.view',
+                    'contacts.create',
+                    'contacts.update',
+                    'contacts.update-notes',
+                    'contacts.activate',
+                    'contacts.deactivate',
+                    'contacts.delete',
+
+                    'contact-notes.view',
+                    'contact-notes.create',
+                    'contact-notes.update',
+                    'contact-notes.delete',
+
+                    'requirements.view',
+                    'requirements.create',
+                    'requirements.update',
+
+                    'quotations.view',
+                    'quotations.create',
+                    'quotations.update',
+                    'quotations.send',
+                    'quotations.cancel',
+
+                    'orders.view',
+                    'orders.create',
+                    'orders.update',
+                    'orders.approve',
+
+                    'suppliers.view',
+                    'suppliers.create',
+                    'suppliers.update',
+
+                    'procurement.view',
+                    'procurement.manage',
+
+                    'production.view',
+                    'production.manage',
+
+                    'quality-control.view',
+
+                    'deliveries.view',
+                    'deliveries.create',
+                    'deliveries.confirm',
+
+                    'payments.view',
+
+                    'follow-ups.view',
+                    'follow-ups.create',
+                    'follow-ups.update',
+
+                    'specifications.view',
+                    'specifications.create',
+                    'specifications.update',
+                ],
+            ],
+
+            /*
+             * Sales
+             */
+            [
+                'name' => 'Sales',
+                'slug' => 'sales',
+                'description' => 'Manages organizations, contacts, requirements and quotations.',
+                'permissions' => [
+                    'organizations.view',
+                    'organizations.create',
+                    'organizations.update',
+
+                    'contacts.view',
+                    'contacts.create',
+                    'contacts.update',
+                    'contacts.update-notes',
+
+                    'contact-notes.view',
+                    'contact-notes.create',
+                    'contact-notes.update',
+
+                    'requirements.view',
+                    'requirements.create',
+                    'requirements.update',
+
+                    'quotations.view',
+                    'quotations.create',
+                    'quotations.update',
+                    'quotations.send',
+                    'quotations.cancel',
+
+                    'orders.view',
+                    'orders.create',
+
+                    'follow-ups.view',
+                    'follow-ups.create',
+                    'follow-ups.update',
+
+                    'specifications.view',
+                    'specifications.create',
+                    'specifications.update',
+                ],
+            ],
+
+            /*
+             * Procurement
+             */
+            [
+                'name' => 'Procurement',
+                'slug' => 'procurement',
+                'description' => 'Manages suppliers and procurement activities.',
+                'permissions' => [
+                    'organizations.view',
+                    'contacts.view',
+                    'contact-notes.view',
+                    'contact-notes.create',
+                    'contact-notes.update',
+                    'orders.view',
+
+                    'suppliers.view',
+                    'suppliers.create',
+                    'suppliers.update',
+
+                    'procurement.view',
+                    'procurement.manage',
+
+                    'specifications.view',
+                ],
+            ],
+
+            /*
+             * Production
+             */
+            [
+                'name' => 'Production',
+                'slug' => 'production',
+                'description' => 'Manages production activities.',
+                'permissions' => [
+                    'organizations.view',
+                    'contacts.view',
+                    'contact-notes.view',
+                    'contact-notes.create',
+                    'contact-notes.update',
+                    'orders.view',
+
+                    'procurement.view',
+
+                    'production.view',
+                    'production.manage',
+
+                    'specifications.view',
+                ],
+            ],
+
+            /*
+             * Quality Control
+             */
+            [
+                'name' => 'Quality Control',
+                'slug' => 'quality-control',
+                'description' => 'Performs and approves quality-control activities.',
+                'permissions' => [
+                    'organizations.view',
+                    'contacts.view',
+                    'contact-notes.view',
+                    'contact-notes.create',
+                    'contact-notes.update',
+                    'orders.view',
+                    'production.view',
+
+                    'quality-control.view',
+                    'quality-control.inspect',
+                    'quality-control.approve',
+
+                    'specifications.view',
+                ],
+            ],
+
+            /*
+             * Finance
+             */
+            [
+                'name' => 'Finance',
+                'slug' => 'finance',
+                'description' => 'Manages financial and payment records.',
+                'permissions' => [
+                    'organizations.view',
+                    'contacts.view',
+                    'contact-notes.view',
+                    'contact-notes.create',
+                    'contact-notes.update',
+                    'orders.view',
+
+                    'payments.view',
+                    'payments.create',
+                    'payments.update',
+                    'payments.reverse',
+
+                    'specifications.view',
+                ],
+            ],
+
+            /*
+             * Delivery
+             */
+            [
+                'name' => 'Delivery',
+                'slug' => 'delivery',
+                'description' => 'Manages order delivery activities.',
+                'permissions' => [
+                    'organizations.view',
+                    'contacts.view',
+                    'contact-notes.view',
+                    'contact-notes.create',
+                    'contact-notes.update',
+                    'orders.view',
+
+                    'deliveries.view',
+                    'deliveries.create',
+                    'deliveries.confirm',
+
+                    'specifications.view',
+                ],
+            ],
+        ];
+
+        /*
+         * Create or update roles and synchronize their permissions.
+         *
+         * sync() makes each role definition the source of truth:
+         * permissions not listed for a role are removed from that role.
+         */
+        foreach ($roles as $roleData) {
+            $role = Role::updateOrCreate(
+                ['slug' => $roleData['slug']],
+                [
+                    'name' => $roleData['name'],
+                    'description' => $roleData['description'],
+                ]
+            );
+
+            $permissionIds = Permission::query()
+                ->whereIn('slug', $roleData['permissions'])
+                ->pluck('id');
+
+            $role->permissions()->sync($permissionIds);
+        }
+    }
+}

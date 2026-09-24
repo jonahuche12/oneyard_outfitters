@@ -1,0 +1,493 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\Permission;
+use App\Models\Role;
+use App\Models\User;
+use Database\Seeders\RbacSeeder;
+use Illuminate\Database\QueryException;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
+
+class RbacTest extends TestCase
+{
+    use RefreshDatabase;
+
+    public function test_user_can_have_multiple_roles(): void
+    {
+        $user = User::factory()->create();
+
+        $salesRole = Role::create([
+            'name' => 'Sales',
+            'slug' => 'sales',
+            'description' => 'Sales role.',
+        ]);
+
+        $adminRole = Role::create([
+            'name' => 'Administrator',
+            'slug' => 'admin',
+            'description' => 'Administrator role.',
+        ]);
+
+        $user->roles()->attach([
+            $salesRole->id,
+            $adminRole->id,
+        ]);
+
+        $this->assertCount(2, $user->fresh()->roles);
+        $this->assertTrue(
+            $user->fresh()->roles->contains('slug', 'sales')
+        );
+        $this->assertTrue(
+            $user->fresh()->roles->contains('slug', 'admin')
+        );
+    }
+
+    public function test_role_can_have_multiple_permissions(): void
+    {
+        $role = Role::create([
+            'name' => 'Sales',
+            'slug' => 'sales',
+            'description' => 'Sales role.',
+        ]);
+
+        $viewPermission = Permission::create([
+            'name' => 'View Organizations',
+            'slug' => 'organizations.view',
+            'description' => 'View organization records.',
+        ]);
+
+        $createPermission = Permission::create([
+            'name' => 'Create Organizations',
+            'slug' => 'organizations.create',
+            'description' => 'Create organization records.',
+        ]);
+
+        $role->permissions()->attach([
+            $viewPermission->id,
+            $createPermission->id,
+        ]);
+
+        $this->assertCount(2, $role->fresh()->permissions);
+        $this->assertTrue(
+            $role->fresh()->permissions->contains(
+                'slug',
+                'organizations.view'
+            )
+        );
+        $this->assertTrue(
+            $role->fresh()->permissions->contains(
+                'slug',
+                'organizations.create'
+            )
+        );
+    }
+
+    public function test_permission_can_retrieve_roles(): void
+    {
+        $role = Role::create([
+            'name' => 'Sales',
+            'slug' => 'sales',
+            'description' => 'Sales role.',
+        ]);
+
+        $permission = Permission::create([
+            'name' => 'View Organizations',
+            'slug' => 'organizations.view',
+            'description' => 'View organization records.',
+        ]);
+
+        $role->permissions()->attach($permission);
+
+        $this->assertTrue(
+            $permission->fresh()->roles->contains('slug', 'sales')
+        );
+    }
+
+    public function test_role_can_retrieve_users(): void
+    {
+        $role = Role::create([
+            'name' => 'Sales',
+            'slug' => 'sales',
+            'description' => 'Sales role.',
+        ]);
+
+        $user = User::factory()->create();
+
+        $role->users()->attach($user);
+
+        $this->assertTrue(
+            $role->fresh()->users->contains('id', $user->id)
+        );
+    }
+
+    public function test_duplicate_user_role_assignment_is_rejected(): void
+    {
+        $user = User::factory()->create();
+
+        $role = Role::create([
+            'name' => 'Sales',
+            'slug' => 'sales',
+            'description' => 'Sales role.',
+        ]);
+
+        $user->roles()->attach($role);
+
+        $this->expectException(QueryException::class);
+
+        $user->roles()->attach($role);
+    }
+
+    public function test_duplicate_role_permission_assignment_is_rejected(): void
+    {
+        $role = Role::create([
+            'name' => 'Sales',
+            'slug' => 'sales',
+            'description' => 'Sales role.',
+        ]);
+
+        $permission = Permission::create([
+            'name' => 'View Organizations',
+            'slug' => 'organizations.view',
+            'description' => 'View organization records.',
+        ]);
+
+        $role->permissions()->attach($permission);
+
+        $this->expectException(QueryException::class);
+
+        $role->permissions()->attach($permission);
+    }
+
+    public function test_role_slug_is_unique(): void
+    {
+        Role::create([
+            'name' => 'Sales',
+            'slug' => 'sales',
+            'description' => 'Sales role.',
+        ]);
+
+        $this->expectException(QueryException::class);
+
+        Role::create([
+            'name' => 'Another Sales Role',
+            'slug' => 'sales',
+            'description' => 'Duplicate slug.',
+        ]);
+    }
+
+    public function test_permission_slug_is_unique(): void
+    {
+        Permission::create([
+            'name' => 'View Organizations',
+            'slug' => 'organizations.view',
+            'description' => 'View organization records.',
+        ]);
+
+        $this->expectException(QueryException::class);
+
+        Permission::create([
+            'name' => 'Another View Organizations',
+            'slug' => 'organizations.view',
+            'description' => 'Duplicate slug.',
+        ]);
+    }
+
+    public function test_rbac_seeder_creates_expected_roles(): void
+    {
+        $this->seed(RbacSeeder::class);
+
+        $expectedRoles = [
+            'super-admin',
+            'admin',
+            'sales',
+            'procurement',
+            'production',
+            'quality-control',
+            'finance',
+            'delivery',
+        ];
+
+        $this->assertDatabaseCount('roles', 8);
+
+        foreach ($expectedRoles as $roleSlug) {
+            $this->assertDatabaseHas('roles', [
+                'slug' => $roleSlug,
+            ]);
+        }
+    }
+
+    public function test_rbac_seeder_creates_expected_permissions(): void
+    {
+        $this->seed(RbacSeeder::class);
+
+        $expectedPermissions = [
+            'organizations.view',
+            'organizations.create',
+            'organizations.update',
+            'organizations.delete',
+
+            'contacts.view',
+            'contacts.create',
+            'contacts.update',
+            'contacts.delete',
+
+            'requirements.view',
+            'requirements.create',
+            'requirements.update',
+
+            'quotations.view',
+            'quotations.create',
+            'quotations.update',
+            'quotations.send',
+            'quotations.cancel',
+
+            'orders.view',
+            'orders.create',
+            'orders.update',
+            'orders.approve',
+
+            'suppliers.view',
+            'suppliers.create',
+            'suppliers.update',
+
+            'procurement.view',
+            'procurement.manage',
+
+            'production.view',
+            'production.manage',
+
+            'quality-control.view',
+            'quality-control.inspect',
+            'quality-control.approve',
+
+            'deliveries.view',
+            'deliveries.create',
+            'deliveries.confirm',
+
+            'payments.view',
+            'payments.create',
+            'payments.update',
+            'payments.reverse',
+
+            'follow-ups.view',
+            'follow-ups.create',
+            'follow-ups.update',
+
+            'specifications.view',
+            'specifications.create',
+            'specifications.update',
+
+            'users.view',
+            'users.create',
+            'users.update',
+            'users.activate',
+            'users.deactivate',
+            'users.assign-roles',
+        ];
+
+        $this->assertDatabaseCount(
+            'permissions',
+            count($expectedPermissions)
+        );
+
+        foreach ($expectedPermissions as $permissionSlug) {
+            $this->assertDatabaseHas('permissions', [
+                'slug' => $permissionSlug,
+            ]);
+        }
+    }
+
+    public function test_sales_role_has_expected_permissions(): void
+    {
+        $this->seed(RbacSeeder::class);
+
+        $role = Role::where('slug', 'sales')->firstOrFail();
+
+        $expectedPermissions = [
+            'organizations.view',
+            'organizations.create',
+            'organizations.update',
+
+            'contacts.view',
+            'contacts.create',
+            'contacts.update',
+
+            'requirements.view',
+            'requirements.create',
+            'requirements.update',
+
+            'quotations.view',
+            'quotations.create',
+            'quotations.update',
+            'quotations.send',
+            'quotations.cancel',
+
+            'orders.view',
+            'orders.create',
+
+            'follow-ups.view',
+            'follow-ups.create',
+            'follow-ups.update',
+
+            'specifications.view',
+            'specifications.create',
+            'specifications.update',
+        ];
+
+        $actualPermissions = $role->permissions()
+            ->orderBy('slug')
+            ->pluck('slug')
+            ->all();
+
+        sort($expectedPermissions);
+        sort($actualPermissions);
+
+        $this->assertSame(
+            $expectedPermissions,
+            $actualPermissions
+        );
+    }
+
+    public function test_super_admin_has_every_seeded_permission(): void
+    {
+        $this->seed(RbacSeeder::class);
+
+        $role = Role::where('slug', 'super-admin')->firstOrFail();
+
+        $allPermissionSlugs = Permission::query()
+            ->orderBy('slug')
+            ->pluck('slug')
+            ->all();
+
+        $superAdminPermissionSlugs = $role->permissions()
+            ->orderBy('slug')
+            ->pluck('slug')
+            ->all();
+
+        $this->assertSame(
+            $allPermissionSlugs,
+            $superAdminPermissionSlugs
+        );
+    }
+
+    public function test_rbac_seeder_is_idempotent(): void
+    {
+        $this->seed(RbacSeeder::class);
+
+        $rolesBefore = Role::query()
+            ->orderBy('slug')
+            ->pluck('id', 'slug')
+            ->all();
+
+        $permissionsBefore = Permission::query()
+            ->orderBy('slug')
+            ->pluck('id', 'slug')
+            ->all();
+
+        $rolePermissionCountsBefore = [];
+
+        foreach ($rolesBefore as $roleSlug => $roleId) {
+            $rolePermissionCountsBefore[$roleSlug] = Role::findOrFail($roleId)
+                ->permissions()
+                ->count();
+        }
+
+        $this->seed(RbacSeeder::class);
+
+        $this->assertDatabaseCount('roles', count($rolesBefore));
+        $this->assertDatabaseCount(
+            'permissions',
+            count($permissionsBefore)
+        );
+
+        $rolesAfter = Role::query()
+            ->orderBy('slug')
+            ->pluck('id', 'slug')
+            ->all();
+
+        $permissionsAfter = Permission::query()
+            ->orderBy('slug')
+            ->pluck('id', 'slug')
+            ->all();
+
+        $this->assertSame($rolesBefore, $rolesAfter);
+        $this->assertSame($permissionsBefore, $permissionsAfter);
+
+        foreach ($rolesAfter as $roleSlug => $roleId) {
+            $this->assertSame(
+                $rolePermissionCountsBefore[$roleSlug],
+                Role::findOrFail($roleId)
+                    ->permissions()
+                    ->count()
+            );
+        }
+    }
+
+    public function test_full_specification_access_roles_have_all_specification_permissions(): void
+    {
+        $this->seed(RbacSeeder::class);
+
+        $permissionSlugs = [
+            'specifications.view',
+            'specifications.create',
+            'specifications.update',
+        ];
+
+        foreach ([
+            'super-admin',
+            'admin',
+            'sales',
+        ] as $roleSlug) {
+            $role = Role::where('slug', $roleSlug)
+                ->firstOrFail();
+
+            foreach ($permissionSlugs as $permissionSlug) {
+                $this->assertTrue(
+                    $role->permissions()
+                        ->where('slug', $permissionSlug)
+                        ->exists(),
+                    "{$roleSlug} should have {$permissionSlug}"
+                );
+            }
+        }
+    }
+
+    public function test_view_only_roles_have_view_specification_permission(): void
+    {
+        $this->seed(RbacSeeder::class);
+
+        foreach ([
+            'procurement',
+            'production',
+            'quality-control',
+            'finance',
+            'delivery',
+        ] as $roleSlug) {
+            $role = Role::where('slug', $roleSlug)
+                ->firstOrFail();
+
+            $this->assertTrue(
+                $role->permissions()
+                    ->where('slug', 'specifications.view')
+                    ->exists(),
+                "{$roleSlug} should have specifications.view"
+            );
+
+            $this->assertFalse(
+                $role->permissions()
+                    ->where('slug', 'specifications.create')
+                    ->exists(),
+                "{$roleSlug} should not have specifications.create"
+            );
+
+            $this->assertFalse(
+                $role->permissions()
+                    ->where('slug', 'specifications.update')
+                    ->exists(),
+                "{$roleSlug} should not have specifications.update"
+            );
+        }
+    }
+}

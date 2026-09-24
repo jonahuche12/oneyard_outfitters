@@ -1,0 +1,23 @@
+[90m= [39m[34;4mIlluminate\Support\Collection[39;24m {#8742
+    [34mall[39m: [
+      [32m"[39m[32morganizations.view[39m[32m"[39m,
+      [32m"[39m[32morganizations.create[39m[32m"[39m,
+      [32m"[39m[32morganizations.update[39m[32m"[39m,
+      [32m"[39m[32mcontacts.view[39m[32m"[39m,
+      [32m"[39m[32mcontacts.create[39m[32m"[39m,
+      [32m"[39m[32mcontacts.update[39m[32m"[39m,
+      [32m"[39m[32mrequirements.view[39m[32m"[39m,
+      [32m"[39m[32mrequirements.create[39m[32m"[39m,
+      [32m"[39m[32mrequirements.update[39m[32m"[39m,
+      [32m"[39m[32mquotations.view[39m[32m"[39m,
+      [32m"[39m[32mquotations.create[39m[32m"[39m,
+      [32m"[39m[32mquotations.update[39m[32m"[39m,
+      [32m"[39m[32mquotations.send[39m[32m"[39m,
+      [32m"[39m[32mquotations.cancel[39m[32m"[39m,
+      [32m"[39m[32morders.view[39m[32m"[39m,
+      [32m"[39m[32morders.create[39m[32m"[39m,
+      [32m"[39m[32mfollow-ups.view[39m[32m"[39m,
+      [32m"[39m[32mfollow-ups.create[39m[32m"[39m,
+      [32m"[39m[32mfollow-ups.update[39m[32m"[39m,
+    ],
+  }
