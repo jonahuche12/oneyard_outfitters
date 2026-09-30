@@ -1,7 +1,12 @@
 import $ from 'jquery';
+import './production-plan';
 
 window.$ = $;
 window.jQuery = $;
+
+import './quotations';
+import './order-coordinator';
+import './procurements/photos';
 
 $(function () {
     /*

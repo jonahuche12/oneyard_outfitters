@@ -60,6 +60,36 @@
                 </a>
             @endcan
 
+            {{-- Orders --}}
+            @can('viewAny', App\Models\Order::class)
+                <a
+                    href="{{ route('orders.index') }}"
+                    class="oy-nav-link
+                        {{ request()->routeIs('orders.*') ? 'is-active' : '' }}"
+                >
+                    <span>Orders</span>
+
+                    @if(request()->routeIs('orders.*'))
+                        <span class="text-xs opacity-70">Active</span>
+                    @endif
+                </a>
+            @endcan
+
+            {{-- Procurement --}}
+            @can('viewAny', App\Models\Procurement::class)
+                <a
+                    href="{{ route('procurements.index') }}"
+                    class="oy-nav-link
+                        {{ request()->routeIs('procurements.*') ? 'is-active' : '' }}"
+                >
+                    <span>Procurement</span>
+
+                    @if(request()->routeIs('procurements.*'))
+                        <span class="text-xs opacity-70">Active</span>
+                    @endif
+                </a>
+            @endcan
+
             {{-- Staff --}}
             @can('viewAny', App\Models\User::class)
                 <a

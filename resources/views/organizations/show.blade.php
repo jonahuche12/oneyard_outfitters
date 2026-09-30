@@ -43,7 +43,7 @@
                 @can('update', $organization)
                     <a
                         href="{{ route('organizations.edit', $organization) }}"
-                        class="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                        class="oy-btn oy-btn-secondary"
                     >
                         Edit Organization
                     </a>
@@ -338,7 +338,7 @@
                     @can('viewAny', App\Models\Assessment::class)
                         <a
                             href="{{ route('assessments.index') }}"
-                            class="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                            class="oy-btn oy-btn-secondary"
                         >
                             View All Assessments
                         </a>
@@ -472,7 +472,7 @@
                     @can('viewAny', App\Models\FollowUp::class)
                         <a
                             href="{{ route('follow-ups.index') }}"
-                            class="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                            class="oy-btn oy-btn-secondary"
                         >
                             View All Follow-ups
                         </a>
@@ -593,6 +593,92 @@
             @endif
         </section>
 
+
+        <!-- QUOTATIONS_SECTION -->
+        {{-- Quotations --}}
+        <div class="oy-card mt-6">
+            <div class="oy-card-header">
+                <div>
+                    <h2 class="oy-card-title">Quotations</h2>
+                    <p class="oy-card-description">
+                        Commercial quotations generated for this organization.
+                    </p>
+                </div>
+
+                @can('create', App\Models\Quotation::class)
+                    <a
+                        href="{{ route('quotations.create', ['organization_id' => $organization->id]) }}"
+                        class="oy-btn oy-btn-primary"
+                    >
+                        Create Quotation
+                    </a>
+                @endcan
+            </div>
+
+            <div class="oy-card-body">
+                @if($organization->quotations->isEmpty())
+                    <div class="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+                        No quotations have been generated for this organization yet.
+                    </div>
+                @else
+                    <div class="overflow-x-auto">
+                        <table class="oy-table min-w-[760px]">
+                            <thead>
+                                <tr>
+                                    <th>Quotation</th>
+                                    <th>Date</th>
+                                    <th>Valid Until</th>
+                                    <th>Status</th>
+                                    <th>Total</th>
+                                    <th class="text-right">Action</th>
+                                </tr>
+                            </thead>
+
+                            <tbody>
+                                @foreach($organization->quotations as $quotation)
+                                    <tr>
+                                        <td class="font-medium text-slate-900">
+                                            {{ $quotation->quotation_number }}
+                                        </td>
+
+                                        <td>
+                                            {{ optional($quotation->quotation_date)->format('d M Y') }}
+                                        </td>
+
+                                        <td>
+                                            {{ $quotation->valid_until
+                                                ? $quotation->valid_until->format('d M Y')
+                                                : '—' }}
+                                        </td>
+
+                                        <td>
+                                            <span class="oy-badge oy-badge-secondary">
+                                                {{ ucfirst($quotation->status) }}
+                                            </span>
+                                        </td>
+
+                                        <td class="font-medium">
+                                            ₦{{ number_format((float) $quotation->total, 2) }}
+                                        </td>
+
+                                        <td class="text-right">
+                                            @can('view', $quotation)
+                                                <a
+                                                    href="{{ route('quotations.show', $quotation) }}"
+                                                    class="oy-btn oy-btn-secondary oy-btn-sm"
+                                                >
+                                                    View
+                                                </a>
+                                            @endcan
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                @endif
+            </div>
+        </div>
 
         <!-- PRODUCT_SPECIFICATIONS_SECTION -->
         {{-- Product Specifications --}}
@@ -771,7 +857,16 @@
                 </p>
 
                 <div class="mt-5 flex flex-wrap gap-3">
-                    @can('export', $organization)
+                    @can('create', App\Models\Quotation::class)
+    <a
+        href="{{ route('quotations.create', ['organization_id' => $organization->id]) }}"
+        class="oy-btn oy-btn-primary"
+    >
+        Create Quotation
+    </a>
+@endcan
+
+@can('export', $organization)
                         <a
                             href="{{ route('organizations.export-intelligence', $organization) }}"
                             class="oy-btn oy-btn-secondary"

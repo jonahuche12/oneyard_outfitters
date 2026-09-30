@@ -2253,3 +2253,1129 @@ Product Specifications are now considered production-complete.
 Begin Phase 5 — Commercial Operations:
 - Quotations
 - Orders
+
+## 2026-09-24 — Quotation Resource Routing Verification
+
+### Completed
+- Registered `QuotationController` as the resource controller for quotations.
+- Confirmed the six required routes are registered:
+  - quotations.index
+  - quotations.create
+  - quotations.store
+  - quotations.show
+  - quotations.edit
+  - quotations.update
+- Confirmed Blade templates compile successfully with `php artisan view:cache`.
+- Confirmed `git diff --check` reports no whitespace errors.
+
+### Status
+Quotation HTTP routing foundation verified.
+
+### Next
+Build the quotation creation interface and server-side quotation item workflow.
+
+## 2026-09-24 — Quotation Resource Routing Verification
+
+### Completed
+- Registered `QuotationController` as the resource controller for quotations.
+- Confirmed the six required routes are registered:
+  - quotations.index
+  - quotations.create
+  - quotations.store
+  - quotations.show
+  - quotations.edit
+  - quotations.update
+- Confirmed Blade templates compile successfully with `php artisan view:cache`.
+- Confirmed `git diff --check` reports no whitespace errors.
+
+### Status
+Quotation HTTP routing foundation verified.
+
+### Next
+Build the quotation creation interface and server-side quotation item workflow.
+
+## 2026-09-24 — Quotation Foundation Verification
+
+- Corrected `QuotationController` and `QuotationItemController` to use the project's established `Gate::authorize()` authorization convention.
+- Verified quotation authorization and commercial foundation with `QuotationTest`.
+- Result: **6 tests passed, 26 assertions**.
+- Verified behaviors:
+  - authorized user can create a draft quotation
+  - users without quotation creation permission are denied
+  - quotation contacts must belong to the selected organization
+  - product specifications must belong to the quotation organization
+  - product specification values are snapshotted into quotation items
+  - quotation totals are calculated server-side
+  - sent quotations cannot be updated
+- Status: **PASSED**
+- Next checkpoint: complete quotation lifecycle/UI verification and prepare the quotation stage for commit.
+
+## 2026-09-24 — Quotation Item Calculation Regression Correction
+
+- Removed explicit two-decimal rounding from quotation item `line_total` calculation during item creation and update.
+- Removed the dedicated rounding-specific feature test because this behavior is not required by the current quotation specification.
+- Re-ran the complete `QuotationTest` feature suite.
+- Result: **7 tests passed, 29 assertions**.
+- Verified remaining quotation behaviors:
+  - authorized users can create draft quotations
+  - users without quotation creation permission are denied
+  - quotation contacts must belong to the selected organization
+  - product specifications must belong to the quotation organization
+  - product specification values are snapshotted into quotation items
+  - quotation totals are calculated server-side
+  - inactive organizations cannot receive new quotations
+  - sent quotations cannot be updated
+- Status: **PASSED**
+- Next checkpoint: complete quotation draft UI/lifecycle verification.
+
+## 2026-09-24 — Quotation Commercial Lifecycle Checkpoint
+
+- Completed quotation draft item workflow:
+  - draft quotation items can be edited
+  - draft quotation items can be removed
+  - quotation totals recalculate after item changes
+- Completed quotation lifecycle actions:
+  - draft → sent
+  - draft → cancelled
+  - sent → cancelled
+- Lifecycle actions are permission-gated using existing quotation permissions.
+- Sent quotations remain protected from normal quotation editing.
+- Added dedicated send and cancel controller actions and routes.
+- Added status-aware lifecycle controls to the quotation show interface.
+- Feature verification result: **12 tests passed, 52 assertions**.
+- Status: **PASSED**
+- Next stage: proceed from Quotations into **Orders**, using accepted quotations as the commercial handoff.
+
+
+### 2026-09-25 — Quotation Creation Workflow Corrected and Verified
+
+**Phase:** Phase 5 — Commercial Operations
+
+**IMPLEMENTED**
+- Corrected quotation creation to operate from an Organization context.
+- Organization is preselected and displayed as read-only during quotation creation.
+- Removed the previous organization-selection/AJAX flow from the quotation creation form.
+- Existing Product Specifications for the selected Organization are displayed directly.
+- Staff can select Product Specifications using checkboxes.
+- Staff can enter the expected quantity for each selected specification.
+- Quotation creation no longer uses Product Specification `unit_price` as the quotation price.
+- Newly created quotation items start with:
+  - `unit_price = 0`
+  - `line_total = 0`
+- Product Specification descriptive information is snapshotted into quotation items.
+- Actual quotation pricing remains editable from the quotation draft after creation.
+- Preserved the existing quotation item pricing and lifecycle functionality.
+- Updated quotation feature tests to reflect the corrected commercial workflow.
+
+**VERIFIED**
+- `php artisan test tests/Feature/QuotationTest.php`
+- Result: **12 tests passed / 64 assertions / 0 failures**
+- Verified draft quotation creation with selected Product Specifications and quantities.
+- Verified initial quotation item pricing is zero until commercial pricing is entered.
+- Verified invalid contact/organization relationships remain rejected.
+- Verified Product Specification organization ownership remains enforced.
+- Verified existing quotation item update/removal and quotation lifecycle tests continue to pass.
+
+**BUSINESS FLOW NOW VERIFIED**
+Organization Account
+→ Create Quotation
+→ Organization fixed/read-only
+→ Select saved Product Specifications
+→ Enter required quantities
+→ Create Draft Quotation
+→ Enter quoted prices
+→ Calculate quotation totals
+→ Send quotation
+
+**NEXT**
+- Perform browser verification of the corrected quotation creation workflow.
+- After quotation creation is fully verified in the browser, proceed to the next Commercial Operations unit.
+- Orders remain paused until quotation creation is completely verified.
+
+### 2026-09-25 — Quotation-to-Order Customer Workflow Defined
+**Phase:** Phase 5 — Commercial Operations
+
+**PLANNED WORKFLOW**
+- Organization account will provide access to all quotations previously generated for that organization.
+- Staff can send a quotation to one or multiple active contacts belonging to the organization.
+- Each quotation recipient will have a separate recipient record with a secure access token and response/delivery history.
+- Email will contain a secure link to a customer-facing quotation page on the Oneyard platform.
+- Contact can review quotation details and either accept or reject it.
+- Rejection will require feedback explaining why the quotation was rejected so staff can make informed adjustments.
+- Accepted quotations will present payment options of 30%, 60%, or 80% of the quotation total.
+- Payment amounts will be calculated server-side from the quotation total.
+- Paystack will be used to collect and verify payment.
+- Payment will only be recorded as successful after trusted Paystack verification/webhook processing.
+- A verified initial payment will create an Order linked to the accepted Quotation and Organization.
+- Orders will retain total, amount paid, and outstanding balance so partial payments remain meaningful.
+- Rejected quotations will remain historical records; revisions should create a new quotation rather than overwrite the rejected quotation.
+
+**DOMAIN FLOW**
+Organization → Product Specifications → Quotation → Send to Contact(s) → Customer Review → Accept/Reject → If Accepted: 30% / 60% / 80% Payment → Paystack Verification → Order Created
+
+**PLANNED PRODUCTION UNITS**
+1. Organization quotation history.
+2. Send quotation to one or multiple organization contacts.
+3. Customer-facing secure quotation portal with accept/reject and rejection feedback.
+4. Paystack payment selection, initialization, verification, and payment records.
+5. Verified-payment-to-Order creation with quotation linkage and balance tracking.
+6. Browser and end-to-end verification.
+
+**STATUS**
+- Workflow defined and approved for production sequencing.
+- No implementation or verification is claimed by this entry.
+- Orders remain paused until the quotation workflow is completed and verified.
+
+## 2026-09-26 — Quotation Recipient and Public Response Workflow Verified
+
+**Phase:** Phase 5 — Commercial Operations
+
+### IMPLEMENTED
+- Added quotation recipient records for sending quotations to selected organization contacts.
+- Added secure, unique recipient access tokens.
+- Added quotation invitation email delivery through the configured mail system.
+- Added recipient delivery, view, and response tracking.
+- Added validation preventing quotations from being sent when a selected contact has no email address.
+- Added public customer-facing quotation access without staff authentication.
+- Added public quotation acceptance workflow.
+- Added public quotation rejection workflow with mandatory rejection feedback.
+- Added protection against duplicate recipient responses.
+- Added quotation status synchronization for multiple recipients:
+  - quotation becomes `accepted` when all recipients accept;
+  - quotation becomes `rejected` when all recipients reject;
+  - quotation remains `sent` when responses are mixed or still pending.
+- Added a dedicated public quotation layout that does not depend on an authenticated staff user.
+
+### VERIFIED
+Quotation feature regression suite:
+
+```text
+php artisan test tests/Feature/QuotationTest.php
+
+20 passed (104 assertions)
+0 failures
+
+## 2026-09-26 — Quotation Draft Pricing and Authorization Corrections Verified
+
+**Phase:** Phase 5 — Commercial Operations
+
+### IMPLEMENTED
+- Corrected quotation draft creation so Product Specification `unit_price` is not copied into the quotation's commercial price.
+- New quotation items now start with `unit_price = 0` and `line_total = 0`.
+- Product Specification descriptive information continues to be snapshotted into quotation items.
+- Commercial quotation pricing remains independently editable after draft creation.
+- Changed quotation recipient sending authorization from `quotations.update` to the dedicated `quotations.send` permission.
+- Removed the obsolete direct "Send Quotation" lifecycle action from the quotation lifecycle partial; sending is performed through the selected-contact workflow.
+- Updated quotation feature tests to reflect the corrected zero-price draft behavior and `quotations.send` authorization.
+- Updated RBAC regression expectations to include the implemented `organizations.export` permission.
+
+### VERIFIED
+
+Focused quotation regression:
+
+php artisan test tests/Feature/QuotationTest.php
+
+20 passed (104 assertions)
+
+Focused RBAC regression:
+
+php artisan test tests/Feature/RbacTest.php
+
+15 passed (117 assertions)
+
+Full application regression:
+
+php artisan test
+
+206 passed (621 assertions)
+Duration: 10.06s
+0 failures
+
+### CURRENT QUOTATION STATUS
+- Quotation creation backend and tests are green.
+- Draft commercial pricing is correctly separated from Product Specification pricing.
+- Quotation recipient authorization is aligned with `quotations.send`.
+- Public quotation acceptance/rejection workflow remains verified.
+- Full application regression remains green.
+
+### NEXT
+- Perform browser verification of the complete quotation workflow:
+  Organization Account → Create Quotation → Select Product Specifications → Enter Quantities → Create Draft → Enter Commercial Prices → Calculate Totals → Select Contacts → Send → Customer Review → Accept/Reject.
+- Do not begin Orders or Paystack implementation until quotation browser verification is completed.
+
+## 2026-09-27 — Quotation Payment Flow Direction
+
+### IMPLEMENTED / VERIFIED CONTEXT
+- Quotation recipient payment percentage selection is implemented and verified.
+- Supported initial payment options are 30%, 60%, and 80%.
+- The selected payment percentage and calculated payment amount are persisted on the quotation recipient.
+- `amount_paid` is initialized at `0`.
+
+### NEW BUSINESS FLOW DECISION
+The quotation recipient must **not** have the quotation treated as commercially completed merely by clicking `Confirm & Continue`.
+
+The intended flow is now:
+
+1. Contact selects the initial payment percentage.
+2. Contact clicks `Confirm & Continue`.
+3. The system initializes a Paystack transaction for the selected payment amount.
+4. The contact is redirected to Paystack to complete payment.
+5. The system independently verifies the payment with Paystack.
+6. Only after successful payment verification does the system continue the quotation-to-order workflow.
+7. The quotation payment/acceptance state is recorded.
+8. An Order is created from the confirmed quotation.
+9. The confirmed payment is recorded against the appropriate business records.
+10. Notifications are sent to:
+    - the contact/customer;
+    - the staff member who created the quotation;
+    - the Super Admin.
+11. The confirmed Order then becomes available for the Production workflow.
+
+### SECURITY / BUSINESS RULE
+Returning from Paystack must **not** by itself be treated as proof of payment. Server-side payment verification is required before the quotation can proceed to Order and Production.
+
+### IMPLEMENTATION BOUNDARY
+The Paystack integration, payment confirmation handling, Order creation, notification workflow, and Production transition have **not yet been implemented** in this milestone.
+
+This entry records the approved workflow direction before implementation begins.
+
+
+## 2026-09-27 — Paystack Payment Verification Progress
+
+### IMPLEMENTED
+- Added Paystack payment transaction persistence through `PaymentTransaction`.
+- Implemented server-side Paystack transaction initialization.
+- Implemented Paystack callback verification against the stored transaction reference.
+- Successful Paystack responses are checked for successful gateway status and matching payment amount before acceptance.
+- Failed or mismatched payments remain unaccepted.
+- Recipient payment fields are persisted for the selected 30%, 60%, or 80% initial payment.
+- Repeated callback handling prevents an already-paid transaction from being processed again.
+
+### VERIFIED
+- Paystack transaction initialization tests pass.
+- Payment percentage validation tests pass.
+- Failed Paystack payment handling passes.
+- Wrong payment amount handling passes.
+- Quotation recipient acceptance is still intentionally blocked until payment is independently confirmed.
+
+### CURRENT VERIFICATION STATUS
+- `tests/Feature/QuotationTest.php`: 24 passed, 2 failed, 146 assertions.
+- The remaining failures are the successful payment verification and repeated callback tests.
+- Test fixtures now correctly represent Paystack amounts in kobo.
+- The remaining issue is the application's payment amount comparison during verification and is being investigated.
+- No Order creation, business payment record, notifications, or Production transition has been implemented yet.
+
+### NEXT STEP
+- Inspect and correct the payment amount comparison.
+- Re-run the quotation feature suite.
+- Only after the verification suite passes, proceed to the Order/payment fulfillment stage.
+
+## 2026-09-27 — Paystack Payment Verification VERIFIED
+
+### VERIFIED
+- `tests/Feature/QuotationTest.php` now passes completely.
+- Result: **26 passed / 157 assertions / 0 failures**.
+- Successful Paystack verification marks the `PaymentTransaction` as paid.
+- Successful verified payment accepts the quotation recipient.
+- Verified payment amount must match the stored transaction amount.
+- Failed Paystack transactions remain unaccepted.
+- Incorrect payment amounts remain unaccepted.
+- Repeated Paystack callbacks do not process the same transaction twice.
+- Payment amount comparison now avoids strict floating-point equality issues.
+
+### FULFILLMENT GATE
+Paystack initialization and server-side payment verification are now verified.
+
+The next implementation unit is the post-payment fulfillment flow:
+
+1. Create the business `Payment` record from the verified gateway transaction.
+2. Create an `Order` from the accepted quotation.
+3. Make fulfillment idempotent so repeated callbacks cannot create duplicate payments or orders.
+4. Keep the entire payment-record/order transition transactional.
+5. Only after successful fulfillment will notifications and Production availability be implemented.
+
+### NOT YET IMPLEMENTED
+- Business Payment model/table.
+- Order model/table.
+- Payment recording from verified Paystack transactions.
+- Order creation from accepted quotations.
+- Fulfillment transaction/idempotency.
+- Customer/staff notifications.
+- Production transition.
+
+2026-09-27 — Paystack → Payment → Order Fulfillment VERIFIED
+
+IMPLEMENTED
+- Wired successful Paystack payment verification into business fulfillment.
+- First successfully verified payment is sufficient to accept a quotation.
+- Multi-recipient quotations can become accepted while other recipients remain pending.
+- Created business Payment from the verified gateway transaction.
+- Created one Order per quotation.
+- Generated immutable server-based order number ORD-######.
+- Snapshotted quotation items into Order Items.
+- Preserved transactional fulfillment and duplicate-order protection.
+- Preserved payment amount verification against the recipient's expected payment.
+- Repeated fulfillment does not create duplicate Payment or Order records.
+
+VERIFIED
+- tests/Feature/QuotationTest.php: 26 passed / 164 assertions / 0 failures.
+- tests/Feature/QuotationFulfillmentTest.php: 6 passed / 20 assertions / 0 failures.
+- Combined regression: 32 passed / 184 assertions / 0 failures.
+- Verified multi-recipient payment flow confirms that one successful payment accepts the quotation and creates the business Payment + Order while another recipient remains pending.
+
+BUSINESS RULE
+- The first successfully verified payment is sufficient to accept the quotation.
+- Additional recipients do not need to respond before fulfillment begins.
+
+NOT YET IMPLEMENTED
+- Payment/order/customer notifications.
+- Production workflow transition.
+- Production records and production tracking.
+
+NEXT
+- Implement fulfillment notifications as the next logical milestone.
+
+
+
+## 2026-09-27 — Payment Fulfillment Notifications VERIFIED
+
+### IMPLEMENTED
+- Added customer `PaymentConfirmed` Mailable and email view.
+- Added internal `OrderCreated` Mailable and email view.
+- Fulfillment now registers notifications with `DB::afterCommit()`.
+- Customer notification is sent to the quotation recipient who completed the verified payment.
+- Internal order notification is sent only to active staff with `orders.view`.
+- Replaced per-user permission checks with an RBAC relationship query.
+- Existing fulfillment idempotency prevents duplicate notifications.
+
+### VERIFIED
+- `tests/Feature/QuotationFulfillmentTest.php`: 8 passed / 28 assertions / 0 failures.
+- `tests/Feature/QuotationTest.php` + `tests/Feature/QuotationFulfillmentTest.php`: 34 passed / 194 assertions / 0 failures.
+- Verified customer payment confirmation notification.
+- Verified authorized internal staff notification.
+- Verified unauthorized and inactive staff are excluded.
+- Verified repeated fulfillment does not send duplicate notifications.
+
+### NEXT
+- Continue fulfillment workflow toward production processing.
+
+
+## 2026-09-27 — Queued Payment Notifications VERIFIED
+### IMPLEMENTED
+- Changed post-payment customer and internal order notifications from synchronous mail delivery to queued mail delivery.
+- Payment and Order creation remain inside the fulfillment transaction.
+- Notifications are queued through `DB::afterCommit()` only after the payment/order transaction commits.
+- Customer payment confirmation is queued to the verified payment recipient.
+- Internal order notifications are queued only for active staff with `orders.view`.
+
+### VERIFIED
+- `PaymentConfirmed` implements `ShouldQueue`.
+- `OrderCreated` implements `ShouldQueue`.
+- Fulfillment uses `Mail::queue()` rather than synchronous `Mail::send()`.
+- The Paystack callback can return the quotation-page redirect without waiting for SMTP delivery.
+- Existing queue infrastructure uses the database queue connection.
+
+### DECISION
+- Do not expand the notification test suite further at this stage; continue production with the existing fulfillment coverage.
+
+### NEXT
+- Begin Order Management production work.
+
+## 2026-09-27 — Order Management Foundation and Fulfillment State CHECKPOINT
+
+### IMPLEMENTED
+- Added Order policy with `orders.view`, `orders.create`, `orders.update`, and `orders.approve` authorization rules.
+- Added Order listing and Order detail controllers.
+- Added Order index and show views using the existing Oneyard UI design.
+- Added Order approval route and controller action for pending orders.
+- Added permission-aware Orders navigation in the application sidebar.
+- Added a permission-aware Orders entry on the dashboard.
+- Orders are created automatically by verified quotation payment fulfillment rather than through manual Order creation.
+- Order records retain immutable quotation item snapshots for fulfillment.
+
+### VERIFIED
+- `php artisan route:list --path=orders` shows:
+  - `GET|HEAD orders`
+  - `GET|HEAD orders/{order}`
+  - `POST orders/{order}/approve`
+- `php artisan view:clear` completed successfully.
+- `php artisan test --filter=Order` passed: 3 tests / 17 assertions / 0 failures.
+- `php artisan test tests/Feature/QuotationFulfillmentTest.php` passed: 8 tests / 30 assertions / 0 failures.
+- Verified payment creates the business Payment and Order.
+- Verified quotation items are snapshotted into Order items.
+- Verified repeated fulfillment does not create duplicate Payment or Order.
+- Verified unpaid transactions, unaccepted quotations, and payment amount mismatches cannot create fulfillment records.
+- Verified customer and authorized staff fulfillment notifications remain covered.
+- Verified repeated fulfillment does not send duplicate notifications.
+
+### CURRENT BUSINESS STATE
+- Orders currently begin in `pending` status after verified quotation payment.
+- Authorized staff can approve a pending Order.
+- The intended operational flow is:
+  `pending → approved → in_production → ready → delivered`.
+- Initial verified payment is recorded against the quotation/payment transaction, but full Order payment is not considered complete merely because the initial gateway transaction succeeded.
+- Remaining balance collection and delivery completion still need to be implemented as part of the fulfillment workflow.
+
+### NEXT
+- Add Expected Delivery Days to quotation creation and editing.
+- Display the expected delivery period on internal and customer-facing quotations.
+- Snapshot the quotation delivery period into the Order when fulfillment creates the Order.
+- Add expected delivery date information to the Order.
+- Allow appropriately authorized staff to revise the Order delivery estimate during production while preserving the original quotation history.
+- Continue into Order lifecycle and Production Management.
+
+
+## 2026-09-27 — Expected Delivery Days and Quotation Email Failure Handling CHECKPOINT
+
+### IMPLEMENTED
+- Added required Expected Delivery Days to quotation creation and editing.
+- Added Expected Delivery information to internal and customer-facing quotation views.
+- Added `expected_delivery_days` and `expected_delivery_date` to Orders.
+- Order fulfillment snapshots the quotation delivery estimate when the Order is created.
+- Order expected delivery date is calculated from the Order date using calendar days.
+- Added Expected Delivery information to the Order detail workflow.
+- Added safe handling for quotation email SMTP transport failures.
+- Failed quotation email delivery is logged and does not mark the recipient as sent.
+- Failed quotation email delivery does not falsely mark the quotation as sent.
+- Added regression coverage for SMTP transport failure handling.
+
+### VERIFIED
+- `php artisan test tests/Feature/QuotationTest.php` passed: 27 tests / 170 assertions / 0 failures.
+- `php artisan test tests/Feature/QuotationFulfillmentTest.php` passed: 8 tests / 30 assertions / 0 failures.
+- Verified quotation delivery information is available to internal and customer-facing quotation views.
+- Verified Order fulfillment snapshots quotation delivery days and calculates the expected delivery date.
+- Verified quotation email transport failures return a normal application error instead of exposing the Symfony exception page.
+- Verified failed recipients retain a null `sent_at` value.
+- Verified failed email delivery does not change a draft quotation to sent.
+
+### CURRENT BUSINESS STATE
+- Quotations carry an expected delivery period in calendar days.
+- Orders snapshot the quotation delivery estimate at fulfillment.
+- The Order operational delivery estimate can subsequently be revised without changing the historical quotation.
+- Customer quotation email failures are handled as application errors and logged for troubleshooting.
+
+### NEXT
+- Refine the Order delivery display to show the remaining time as a badge, for example `15 days to delivery`.
+- Use a warmer/urgent badge state when fewer than 5 days remain.
+- Continue with authorized Order delivery-estimate updates.
+
+## 2026-09-27 — Order Delivery Estimate Update — VERIFIED
+
+### IMPLEMENTED
+- Added `expected_delivery_days` and `expected_delivery_date` support to Orders.
+- Added authorized Order edit/update flow for delivery estimates.
+- Added `orders.update` policy authorization.
+- Added validation requiring delivery days between 1 and 365.
+- Added validation requiring a valid expected delivery date.
+- Added permission-aware delivery-estimate editing UI.
+- Preserved all existing Order fields and lifecycle status during estimate updates.
+
+### VERIFIED
+- Authorized staff can update an Order delivery estimate.
+- Staff without `orders.update` permission are denied with HTTP 403.
+- Invalid delivery-day values are rejected.
+- Invalid delivery dates are rejected.
+- Existing Order status, financial values, terms, and notes remain unchanged.
+- Secure public Order tracking tests remain passing.
+- `tests/Feature/OrderTest.php`: 17 passed / 88 assertions.
+- Full regression: 238 passed / 804 assertions / 0 failures.
+
+### STATUS
+Order delivery-estimate update is implemented and regression-verified.
+
+## 2026-09-28 — Order Coordination & Production Plan Design — DESIGN APPROVED
+
+### DESIGN DECISIONS
+
+The approved Order enters production when an authorized staff member assigns the Order to another active staff member who will become the Order Coordinator for that specific Order.
+
+- Order coordination is assignment-based, not a permanent staff role.
+- A staff member must be authorized to assign Orders through the appropriate Order permission.
+- Once assigned, the selected staff member becomes the Order Coordinator for that Order.
+- The Order Coordinator is responsible for organizing and monitoring execution of the Order.
+- The Order Coordinator can create the Production Plan for the assigned Order.
+- The Production Plan consists of predefined production activities selected for that particular Order.
+- Production activities are selected using checkboxes from a controlled system activity list.
+- Quality Control is mandatory for every production plan and cannot be removed.
+- Delivery is mandatory for every production plan and cannot be removed.
+- Other activities are selected according to the Order, such as Material Purchase, Material Preparation, Cutting, Sewing, Embroidery, Printing, Branding, Assembly, Finishing and Packaging.
+- Production activities and Procurement Requirements are separate concepts.
+- An activity such as Material Purchase may exist in the Production Plan without itself being a Procurement Requirement.
+- A Procurement Requirement is created separately when a specific material or item must be sourced.
+- Procurement Requirements are therefore subordinate to the operational need identified by the Order Coordinator, but are not the same thing as production activities.
+- The Order Coordinator can create Procurement Requirements for materials/items required by the Production Plan.
+- Procurement staff with procurement permissions can independently source against the same Procurement Requirement.
+- Multiple sourcing offers can therefore exist for one Procurement Requirement.
+- The Procurement Center remains a separate operational domain from Production Activities.
+- The coordinator organizes the complete Order while specialized staff perform work according to their permissions.
+- Procurement staff manage sourcing activities and offers.
+- Production staff perform production activities.
+- Quality Control staff perform required quality inspection.
+- Delivery staff perform delivery operations.
+- The coordinator monitors and coordinates these activities rather than becoming the sole person responsible for performing them.
+- The system is designed so the Order does not depend on one person performing every operational task.
+
+### PRODUCTION PLAN STRUCTURE
+
+Approved Order
+→ Assign Order Coordinator
+→ Create Production Plan
+→ Select Required Production Activities
+→ Create Procurement Requirements where required
+→ Coordinate Production
+→ Quality Control
+→ Delivery
+
+### REQUIRED ACTIVITIES
+
+Every Production Plan must contain:
+
+- Quality Control
+- Delivery
+
+These activities are mandatory and cannot be deselected.
+
+### EXAMPLE ACTIVITIES
+
+The controlled activity list may include:
+
+- Material Purchase
+- Material Preparation
+- Material Receipt
+- Cutting
+- Sewing
+- Embroidery
+- Printing
+- Branding
+- Assembly
+- Finishing
+- Packaging
+- Quality Control
+- Delivery
+
+The final activity list will be implemented as controlled system data rather than allowing arbitrary activity names to be entered for every Order.
+
+### IMPORTANT DOMAIN SEPARATION
+
+Production Activity:
+"What needs to happen to complete this Order?"
+
+Procurement Requirement:
+"What specific material/item must be sourced, and under what sourcing and financial limits?"
+
+A Production Activity may lead to one or more Procurement Requirements, but the two records must remain separate.
+
+### STATUS
+
+Order Coordination and Production Plan architecture approved for implementation.
+
+This milestone records the approved design only. Implementation and tests are not yet verified.
+
+
+## 2026-09-28 — Production Coordination & Production Plan — VERIFIED
+
+### IMPLEMENTED
+- Added production coordinator assignment workflow for approved Orders.
+- Added assignment history with reassignment support; previous assignments are ended rather than overwritten.
+- Enforced one active coordinator assignment per Order.
+- Coordinator candidates must be active staff with `production.manage`.
+- `orders.assign` controls who may assign or reassign coordinators.
+- First assignment of an approved Order moves it to `in_production`.
+- Added data-driven Production Activities and Production Plan creation.
+- Required Production Activities must always be included; current required activities are Quality Control and Delivery.
+- Inactive Production Activities cannot be selected.
+- Production Plans record the current coordinator.
+- Duplicate Production Plans are prevented.
+- Only the current Order coordinator with `production.manage` may create a Production Plan.
+- Added `coordinator_id` to `production_plans` through a corrective migration after identifying the schema/model mismatch.
+- Procurement remains a Production Activity while the detailed Procurement Center workflow remains a separate process.
+
+### VERIFIED
+- `tests/Feature/OrderProductionPlanTest.php`: **13 passed / 51 assertions**
+- Full regression: **251 passed / 856 assertions / 0 failures**
+- Production coordination and Production Plan creation are verified without regression to previously completed modules.
+
+
+## 2026-09-28 — Production Coordination & Production Plan Foundation — VERIFIED
+
+### IMPLEMENTED
+- Added production coordinator assignment workflow for approved Orders.
+- Added coordinator reassignment support while preserving previous assignment history.
+- Previous coordinator assignments are ended rather than overwritten.
+- Enforced one active coordinator assignment per Order.
+- Coordinator candidates must be active staff with `production.manage`.
+- `orders.assign` controls who may assign or reassign coordinators.
+- First coordinator assignment moves an approved Order to `in_production`.
+- Added data-driven Production Activities.
+- Added Production Plan creation for the current Order coordinator.
+- Quality Control and Delivery are required Production Activities.
+- Inactive Production Activities cannot be selected.
+- Production Plans record the coordinating staff member.
+- Duplicate Production Plans are prevented.
+- Procurement remains a Production Activity while the detailed Procurement Center workflow remains a separate process.
+- Added production activity execution with pending → started → completed state transitions.
+- Only the current Order coordinator with `production.manage` may execute Production Plan activities.
+- Invalid, repeated, cross-order, and out-of-production activity execution is rejected.
+
+### VERIFIED
+- Production coordination and Production Plan creation focused tests passed.
+- Production Activity execution focused tests passed: 19 passed / 87 assertions / 0 failures.
+- Previous full regression passed: 251 passed / 856 assertions / 0 failures.
+
+### CURRENT CORRECTION
+- Database verification confirmed coordinator assignment records are being created correctly and active assignments retain `ended_at = null`.
+- The `Order::currentAssignment()` relationship is currently being corrected so the active coordinator is resolved correctly by the Order view.
+- This display/relationship correction is not yet marked as verified.
+
+### NEXT
+- Verify the corrected `currentAssignment()` relationship.
+- Complete the Production Plan creation interface using a modal without changing the existing backend workflow.
+
+## 2026-09-28 — Production Activity Completion Evidence — VERIFIED
+
+### IMPLEMENTED
+- Reused the existing `ProductionPlanActivityEvidence` model and `production_plan_activity_evidence` table.
+- Completed the existing evidence migration with activity and uploader foreign keys.
+- Added MySQL-safe explicit foreign-key names for the evidence table.
+- Added the existing `ProductionPlanActivity::evidences()` relationship verification.
+- Updated Production Activity completion to require completion evidence.
+- Supported JPG, JPEG, PNG, WEBP and PDF evidence files.
+- Limited evidence uploads to 10 MB.
+- Stored production evidence on the private local filesystem disk.
+- Recorded evidence uploader, original filename, MIME type, file size and optional note.
+- Kept the existing production state transition requirement: started → completed.
+- Evidence creation and activity completion occur within the same database transaction.
+- Uploaded evidence is removed if the completion transaction fails.
+- Existing completion tests were updated to submit and verify evidence.
+
+### VERIFIED
+- Evidence migration completed successfully.
+- Production Plan focused suite passed: 19 passed / 92 assertions / 0 failures.
+- Evidence persistence, metadata and private file storage are covered by the focused test suite.
+
+### NEXT
+- Production Plan execution interface:
+  - Collapse Production Plan activities by default.
+  - Add expand/collapse chevron control.
+  - Add activity completion toggle.
+  - Open completion confirmation/evidence modal before completion.
+  - Allow coordinator to upload evidence and add a completion note.
+  - Preserve completed activity state in the interface.
+  - Restrict unmarking to Admin and Super Admin in the next execution unit.
+
+## 2026-09-28 — Production Activity Unmark Modal Flow — IMPLEMENTED
+
+### IMPLEMENTED
+- Replaced the legacy browser `window.confirm()` unmark flow.
+- Reused the existing completed-activity toggle icon as the Admin/Super Admin unmark trigger.
+- Wired the completed toggle to the dedicated Production Unmark modal.
+- Added AJAX submission for the unmark modal.
+- Preserved the optional unmark reason/note field in the submitted request.
+- Added modal Cancel and backdrop close behavior.
+- Added Escape-key handling for the unmark modal.
+- Restored page scrolling and focus state when the modal closes.
+- Updated the activity card immediately after successful unmarking.
+- Updated production progress counters after unmarking.
+- Preserved existing completion evidence behavior.
+- Kept the existing backend authorization and state-transition rules unchanged.
+
+### VERIFIED
+- Not yet browser-verified.
+- Not yet recorded as a production regression milestone.
+
+### NEXT
+- Build the frontend assets.
+- Browser-verify Admin/Super Admin unmark flow.
+- Verify Coordinator cannot access the unmark action.
+- Verify activity returns from Completed to In Progress without removing existing evidence.
+- Verify modal closing restores scrolling and page interaction.
+- Run the focused Production Plan test suite and full regression after frontend verification.
+- Decide separately whether unmark reasons should be persisted as historical activity records.
+
+
+## 2026-09-28 — Production Activity Unmark Modal Flow — VERIFIED
+
+### IMPLEMENTED
+- Replaced the legacy browser `window.confirm()` unmark flow.
+- Reused the existing completed-activity toggle icon as the Admin/Super Admin unmark trigger.
+- Wired the completed toggle to the dedicated Production Unmark modal.
+- Added AJAX submission for the unmark modal.
+- Preserved the optional unmark reason/note field in the submitted request.
+- Added modal Cancel and backdrop close behavior.
+- Added Escape-key handling for the unmark modal.
+- Restored page scrolling and focus state when the modal closes.
+- Updated the activity card immediately after successful unmarking.
+- Updated production progress counters after unmarking.
+- Preserved existing completion evidence.
+- Kept the backend authorization and state-transition rules unchanged.
+
+### VERIFIED
+- Focused unmark/production-plan tests passed: 27 tests / 112 assertions / 0 failures.
+- Browser verification passed.
+- Admin/Super Admin can open the unmark modal from a completed activity.
+- Coordinator does not receive the unmark action.
+- Completed activity returns to In Progress after confirmation.
+- Existing completion evidence remains preserved.
+- Modal close behavior restores normal page interaction.
+
+### DECISION
+- Unmark reasons will not be converted into a separate historical activity-log system at this stage.
+- Procurement is the next production unit.
+
+### NEXT
+- Begin Procurement Center foundation.
+- Support both order-linked and independent procurement.
+- Allow Order Coordinators to create/update procurement requirements for orders they coordinate.
+- Allow Admin/Super Admin to create/update both order-linked and independent procurement.
+- Support Product Specification Artifact references and new procurement-specific uploads.
+- Support procurement units such as Yard, Piece, Meter, etc.
+- Add maximum unit price.
+- Add procurement staff offers/bids against open procurement listings.
+
+## 2026-09-29 — Procurement Foundation & Authorization Milestone
+
+### STATUS: IMPLEMENTED + VERIFIED
+
+### Procurement Foundation
+Implemented the initial Procurement Center domain foundation.
+
+Procurement architecture supports two procurement sources:
+
+1. Order-linked procurement
+   - `order_id` references an existing order.
+   - Production coordinators can manage procurement requirements for orders currently assigned to them.
+   - Procurement requirements may reference existing Product Specification artifacts.
+
+2. Independent procurement
+   - `order_id` is nullable.
+   - Used for general materials, stock, packaging, consumables, replacement materials, and other procurement needs not tied to a specific order.
+   - Creation and management are restricted to Admin and Super Admin staff with `procurement.manage`.
+
+### Procurement Tables
+Implemented and migrated:
+
+- `procurements`
+- `procurement_attachments`
+- `procurement_offers`
+
+`procurements` includes:
+- order linkage
+- creator/updater tracking
+- item name and description
+- quantity
+- unit
+- maximum unit price
+- required-by date
+- offer deadline
+- priority
+- status
+- notes
+- timestamps
+- soft deletes
+
+`procurement_attachments` supports:
+- existing Product Specification artifact references
+- new procurement-specific uploaded file references
+- uploader tracking
+- original filename
+- MIME type
+- file size
+- notes
+
+`procurement_offers` supports:
+- submitting staff member
+- quantity
+- unit price
+- calculated total price
+- offer status
+- submission timestamp
+- notes
+
+### Models
+Implemented:
+- `Procurement`
+- `ProcurementAttachment`
+- `ProcurementOffer`
+
+Relationships added between:
+- Order → procurements
+- User → procurementOffers
+- Procurement → order
+- Procurement → creator/updater
+- Procurement → attachments
+- Procurement → offers
+- ProcurementAttachment → ProductSpecificationArtifact
+- ProductSpecificationArtifact → procurementAttachments
+- ProcurementOffer → submitting User
+
+Procurement uses soft deletes.
+
+### Authorization Boundary
+Implemented `ProcurementPolicy`.
+
+Verified rules:
+
+- `procurement.view` controls procurement visibility.
+- Admin/Super Admin with `procurement.manage` may create independent procurement.
+- Coordinators cannot create independent procurement.
+- Coordinators with `procurement.manage` may create procurement for their currently assigned order.
+- Coordinators cannot create procurement for another/unassigned order.
+- Admin/Super Admin with `procurement.manage` may update any procurement.
+- Coordinators may update procurement belonging to their currently assigned order.
+- Coordinators cannot update procurement belonging to another order.
+- Coordinators cannot update independent procurement.
+
+Important implementation detail:
+`createForOrder()` accepts `Order` as its policy subject/context because the authorization decision occurs before the Procurement record exists.
+
+Gate calls for this ability explicitly target `ProcurementPolicy`:
+
+`Gate::forUser($user)->allows('createForOrder', [Procurement::class, $order])`
+
+### Verification
+Procurement focused test suite:
+
+- 19 tests passed
+- 33 assertions
+- 0 failures
+
+The suite verifies:
+- order-linked procurement relationships
+- independent procurement
+- creator/updater tracking
+- attachments
+- Product Specification artifact references
+- new uploaded file references
+- procurement offers
+- user → procurement offer relationship
+- decimal/date casts
+- soft deletion
+- procurement view authorization
+- independent procurement creation authorization
+- order-linked coordinator creation authorization
+- unauthorized order access
+- Admin update authorization
+- coordinator update authorization
+- cross-order update protection
+- independent procurement update protection
+
+### Existing Regression Context
+Before Procurement authorization work, the project had reached:
+
+- 265 full-regression tests passed
+- 918 assertions
+- 0 failures
+
+The Procurement model-focused suite subsequently reached 9 passed / 23 assertions, and the authorization expansion now stands at 19 passed / 33 assertions.
+
+### Current Project Position
+The Procurement domain foundation and authorization boundary are complete.
+
+NOT YET IMPLEMENTED:
+- ProcurementController
+- Procurement Center routes
+- Procurement create/update Form Requests
+- Procurement Center listing UI
+- Procurement detail/show UI
+- Order-linked procurement creation workflow
+- Independent procurement creation workflow
+- Product Specification artifact selection/upload workflow
+- Procurement HTTP feature tests
+- Procurement offer/bidding workflow
+- Supplier module
+
+### Exact Restart Point
+Next production unit is:
+
+**Build the Procurement Center backend HTTP workflow.**
+
+Start by inspecting and following the existing controller/route conventions, especially `OrderController`.
+
+Next sequence:
+
+1. Create `ProcurementController`.
+2. Add Procurement Center routes.
+3. Add create/update validation.
+4. Implement order-linked procurement creation.
+5. Implement independent procurement creation for Admin/Super Admin.
+6. Implement attachment selection/upload handling.
+7. Implement Procurement Center listing/show.
+8. Add HTTP feature tests.
+9. Run focused Procurement tests.
+10. Run full regression.
+11. Browser-verify the Procurement Center.
+12. Append the next milestone to this log.
+
+Do not begin the procurement offer/bidding workflow until the procurement requirement workflow is implemented and verified.
+
+
+---
+
+## 2026-09-29 — Procurement RBAC Correction
+
+### Issue
+A staff user assigned the Production role could still see and access the Procurement Center even after Procurement access was expected to be removed.
+
+### Analysis
+The `User::hasPermission()` implementation was verified to resolve permissions directly through the user's assigned roles.
+
+The affected staff user had multiple roles, including:
+- sales
+- production
+- quality-control
+- finance
+- delivery
+
+The Production role was found to contain `procurement.view`, which granted Procurement visibility and access.
+
+### Implemented
+- Removed `procurement.view` from the Production role in `database/seeders/RbacSeeder.php`.
+- Retained Procurement permissions for the intended administrative and dedicated Procurement roles.
+- Re-ran `RbacSeeder`.
+- Because the seeder synchronizes role permissions using `sync()`, the stale `production → procurement.view` relationship was removed from the database.
+
+### Authorization Behavior
+Procurement authorization continues to use:
+- `ProcurementPolicy::viewAny()`
+- `ProcurementPolicy::view()`
+- `User::hasPermission('procurement.view')`
+
+The Procurement navigation remains permission-aware through the application's policy authorization.
+
+### Verified
+- Production role no longer grants `procurement.view`.
+- A Production-assigned staff user no longer has effective `procurement.view`.
+- Procurement access is therefore denied to Production staff without another role granting the permission.
+- Procurement remains available to roles that legitimately have the permission.
+- Full test suite passed.
+
+### Test Result
+- 296 tests passed
+- 983 assertions
+- 0 failures
+- Duration: 16.44s
+
+### Status
+**IMPLEMENTED + VERIFIED**
+
+---
+
+---
+
+## 2026-09-29 — Procurement Center Index UI
+
+### Implemented
+- Added `resources/views/procurements/index.blade.php`.
+- Added Procurement Center page structure using the existing application UI components.
+- Added permission-aware Create Procurement actions.
+- Added search by procurement requirement and order number.
+- Added status filtering.
+- Added pagination with query-string preservation.
+- Added requirement, linked order, quantity, required-by date, priority, and status display.
+- Added independent-procurement handling when no order is linked.
+- Added permission-aware empty-state Create Procurement action.
+
+### Route Verification
+Verified Procurement routes are registered:
+- `procurements.index`
+- `procurements.create`
+- `procurements.store`
+- `procurements.show`
+- `procurements.edit`
+- `procurements.update`
+- `orders.procurements.create`
+- `orders.procurements.store`
+
+### View Verification
+- Procurement view directory contains the index view.
+- `php artisan view:clear` completed successfully.
+- No compiled-view cache remained after clearing.
+
+### Status
+**IMPLEMENTED + VERIFIED**
+
+---
+
+
+---
+
+## 2026-09-29 — Procurement Center Index Completed
+
+### Implemented
+- Added Procurement Center index view at `resources/views/procurements/index.blade.php`.
+- Added permission-aware Procurement navigation and Create Procurement actions.
+- Added procurement requirement search.
+- Added order-number search.
+- Added status filtering.
+- Added pagination and query-string preservation.
+- Added requirement, order, quantity, required-by date, priority, and status display.
+- Added independent procurement handling.
+
+### Tested
+`tests/Feature/ProcurementPolicyTest.php`
+
+- 17 tests passed
+- 46 assertions
+- 0 failures
+
+Coverage includes:
+- Procurement index authorization
+- Procurement navigation authorization
+- Requirement-name search
+- Order-number search
+- Status filtering
+- Independent procurement creation
+- Order-linked procurement creation
+- Procurement update authorization
+- Order-link protection
+
+### Browser Verification
+- Procurement navigation verified.
+- Procurement Center page verified.
+- Search verified.
+- Status filtering verified.
+- Clear/filter behavior verified.
+- Procurement table and actions verified.
+- Permission boundary verified.
+
+### Status
+**IMPLEMENTED + TESTED + BROWSER VERIFIED**
+
+---
+
+
+## 2026-09-29 — Procurement Commission and Reference Photos Completed
+
+### Implemented
+- Added `commission_per_unit` to procurement requirements.
+- Added commission validation to procurement create/update requests.
+- Added commission display to procurement create/edit/show workflow.
+- Added procurement reference-photo uploads with a maximum of 3 photos.
+- Restricted reference photos to JPEG, JPG, PNG, and WebP.
+- Limited each reference photo to 5 MB.
+- Stored procurement reference photos on the private local disk using UUID filenames.
+- Added secure procurement attachment delivery through the Procurement authorization policy.
+- Added immediate client-side photo previews for Procurement Create.
+- Added existing-photo thumbnails and new-photo previews for Procurement Edit.
+- Added first reference-photo thumbnails to the Procurement Center.
+- Added full reference-photo gallery to the Procurement Show page.
+- Kept procurement photo JavaScript in the external Vite-managed JavaScript structure.
+- Updated Procurement HTTP test fixtures to include the required commission field.
+
+### Tested
+- Procurement policy/HTTP tests passed after updating the shared procurement payload.
+- Procurement model tests passed.
+- Full application regression passed.
+- Procurement photo upload and commission workflow verified.
+
+### Browser Verification
+- Create Procurement photo preview verified.
+- Edit Procurement existing and newly selected photo previews verified.
+- Three-photo limit verified.
+- Procurement Center thumbnail verified.
+- Procurement Show photo gallery verified.
+- Protected photo access verified.
+- Commission field workflow verified.
+
+### Status
+**IMPLEMENTED + TESTED + BROWSER VERIFIED**

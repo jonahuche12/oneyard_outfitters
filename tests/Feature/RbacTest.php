@@ -226,6 +226,7 @@ class RbacTest extends TestCase
             'organizations.view',
             'organizations.create',
             'organizations.update',
+            'organizations.export',
             'organizations.delete',
 
             'contacts.view',
@@ -255,6 +256,7 @@ class RbacTest extends TestCase
             'orders.create',
             'orders.update',
             'orders.approve',
+            'orders.assign',
 
             'suppliers.view',
             'suppliers.create',
@@ -317,6 +319,7 @@ class RbacTest extends TestCase
             'organizations.view',
             'organizations.create',
             'organizations.update',
+            'organizations.export',
 
             'contacts.view',
             'contacts.create',

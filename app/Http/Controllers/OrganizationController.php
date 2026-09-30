@@ -88,6 +88,7 @@ class OrganizationController extends Controller
             'assessments',
             'followUps',
             'productSpecifications',
+            'quotations',
         ]);
 
         $organization->load([
@@ -96,6 +97,10 @@ class OrganizationController extends Controller
                 ->latest('specification_date')
                 ->latest('id')
                 ->limit(5),
+
+            'quotations' => fn ($query) => $query
+                ->latest('quotation_date')
+                ->latest('id'),
         ]);
 
         return view('organizations.show', [

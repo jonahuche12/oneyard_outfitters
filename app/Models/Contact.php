@@ -37,6 +37,11 @@ class Contact extends Model
         ];
     }
 
+    public function quotationRecipients(): HasMany
+    {
+        return $this->hasMany(QuotationRecipient::class);
+    }
+
     public function organization(): BelongsTo
     {
         return $this->belongsTo(Organization::class);
@@ -55,5 +60,10 @@ class Contact extends Model
     public function interactionNotes(): HasMany
     {
         return $this->hasMany(ContactNote::class);
+    }
+
+    public function orderNotificationRecipients(): HasMany
+    {
+        return $this->hasMany(OrderNotificationRecipient::class);
     }
 }

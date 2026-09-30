@@ -33,7 +33,7 @@
             @can('update', $staff)
                 <a
                     href="{{ route('staff.edit', $staff) }}"
-                    class="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                    class="oy-btn oy-btn-secondary"
                 >
                     Edit Staff
                 </a>

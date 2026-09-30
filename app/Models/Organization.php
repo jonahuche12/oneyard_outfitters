@@ -57,4 +57,9 @@ class Organization extends Model
     {
         return $this->hasMany(ProductSpecification::class);
     }
+
+    public function quotations(): HasMany
+    {
+        return $this->hasMany(Quotation::class);
+    }
 }

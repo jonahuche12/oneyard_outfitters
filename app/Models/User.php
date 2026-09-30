@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\OrderAssignment;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -100,4 +101,14 @@ class User extends Authenticatable
             'uploaded_by'
         );
     }
+    public function assignments(): HasMany
+    {
+        return $this->hasMany(OrderAssignment::class, 'user_id');
+    }
+
+    public function procurementOffers(): HasMany
+    {
+        return $this->hasMany(ProcurementOffer::class);
+    }
+
 }

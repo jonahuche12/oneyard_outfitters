@@ -24,7 +24,7 @@
             @can('create', App\Models\User::class)
                 <a
                     href="{{ route('staff.create') }}"
-                    class="inline-flex items-center justify-center rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2"
+                    class="oy-btn oy-btn-primary"
                 >
                     + Add Staff
                 </a>
@@ -68,7 +68,7 @@
 
                     <button
                         type="submit"
-                        class="inline-flex items-center justify-center rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
+                        class="oy-btn oy-btn-primary"
                     >
                         Search
                     </button>
@@ -76,7 +76,7 @@
                     @if ($search !== '')
                         <a
                             href="{{ route('staff.index') }}"
-                            class="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-5 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                            class="oy-btn oy-btn-secondary"
                         >
                             Clear
                         </a>
@@ -199,7 +199,7 @@
                                         @can('view', $member)
                                             <a
                                                 href="{{ route('staff.show', $member) }}"
-                                                class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-700 transition hover:bg-slate-50"
+                                                class="oy-btn oy-btn-secondary oy-btn-sm"
                                             >
                                                 View
                                             </a>
@@ -208,7 +208,7 @@
                                         @can('update', $member)
                                             <a
                                                 href="{{ route('staff.edit', $member) }}"
-                                                class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-700 transition hover:bg-slate-50"
+                                                class="oy-btn oy-btn-secondary oy-btn-sm"
                                             >
                                                 Edit
                                             </a>

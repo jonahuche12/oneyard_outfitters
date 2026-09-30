@@ -207,6 +207,11 @@ class RbacSeeder extends Seeder
                 'slug' => 'orders.approve',
                 'description' => 'Approve orders for fulfillment.',
             ],
+            [
+                'name' => 'Assign Orders',
+                'slug' => 'orders.assign',
+                'description' => 'Assign approved orders to production coordinators.',
+            ],
 
             /*
              * Suppliers
@@ -429,6 +434,7 @@ class RbacSeeder extends Seeder
                     'orders.create',
                     'orders.update',
                     'orders.approve',
+                    'orders.assign',
 
                     'suppliers.view',
                     'suppliers.create',
@@ -543,8 +549,6 @@ class RbacSeeder extends Seeder
                     'contact-notes.create',
                     'contact-notes.update',
                     'orders.view',
-
-                    'procurement.view',
 
                     'production.view',
                     'production.manage',

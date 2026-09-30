@@ -1,12 +1,18 @@
 <?php
 
+use App\Http\Controllers\QuotationController;
+use App\Http\Controllers\QuotationItemController;
 use App\Http\Controllers\AssessmentController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\ContactNoteController;
 use App\Http\Controllers\OrganizationController;
 use App\Http\Controllers\FollowUpController;
 use App\Http\Controllers\ProductSpecificationController;
+use App\Http\Controllers\OrderController;
+use App\Http\Controllers\PublicOrderController;
 use App\Http\Controllers\ProductSpecificationArtifactController;
+use App\Http\Controllers\ProcurementController;
+use App\Http\Controllers\ProcurementOfferController;
 use App\Http\Controllers\StaffController;
 use Illuminate\Support\Facades\Route;
 
@@ -126,4 +132,154 @@ Route::middleware(['auth', 'active'])->group(function () {
         '/contact-notes/{contactNote}',
         [ContactNoteController::class, 'destroy']
     )->name('contact-notes.destroy');
+
+    Route::resource('quotations', QuotationController::class)
+        ->except(['destroy']);
+
+    Route::get(
+        '/quotations/organization-options/{organization}',
+        [QuotationController::class, 'organizationOptions']
+    )->name('quotations.organization-options');
+
+    Route::post(
+        '/quotations/{quotation}/send-to-contacts',
+        [QuotationController::class, 'sendToContacts']
+    )->name('quotations.send-to-contacts');
+
+    Route::post(
+        '/quotations/{quotation}/send',
+        [QuotationController::class, 'send']
+    )->name('quotations.send');
+
+    Route::post(
+        '/quotations/{quotation}/cancel',
+        [QuotationController::class, 'cancel']
+    )->name('quotations.cancel');
+
+    Route::get(
+    '/procurements/{procurement}/attachments/{attachment}',
+    [ProcurementController::class, 'showAttachment']
+)->name('procurements.attachments.show');
+
+    Route::get(
+        '/procurements/{procurement}/offers/create',
+        [ProcurementOfferController::class, 'create']
+    )->name('procurements.offers.create');
+
+    Route::post(
+        '/procurements/{procurement}/offers',
+        [ProcurementOfferController::class, 'store']
+    )->name('procurements.offers.store');
+
+    Route::get(
+        '/procurement-offers/{offer}',
+        [ProcurementOfferController::class, 'show']
+    )->name('procurements.offers.show');
+
+    Route::get(
+        '/procurement-offers/{offer}/edit',
+        [ProcurementOfferController::class, 'edit']
+    )->name('procurements.offers.edit');
+
+    Route::put(
+        '/procurement-offers/{offer}',
+        [ProcurementOfferController::class, 'update']
+    )->name('procurements.offers.update');
+
+    Route::post(
+        '/procurement-offers/{offer}/withdraw',
+        [ProcurementOfferController::class, 'withdraw']
+    )->name('procurements.offers.withdraw');
+
+Route::resource('procurements', ProcurementController::class)
+        ->except(['destroy']);
+
+    Route::get(
+        '/orders/{order}/procurements/create',
+        [ProcurementController::class, 'createForOrder']
+    )->name('orders.procurements.create');
+
+    Route::post(
+        '/orders/{order}/procurements',
+        [ProcurementController::class, 'storeForOrder']
+    )->name('orders.procurements.store');
+
+    Route::resource('orders', OrderController::class)
+        ->only(['index', 'show', 'edit', 'update']);
+
+    Route::post(
+        '/orders/{order}/approve',
+        [OrderController::class, 'approve']
+    )->name('orders.approve');
+
+    Route::post(
+        '/orders/{order}/resend-approval',
+        [OrderController::class, 'resendApproval']
+    )->name('orders.resend-approval');
+
+    Route::post(
+        '/orders/{order}/assign-coordinator',
+        [OrderController::class, 'assignCoordinator']
+    )->name('orders.assign-coordinator');
+
+    Route::post(
+        '/orders/{order}/production-plan',
+        [OrderController::class, 'createProductionPlan']
+    )->name('orders.production-plan.store');
+
+    Route::post(
+        '/quotations/{quotation}/items',
+        [QuotationItemController::class, 'store']
+    )->name('quotation-items.store');
+
+    Route::patch(
+        '/quotations/{quotation}/items/{item}',
+        [QuotationItemController::class, 'update']
+    )->name('quotation-items.update');
+
+    Route::delete(
+        '/quotations/{quotation}/items/{item}',
+        [QuotationItemController::class, 'destroy']
+    )->name('quotation-items.destroy');
 });
+
+Route::get(
+    '/public/orders/{token}',
+    [PublicOrderController::class, 'show']
+)->name('public.orders.show');
+
+Route::get(
+    '/public/quotations/{token}',
+    [\App\Http\Controllers\Public\QuotationController::class, 'show']
+)->name('public.quotations.show');
+
+Route::post(
+    '/public/quotations/{token}/accept',
+    [\App\Http\Controllers\Public\QuotationController::class, 'accept']
+)->name('public.quotations.accept');
+
+Route::get(
+    '/public/quotations/{token}/payment/callback',
+    [\App\Http\Controllers\Public\QuotationController::class, 'paymentCallback']
+)->name('public.quotations.payment.callback');
+
+Route::post(
+    '/public/quotations/{token}/reject',
+    [\App\Http\Controllers\Public\QuotationController::class, 'reject']
+)->name('public.quotations.reject');
+
+
+Route::post(
+    '/orders/{order}/production-plan/activities/{activity}/start',
+    [OrderController::class, 'startProductionActivity']
+)->name('orders.production-plan.activities.start');
+
+Route::post(
+    '/orders/{order}/production-plan/activities/{activity}/complete',
+    [OrderController::class, 'completeProductionActivity']
+)->name('orders.production-plan.activities.complete');
+
+Route::post(
+    '/orders/{order}/production-plan/activities/{activity}/unmark',
+    [OrderController::class, 'unmarkProductionActivity']
+)->name('orders.production-plan.activities.unmark');

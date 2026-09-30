@@ -24,7 +24,7 @@
             @can('create', App\Models\Organization::class)
                 <a
                     href="{{ route('organizations.create') }}"
-                    class="inline-flex items-center justify-center rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2"
+                    class="oy-btn oy-btn-primary"
                 >
                     + Add Organization
                 </a>
@@ -62,7 +62,7 @@
 
                     <button
                         type="submit"
-                        class="inline-flex items-center justify-center rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
+                        class="oy-btn oy-btn-primary"
                     >
                         Search
                     </button>
@@ -70,7 +70,7 @@
                     @if ($search !== '')
                         <a
                             href="{{ route('organizations.index') }}"
-                            class="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-5 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                            class="oy-btn oy-btn-secondary"
                         >
                             Clear
                         </a>
@@ -206,7 +206,7 @@
                                         @can('view', $organization)
                                             <a
                                                 href="{{ route('organizations.show', $organization) }}"
-                                                class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-700 transition hover:bg-slate-50"
+                                                class="oy-btn oy-btn-secondary oy-btn-sm"
                                             >
                                                 View
                                             </a>
@@ -215,7 +215,7 @@
                                         @can('update', $organization)
                                             <a
                                                 href="{{ route('organizations.edit', $organization) }}"
-                                                class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-700 transition hover:bg-slate-50"
+                                                class="oy-btn oy-btn-secondary oy-btn-sm"
                                             >
                                                 Edit
                                             </a>
@@ -232,7 +232,7 @@
 
                                                     <button
                                                         type="submit"
-                                                        class="inline-flex items-center gap-1.5 rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 transition hover:border-emerald-400 hover:bg-emerald-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
+                                                        class="oy-btn oy-btn-success oy-btn-sm"
                                                     >
                                                         <svg
                                                             class="h-3.5 w-3.5"
@@ -264,7 +264,7 @@
 
                                                     <button
                                                         type="submit"
-                                                        class="inline-flex items-center gap-1.5 rounded-lg border border-red-300 bg-white px-3 py-2 text-xs font-semibold text-red-700 transition hover:border-red-400 hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-300 focus:ring-offset-2"
+                                                        class="oy-btn oy-btn-danger oy-btn-sm"
                                                     >
                                                         <svg
                                                             class="h-3.5 w-3.5"
