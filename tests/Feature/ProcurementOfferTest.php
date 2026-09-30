@@ -755,7 +755,10 @@ class ProcurementOfferTest extends TestCase
         $response = $this
             ->actingAs($user)
             ->post(
-                route('procurements.offers.withdraw', $offer)
+                route('procurements.offers.withdraw', $offer),
+                [
+                    'withdrawal_reason' => 'Supplier cannot meet the required delivery timeline.',
+                ]
             );
 
         $response->assertRedirect(
@@ -765,6 +768,89 @@ class ProcurementOfferTest extends TestCase
         $this->assertDatabaseHas('procurement_offers', [
             'id' => $offer->id,
             'status' => ProcurementOffer::STATUS_WITHDRAWN,
+            'withdrawal_reason' => 'Supplier cannot meet the required delivery timeline.',
+        ]);
+    }
+
+    public function test_withdrawal_reason_is_required(): void
+    {
+        $user = $this->userWithRole(
+            'procurement-viewer',
+            ['procurement.view']
+        );
+
+        $procurement = $this->procurement();
+
+        $offer = ProcurementOffer::create([
+            'procurement_id' => $procurement->id,
+            'user_id' => $user->id,
+            'quantity' => 80,
+            'unit_price' => 3200,
+            'total_price' => 256000,
+            'status' => ProcurementOffer::STATUS_SUBMITTED,
+            'submitted_at' => now(),
+        ]);
+
+        $response = $this
+            ->actingAs($user)
+            ->from(route('procurements.offers.show', $offer))
+            ->post(
+                route('procurements.offers.withdraw', $offer),
+                [
+                    'withdrawal_reason' => '',
+                ]
+            );
+
+        $response->assertRedirect(
+            route('procurements.offers.show', $offer)
+        );
+
+        $response->assertSessionHasErrors('withdrawal_reason');
+
+        $this->assertDatabaseHas('procurement_offers', [
+            'id' => $offer->id,
+            'status' => ProcurementOffer::STATUS_SUBMITTED,
+        ]);
+    }
+
+    public function test_withdrawal_reason_cannot_exceed_1000_characters(): void
+    {
+        $user = $this->userWithRole(
+            'procurement-viewer',
+            ['procurement.view']
+        );
+
+        $procurement = $this->procurement();
+
+        $offer = ProcurementOffer::create([
+            'procurement_id' => $procurement->id,
+            'user_id' => $user->id,
+            'quantity' => 80,
+            'unit_price' => 3200,
+            'total_price' => 256000,
+            'status' => ProcurementOffer::STATUS_SUBMITTED,
+            'submitted_at' => now(),
+        ]);
+
+        $response = $this
+            ->actingAs($user)
+            ->from(route('procurements.offers.show', $offer))
+            ->post(
+                route('procurements.offers.withdraw', $offer),
+                [
+                    'withdrawal_reason' => str_repeat('x', 1001),
+                ]
+            );
+
+        $response->assertRedirect(
+            route('procurements.offers.show', $offer)
+        );
+
+        $response->assertSessionHasErrors('withdrawal_reason');
+
+        $this->assertDatabaseHas('procurement_offers', [
+            'id' => $offer->id,
+            'status' => ProcurementOffer::STATUS_SUBMITTED,
         ]);
     }
 

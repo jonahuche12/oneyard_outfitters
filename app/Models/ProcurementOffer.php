@@ -23,6 +23,7 @@ class ProcurementOffer extends Model
         'total_price',
         'notes',
         'status',
+        'withdrawal_reason',
         'submitted_at',
     ];
 

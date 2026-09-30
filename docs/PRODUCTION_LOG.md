@@ -3379,3 +3379,95 @@ Coverage includes:
 
 ### Status
 **IMPLEMENTED + TESTED + BROWSER VERIFIED**
+
+## 2026-09-30 — RECONCILIATION — Test and Git State Verified Against Log
+
+**Type:** DOCUMENTATION / TEST
+**Status:** COMPLETED
+
+### Verified (user-run output)
+- `php artisan test`: 336 passed / 1125 assertions / 0 failures.
+- Organization Intelligence Export committed in 05dafaa.
+
+### Findings
+- ProcurementOfferTest exists and passes (29 tests): Procurement Offers backend implemented but was not logged.
+  Covered: submission authorization, ready-status and deadline rules, quantity/max-price limits, server-side
+  total/user/status/timestamp, owner-only view/update/withdraw, admin view, 3-offer limit per staff.
+- Migration add_withdrawal_reason_to_procurement_offers_table created 2026-09-30; dev DB migration state unconfirmed.
+- Quotation, payment, order, production and procurement code untracked in git; HEAD 1 commit ahead of origin/main.
+- Two log files exist: docs/PRODUCTION_LOG.md (tracked) and docs/production-log.md (untracked).
+- docs/TROUBLESHOOTING.md modified; changes not logged.
+
+### Open
+- Offer UI, award/selection lifecycle, withdrawal-reason behaviour not yet inspected.
+- Quotation/Order browser verification, Paystack webhook, queue worker, commission rules unresolved.
+
+### Next
+Checkpoint commit and push, inspect Procurement Offer implementation, design remaining offer lifecycle for approval.
+
+## 2026-09-30 — Procurement Offer Withdrawal Reason — Progress Milestone
+
+### Implemented
+- Added `withdrawal_reason` persistence to `procurement_offers`.
+- Added `WithdrawProcurementOfferRequest` validation requiring a withdrawal reason with a maximum length of 1000 characters.
+- Updated `ProcurementOfferController::withdraw()` to persist both withdrawn status and the validated withdrawal reason.
+- Added `withdrawal_reason` to `ProcurementOffer` mass assignment.
+- Focused `ProcurementOfferTest` suite currently passes: 31 tests / 113 assertions.
+- Withdrawal reason input is currently present directly inside the withdrawal forms on the Procurement and Offer detail views.
+
+### Current UI State
+- The withdrawal reason is still displayed inline beside the Withdraw action.
+- This is being refined to a modal workflow so the offer cards remain compact.
+- The current Blade withdrawal block was inspected and confirmed in `resources/views/procurements/show.blade.php`.
+
+### Next Step
+- Replace the inline withdrawal reason form with a modal workflow triggered by the Withdraw button.
+- Apply the same modal workflow to `resources/views/procurements/offers/show.blade.php`.
+- Preserve authorization, CSRF protection, validation errors, and the existing withdrawal route/controller.
+- Then run Blade compilation and the Procurement Offer tests, followed by broader Procurement verification and browser verification.
+
+
+---
+
+## 2026-09-30 — Procurement Offer Withdrawal Modal Refinement VERIFIED
+
+### Completed
+Replaced the inline Procurement Offer withdrawal forms with a reusable modal-based withdrawal workflow on:
+
+- `resources/views/procurements/show.blade.php`
+- `resources/views/procurements/offers/show.blade.php`
+
+Added dedicated JavaScript:
+
+- `resources/js/procurements/offers.js`
+
+Registered the module through:
+
+- `resources/js/app.js`
+
+### Behavior
+- Withdrawal action remains permission-controlled by the existing `withdraw` policy.
+- Existing `procurements.offers.withdraw` POST route preserved.
+- CSRF protection preserved.
+- Withdrawal reason remains required and limited to 1000 characters.
+- Validation errors reopen the withdrawal modal.
+- The correct offer is restored after validation failure.
+- Cancel, backdrop, and Escape close the modal.
+- Focus returns to the triggering button after closing.
+- No AJAX/fetch introduced; existing server-side POST/redirect workflow preserved.
+
+### Verification
+- Blade/application cache compilation passed.
+- `ProcurementOfferTest` passed.
+- Procurement tests passed.
+- Procurement policy tests passed.
+- JavaScript production build passed.
+- Browser verification passed.
+
+### Status
+**VERIFIED**
+
+### Next Logical Unit
+Procurement Offer Award/Selection lifecycle.
+
+The withdrawal workflow is now considered closed. No further withdrawal UI changes should be introduced unless a later lifecycle requirement exposes a concrete defect.

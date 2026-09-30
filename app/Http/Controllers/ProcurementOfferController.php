@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\Procurement\StoreProcurementOfferRequest;
 use App\Http\Requests\Procurement\UpdateProcurementOfferRequest;
+use App\Http\Requests\WithdrawProcurementOfferRequest;
 use App\Models\Procurement;
 use App\Models\ProcurementOffer;
 use Illuminate\Http\RedirectResponse;
@@ -130,19 +131,22 @@ class ProcurementOfferController extends Controller
             );
     }
 
-    public function withdraw(ProcurementOffer $offer): RedirectResponse
-    {
+    public function withdraw(
+        WithdrawProcurementOfferRequest $request,
+        ProcurementOffer $offer
+    ): RedirectResponse {
         Gate::authorize('withdraw', $offer);
 
         $offer->update([
             'status' => ProcurementOffer::STATUS_WITHDRAWN,
+            'withdrawal_reason' => $request->validated('withdrawal_reason'),
         ]);
 
         return redirect()
             ->route('procurements.show', $offer->procurement_id)
             ->with(
                 'success',
-                'Your offer was cancelled successfully.'
+                'Your offer was withdrawn successfully.'
             );
     }
 

@@ -343,20 +343,16 @@
                                     @endcan
 
                                     @can('withdraw', $offer)
-                                        <form
-                                            method="POST"
-                                            action="{{ route('procurements.offers.withdraw', $offer) }}"
-                                            onsubmit="return confirm('Withdraw this offer?');"
+                                        <button
+                                            type="button"
+                                            class="oy-btn oy-btn-secondary"
+                                            data-withdraw-offer
+                                            data-offer-id="{{ $offer->id }}"
+                                            data-offer-label="Offer #{{ $offer->id }}"
+                                            data-withdraw-action="{{ route('procurements.offers.withdraw', $offer) }}"
                                         >
-                                            @csrf
-
-                                            <button
-                                                type="submit"
-                                                class="oy-btn oy-btn-secondary"
-                                            >
-                                                Withdraw
-                                            </button>
-                                        </form>
+                                            Withdraw
+                                        </button>
                                     @endcan
                                 </div>
                             </div>
@@ -391,6 +387,16 @@
 
                                     <div class="mt-1 whitespace-pre-line text-sm text-slate-700">
                                         {{ $offer->notes }}
+                                    </div>
+                                </div>
+                            @endif
+
+                            @if($offer->withdrawal_reason)
+                                <div class="mt-4 border-t border-slate-100 pt-4">
+                                    <div class="oy-meta-label">Withdrawal Reason</div>
+
+                                    <div class="mt-1 whitespace-pre-line text-sm text-slate-700">
+                                        {{ $offer->withdrawal_reason }}
                                     </div>
                                 </div>
                             @endif
@@ -457,6 +463,110 @@
                     @endforeach
                 </div>
             @endif
+        </div>
+    </div>
+
+    <div
+        id="procurement-offer-withdrawal-modal"
+        class="{{ $errors->has('withdrawal_reason') ? '' : 'hidden' }} fixed inset-0 z-50 overflow-y-auto"
+        data-reopen="{{ $errors->has('withdrawal_reason') && old('withdrawal_offer_id') ? 'true' : 'false' }}"
+        aria-labelledby="procurement-offer-withdrawal-title"
+        role="dialog"
+        aria-modal="true"
+    >
+        <div class="flex min-h-full items-center justify-center p-4">
+            <div
+                class="fixed inset-0 bg-slate-900/50"
+                data-withdrawal-modal-close
+                aria-hidden="true"
+            ></div>
+
+            <div class="relative w-full max-w-lg rounded-xl bg-white shadow-xl">
+                <div class="flex items-start justify-between border-b border-slate-200 px-6 py-4">
+                    <div>
+                        <h2
+                            id="procurement-offer-withdrawal-title"
+                            class="text-lg font-semibold text-slate-900"
+                        >
+                            Withdraw Offer
+                        </h2>
+
+                        <p class="mt-1 text-sm text-slate-500">
+                            Provide a reason for withdrawing this offer.
+                        </p>
+                    </div>
+
+                    <button
+                        type="button"
+                        class="text-2xl leading-none text-slate-400 hover:text-slate-600"
+                        data-withdrawal-modal-close
+                        aria-label="Close withdrawal dialog"
+                    >
+                        &times;
+                    </button>
+                </div>
+
+                <form
+                    id="procurement-offer-withdrawal-form"
+                    method="POST"
+                    action="{{ old('withdrawal_offer_id') ? route('procurements.offers.withdraw', old('withdrawal_offer_id')) : '#' }}"
+                >
+                    @csrf
+
+                    <input
+                        type="hidden"
+                        id="procurement-offer-withdrawal-offer-id"
+                        name="withdrawal_offer_id"
+                        value="{{ old('withdrawal_offer_id') }}"
+                    >
+
+                    <div class="px-6 py-5">
+                        <label
+                            for="procurement-offer-withdrawal-reason"
+                            class="block text-sm font-medium text-slate-700"
+                        >
+                            Withdrawal reason
+                        </label>
+
+                        <textarea
+                            id="procurement-offer-withdrawal-reason"
+                            name="withdrawal_reason"
+                            rows="4"
+                            maxlength="1000"
+                            required
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                            placeholder="Why are you withdrawing this offer?"
+                        >{{ old('withdrawal_reason') }}</textarea>
+
+                        @error('withdrawal_reason')
+                            <p class="mt-2 text-sm text-red-600">
+                                {{ $message }}
+                            </p>
+                        @enderror
+
+                        <p class="mt-2 text-xs text-slate-500">
+                            Maximum 1000 characters.
+                        </p>
+                    </div>
+
+                    <div class="flex justify-end gap-3 border-t border-slate-200 px-6 py-4">
+                        <button
+                            type="button"
+                            class="oy-btn oy-btn-secondary"
+                            data-withdrawal-modal-close
+                        >
+                            Cancel
+                        </button>
+
+                        <button
+                            type="submit"
+                            class="oy-btn oy-btn-secondary"
+                        >
+                            Confirm Withdrawal
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 

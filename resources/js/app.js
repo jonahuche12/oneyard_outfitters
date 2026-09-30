@@ -7,6 +7,7 @@ window.jQuery = $;
 import './quotations';
 import './order-coordinator';
 import './procurements/photos';
+import './procurements/offers';
 
 $(function () {
     /*
