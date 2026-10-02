@@ -21,8 +21,8 @@ class ProductionActivitySeeder extends Seeder
             ['name' => 'Assembly', 'sort_order' => 90, 'is_required' => false],
             ['name' => 'Finishing', 'sort_order' => 100, 'is_required' => false],
             ['name' => 'Packaging', 'sort_order' => 110, 'is_required' => false],
-            ['name' => 'Quality Control', 'sort_order' => 120, 'is_required' => true],
-            ['name' => 'Delivery', 'sort_order' => 130, 'is_required' => true],
+            ['name' => 'Quality Control', 'sort_order' => 120, 'is_required' => false, 'is_active' => false],
+            ['name' => 'Delivery', 'sort_order' => 130, 'is_required' => false, 'is_active' => false],
         ];
 
         foreach ($activities as $activity) {

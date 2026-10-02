@@ -3,17 +3,17 @@
 ## CURRENT STATE
 
 PROJECT: Oneyard Outfitters — Institutional Supply & Uniform Management System
-CURRENT PHASE: Phase 2 — Application Operations
-CURRENT FEATURE: Organization Management
-CURRENT STAGE: Ready to begin Organization Management frontend
-STATUS: Authentication, application shell, RBAC, staff management, and domain foundations verified
-LAST COMPLETED: Authentication + Staff Management + full automated test suite
-CURRENT WORK: Preparing Organization Management frontend and operational workflow
-NEXT STEP: Build Organization List/Search → Create Organization → Organization Account → Edit Organization
-BLOCKERS: None currently
-KNOWN ISSUES: None currently blocking production
-OPEN QUESTIONS: None currently blocking the next unit
-DEFERRED SCOPE: Product catalogue/categories/products, supplier portal, advanced reporting, customer portal, complex inventory, automation
+CURRENT PHASE: Phase 6 — Financial / Fulfillment (in progress)
+CURRENT FEATURE: Procurement Center frontend refinement; fulfillment lifecycle (Production → Coordinator Check → QC → Delivery → Balance Collection) queued
+CURRENT STAGE: Procurement reference-photo refinement — build, Blade compile and procurement tests verified; browser verification pending
+STATUS: Full suite 351 tests: 335 passed, 16 failed (2026-10-02, cause undiagnosed); Procurement-filtered tests 86 passed (earlier run)
+LAST COMPLETED: Procurement offer withdrawal reason + modal (2026-09-30, browser verified)
+CURRENT WORK: Diagnose 16 failing tests, then Quality Control stage design/build
+NEXT STEP: Close photo refinement → approve Coordinator Check → QC design → build; then Procurement Offer Award/Selection
+BLOCKERS: 16 failing tests in full suite (2026-10-02); do not commit until green
+KNOWN ISSUES: Quotation/Order browser verification not logged; Order::currentAssignment() fix never marked verified; no Paystack webhook or queue-worker note logged
+OPEN QUESTIONS: Coordinator Check actor and status names; QC permission gating; offer award rules; commission rules
+DEFERRED SCOPE: Product catalogue, supplier portal, customer portal, advanced reporting, complex inventory, broad automation
 
 ---
 
@@ -2454,6 +2454,9 @@ php artisan test tests/Feature/QuotationTest.php
 
 20 passed (104 assertions)
 0 failures
+```
+
+---
 
 ## 2026-09-26 — Quotation Draft Pricing and Authorization Corrections Verified
 
@@ -3471,3 +3474,172 @@ Registered the module through:
 Procurement Offer Award/Selection lifecycle.
 
 The withdrawal workflow is now considered closed. No further withdrawal UI changes should be introduced unless a later lifecycle requirement exposes a concrete defect.
+
+## 2026-10-02 — Procurement Reference Photos Frontend Refinement — Progress Milestone
+
+### Implemented / In Progress
+- Began frontend refinement of Procurement reference photos.
+- Procurement Show reference photos are being moved near the top of the page content.
+- Reference Photos are designed to remain collapsed by default and expand on user interaction.
+- Expanded gallery photos open through a modal viewer rather than navigating away from the procurement page.
+- Procurement Center reference-photo thumbnails are being made clickable so the reference-photo modal can display the available procurement photos.
+- Existing private attachment routes and authorization boundaries are preserved; no photo storage or authorization changes are being introduced.
+- Procurement photo JavaScript remains in the external Vite-managed JavaScript structure.
+
+### Current Verification State
+- Initial Vite build exposed an existing extra closing brace in `resources/js/procurements/offers.js`; this was corrected.
+- Blade compilation subsequently exposed nested `@json()` expressions in the new photo markup; these are being simplified by preparing photo data in the Blade PHP block before passing it to the markup.
+- Final Blade compilation, production build, and browser verification are still pending.
+
+### Status
+**IMPLEMENTED + VERIFICATION IN PROGRESS**
+
+### Next Step
+- Complete Blade compilation and Vite production build.
+- Browser verify Procurement Show collapsed/expanded photo gallery and modal behavior.
+- Browser verify Procurement Center photo thumbnail modal behavior.
+- Then close the frontend refinement milestone before continuing the Procurement Offer Award/Selection lifecycle.
+
+### Confirmed Broader Business Workflow
+The continuation of the system after successful production must include the complete downstream fulfillment and collection workflow:
+
+**Production → Quality Control → Delivery → Balance Collection → Organization Account / Closure**
+
+Quality Control must be treated as a distinct stage after Production, Delivery must follow successful quality verification, and the remaining customer balance must be tracked and collected as part of order completion rather than treating Delivery as the final business step.
+
+### Future Workflow Scope
+- Production execution and production status tracking.
+- Quality Control inspection, approval/rejection, and required corrective workflow.
+- Delivery preparation, dispatch, receipt/confirmation, and delivery records.
+- Balance calculation, outstanding-balance tracking, and balance collection/payment recording.
+- Final organization/order account state after fulfillment and financial closure.
+
+These stages are part of the planned continuation and should be preserved when subsequent production work is logged.
+
+
+---
+
+## 2026-10-02 — Production → Order Coordinator Checkpoint: Current State
+
+### Current Objective
+
+Refine the order lifecycle so that completion of Production is followed by an explicit **Order Coordinator Check**, after which the order enters an independent **Quality Control** stage.
+
+Target lifecycle:
+
+```text
+Order
+  ↓
+Order Coordinator
+  ↓
+Production Plan
+  ↓
+Production activities completed
+  ↓
+Order Coordinator checks completed production
+  ↓
+READY FOR QUALITY CONTROL
+  ↓
+Quality Control
+  ├── FAIL → Correction → Coordinator Check → Quality Control
+  └── PASS → READY FOR DELIVERY
+  ↓
+Delivery
+  ↓
+Balance Collection
+  ↓
+Organization Account / Closure
+```
+
+### Status
+
+DESIGN DIRECTION RECORDED. No implementation, migration, or test is claimed by this entry.
+
+### Open Design Points
+
+- Order status names and transitions for Coordinator Check, Quality Control, correction, and delivery readiness are not yet defined.
+- Who may perform the Coordinator Check (current order coordinator only, or Admin/Super Admin as well) is not yet decided.
+- Whether Quality Control is gated by the existing quality-control role/permissions is not yet decided.
+
+### Next
+
+Inspect current order statuses and Production Plan completion handling, then present the design for approval.
+
+
+---
+
+## 2026-10-02 — RECOVERY — Log Re-ingested, State Reconciled
+
+**Type:** DOCUMENTATION
+**Status:** COMPLETED
+
+### Recovered State
+- Procurement offer withdrawal reason and modal implemented and browser-verified (09-30); ProcurementOfferTest 31 passed / 113 assertions.
+- Procurement reference-photo frontend refinement in progress; Blade/Vite compile and browser verification pending.
+- Fulfillment lifecycle direction recorded (Production → Coordinator Check → QC → Delivery → Balance Collection → Closure); no implementation.
+- Procurement offer award/selection is the next procurement unit; not started.
+
+### Log Maintenance
+- Closed an unterminated code fence in the 2026-09-26 quotation entry that caused the rest of the log to render as one code block.
+- Replaced the stale CURRENT STATE header (previously Phase 2 / Organization Management).
+
+### Next
+Verify photo refinement build, then inspect order/production code and present Coordinator Check → QC design for approval.
+
+
+---
+
+## 2026-10-02 — RECONCILIATION — Build, Views and Procurement Tests Verified; Code Ahead of Log
+
+**Type:** TEST / DOCUMENTATION
+**Status:** COMPLETED
+
+### Verified (user-run output)
+- npm run build: passed.
+- php artisan view:cache: Blade templates cached successfully.
+- php artisan test --filter=Procurement: 86 passed / 265 assertions / 0 failures.
+- Secrets check: no Paystack key patterns in .env.example or config/services.php; .env not tracked; neither file shows pending changes.
+
+### Code present but not previously logged (seen in cat/grep output; behaviour not yet reviewed)
+- Order::STATUS_READY_FOR_QUALITY_CONTROL.
+- ProductionPlan fields coordinator_checked_by, coordinator_checked_at, coordinator_check_notes and coordinatorCheckedBy() relation.
+- Route orders.production-plan.confirm-complete -> OrderController::confirmProductionComplete; sets the order to ready_for_quality_control after checking plan activities.
+- ProcurementController and ProcurementOfferController reference ProcurementOffer::STATUS_ACCEPTED (offer selection logic present).
+- No Quality Control or Delivery controllers, policies or routes exist; quality-control.* and deliveries.* permissions are seeded.
+
+### Inferred (unverified)
+- Procurement test count rose from 73 (sum of last recorded class counts) to 86, suggesting offer award/selection tests were added.
+
+### Findings
+- OrderController status list (lines ~66-71) omits ready_for_quality_control.
+- Migration state for coordinator_checked_* columns not yet confirmed.
+- Unconfirmed whether the coordinator check counts the mandatory Quality Control and Delivery plan activities.
+- Photo refinement: browser verification still pending.
+
+### Next
+Inspect confirmProductionComplete, OrderPolicy and migration state; approve and build the Quality Control stage with correction loop.
+
+
+---
+
+## 2026-10-02 — RECONCILIATION — Git, Migrations and Full Suite State
+
+**Type:** TEST / DOCUMENTATION
+**Status:** IN PROGRESS
+
+### Verified (user-run output)
+- HEAD acacf60 equals origin/main; commits 08e54af (checkpoint) and acacf60 (withdrawal reasons) are pushed.
+- Uncommitted work: changes to the order/production code (OrderController, Order, ProductionPlan, OrderPolicy, ProductionActivitySeeder, routes/web.php, OrderProductionPlanTest), procurement controllers/policies/views/JS/tests, and two untracked migrations dated 2026-10-02.
+- Migrations ran (batch 20): add_coordinator_check_fields_to_production_plans_table; deactivate_quality_control_and_delivery_production_activities.
+- Full suite: 351 tests, 335 passed, 16 failed (1138 assertions). Procurement-filtered tests (86) passed in the earlier run, so the failures lie elsewhere. Cause not yet diagnosed.
+
+### Code observed (not yet reviewed in detail)
+- OrderController::confirmProductionComplete (Coordinator Check): policy requires status in_production, current coordinator with production.manage, plan present and all activities completed; sets order to ready_for_quality_control and records coordinator_checked_by/at/notes.
+- No tests for the Coordinator Check found in OrderProductionPlanTest; no UI trigger found in orders/show.blade.php.
+- Nothing sets Order::STATUS_READY or STATUS_DELIVERED; no Quality Control or Delivery controllers, policies or routes exist.
+- OrderController status filter (lines ~66-71) omits ready_for_quality_control.
+- orders/show.blade.php line ~316 still says Quality Control and Delivery are mandatory for every Order, which conflicts with the migration deactivating those production activities (migration contents not yet reviewed).
+- confirmProductionComplete does not lock the order row or re-check order status inside its transaction.
+
+### Next
+Diagnose the 16 failures, fix, run the full suite to green; then Quality Control stage (backend and tests, then UI).

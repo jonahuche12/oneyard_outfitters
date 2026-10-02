@@ -1,70 +1,174 @@
-import $ from 'jquery';
+const initProcurementPhotos = () => {
+    const modal = document.getElementById('procurement-photo-modal');
 
-$(function () {
-    const input = $('#procurement-photos');
-    const preview = $('#procurement-photo-preview');
-
-    if (!input.length || !preview.length) {
+    if (!modal) {
         return;
     }
 
-    const maximumPhotos = Number(
-        input.data('maximum-photos') || 3
-    );
+    const image = document.getElementById('procurement-photo-modal-image');
+    const count = document.getElementById('procurement-photo-modal-count');
+    const thumbnails = document.getElementById('procurement-photo-modal-thumbnails');
 
-    input.on('change', function () {
-        preview.empty();
+    let photos = [];
+    let currentIndex = 0;
+    let lastTrigger = null;
 
-        const files = Array.from(this.files || []);
+    const closeModal = () => {
+        modal.classList.add('hidden');
+        modal.setAttribute('aria-hidden', 'true');
+        document.body.classList.remove('overflow-hidden');
 
-        if (files.length > maximumPhotos) {
-            alert(
-                'You can select a maximum of ' +
-                maximumPhotos +
-                (maximumPhotos === 1
-                    ? ' reference photo.'
-                    : ' reference photos.')
-            );
+        image.src = '';
+        image.alt = '';
+        thumbnails.innerHTML = '';
 
-            this.value = '';
+        if (lastTrigger) {
+            lastTrigger.focus();
+        }
+    };
+
+    const renderPhoto = (index) => {
+        if (!photos.length || !photos[index]) {
             return;
         }
 
-        files.forEach(function (file) {
-            if (!file.type.startsWith('image/')) {
+        currentIndex = index;
+
+        const photo = photos[index];
+
+        image.src = photo.src;
+        image.alt = photo.alt || 'Procurement reference photo';
+
+        count.textContent = `${index + 1} of ${photos.length}`;
+
+        thumbnails.innerHTML = '';
+
+        if (photos.length > 1) {
+            photos.forEach((item, itemIndex) => {
+                const button = document.createElement('button');
+
+                button.type = 'button';
+                button.className =
+                    'h-16 w-16 shrink-0 overflow-hidden rounded-lg border-2 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-1';
+
+                if (itemIndex === currentIndex) {
+                    button.classList.add('border-slate-900');
+                } else {
+                    button.classList.add('border-transparent');
+                }
+
+                button.setAttribute(
+                    'aria-label',
+                    `View reference photo ${itemIndex + 1}`
+                );
+
+                const thumbnail = document.createElement('img');
+
+                thumbnail.src = item.src;
+                thumbnail.alt = item.alt || '';
+                thumbnail.className = 'h-full w-full object-cover';
+
+                button.appendChild(thumbnail);
+
+                button.addEventListener('click', () => {
+                    renderPhoto(itemIndex);
+                });
+
+                thumbnails.appendChild(button);
+            });
+        }
+    };
+
+    const openModal = (trigger) => {
+        let parsedPhotos = [];
+
+        try {
+            parsedPhotos = JSON.parse(trigger.dataset.photoImages || '[]');
+        } catch (error) {
+            parsedPhotos = [];
+        }
+
+        if (!parsedPhotos.length) {
+            return;
+        }
+
+        photos = parsedPhotos;
+        currentIndex = Number.parseInt(trigger.dataset.photoIndex || '0', 10);
+        lastTrigger = trigger;
+
+        renderPhoto(currentIndex);
+
+        modal.classList.remove('hidden');
+        modal.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('overflow-hidden');
+
+        requestAnimationFrame(() => {
+            const closeButton = modal.querySelector('[data-procurement-photo-close]');
+
+            if (closeButton) {
+                closeButton.focus();
+            }
+        });
+    };
+
+    document.querySelectorAll('[data-procurement-photo-modal]').forEach((trigger) => {
+        trigger.addEventListener('click', () => {
+            openModal(trigger);
+        });
+    });
+
+    modal.querySelectorAll('[data-procurement-photo-close]').forEach((element) => {
+        element.addEventListener('click', closeModal);
+    });
+
+    document.addEventListener('keydown', (event) => {
+        if (modal.classList.contains('hidden')) {
+            return;
+        }
+
+        if (event.key === 'Escape') {
+            closeModal();
+            return;
+        }
+
+        if (event.key === 'ArrowRight' && photos.length > 1) {
+            renderPhoto((currentIndex + 1) % photos.length);
+        }
+
+        if (event.key === 'ArrowLeft' && photos.length > 1) {
+            renderPhoto(
+                (currentIndex - 1 + photos.length) % photos.length
+            );
+        }
+    });
+
+    document.querySelectorAll('[data-procurement-photo-toggle]').forEach((toggle) => {
+        toggle.addEventListener('click', () => {
+            const galleryId = toggle.getAttribute('aria-controls');
+            const gallery = document.getElementById(galleryId);
+
+            if (!gallery) {
                 return;
             }
 
-            const reader = new FileReader();
+            const expanded = toggle.getAttribute('aria-expanded') === 'true';
 
-            reader.onload = function (event) {
-                const wrapper = $('<div>', {
-                    class: 'overflow-hidden rounded-xl border border-slate-200 bg-slate-50'
-                });
+            toggle.setAttribute('aria-expanded', String(!expanded));
+            gallery.classList.toggle('hidden', expanded);
 
-                const imageContainer = $('<div>', {
-                    class: 'aspect-square bg-slate-100'
-                });
+            const chevron = toggle.querySelector(
+                '[data-procurement-photo-chevron]'
+            );
 
-                const image = $('<img>', {
-                    src: event.target.result,
-                    alt: file.name,
-                    class: 'h-full w-full object-cover'
-                });
-
-                const filename = $('<div>', {
-                    class: 'truncate px-3 py-2 text-xs text-slate-600',
-                    text: file.name
-                });
-
-                imageContainer.append(image);
-                wrapper.append(imageContainer);
-                wrapper.append(filename);
-
-                preview.append(wrapper);
-            };
-
-            reader.readAsDataURL(file);
+            if (chevron) {
+                chevron.classList.toggle('rotate-180', !expanded);
+            }
         });
     });
-});
+};
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initProcurementPhotos);
+} else {
+    initProcurementPhotos();
+}

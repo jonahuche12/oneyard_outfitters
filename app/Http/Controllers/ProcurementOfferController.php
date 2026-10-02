@@ -40,10 +40,18 @@ class ProcurementOfferController extends Controller
             $procurement,
             $validated
         ): void {
-            Procurement::query()
+            $lockedProcurement = Procurement::query()
                 ->whereKey($procurement->id)
                 ->lockForUpdate()
                 ->firstOrFail();
+
+            abort_if(
+                $lockedProcurement->offers()
+                    ->where('status', ProcurementOffer::STATUS_ACCEPTED)
+                    ->exists(),
+                403,
+                'This procurement already has an accepted offer.'
+            );
 
             $existingOfferCount = ProcurementOffer::query()
                 ->where('procurement_id', $procurement->id)
@@ -131,6 +139,84 @@ class ProcurementOfferController extends Controller
             );
     }
 
+    public function accept(ProcurementOffer $offer): RedirectResponse
+    {
+        Gate::authorize('accept', $offer);
+
+        DB::transaction(function () use ($offer): void {
+            $procurement = Procurement::query()
+                ->whereKey($offer->procurement_id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $selectedOffer = ProcurementOffer::query()
+                ->whereKey($offer->id)
+                ->where('procurement_id', $procurement->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            abort_unless(
+                $selectedOffer->status === ProcurementOffer::STATUS_SUBMITTED,
+                422,
+                'Only a submitted offer can be accepted.'
+            );
+
+            $selectedOffer->update([
+                'status' => ProcurementOffer::STATUS_ACCEPTED,
+            ]);
+
+            ProcurementOffer::query()
+                ->where('procurement_id', $procurement->id)
+                ->where('status', ProcurementOffer::STATUS_SUBMITTED)
+                ->where('id', '!=', $selectedOffer->id)
+                ->update([
+                    'status' => ProcurementOffer::STATUS_REJECTED,
+                ]);
+        });
+
+        return redirect()
+            ->route('procurements.show', $offer->procurement_id)
+            ->with(
+                'success',
+                'The procurement offer was accepted successfully.'
+            );
+    }
+
+    public function reject(ProcurementOffer $offer): RedirectResponse
+    {
+        Gate::authorize('reject', $offer);
+
+        DB::transaction(function () use ($offer): void {
+            $procurement = Procurement::query()
+                ->whereKey($offer->procurement_id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $selectedOffer = ProcurementOffer::query()
+                ->whereKey($offer->id)
+                ->where('procurement_id', $procurement->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            abort_unless(
+                $selectedOffer->status === ProcurementOffer::STATUS_SUBMITTED,
+                422,
+                'Only a submitted offer can be rejected.'
+            );
+
+            $selectedOffer->update([
+                'status' => ProcurementOffer::STATUS_REJECTED,
+            ]);
+        });
+
+        return redirect()
+            ->route('procurements.show', $offer->procurement_id)
+            ->with(
+                'success',
+                'The procurement offer was rejected successfully.'
+            );
+    }
+
     public function withdraw(
         WithdrawProcurementOfferRequest $request,
         ProcurementOffer $offer
@@ -164,6 +250,14 @@ class ProcurementOfferController extends Controller
                 && $procurement->offer_deadline->isPast(),
             403,
             'The offer deadline for this procurement has passed.'
+        );
+
+        abort_if(
+            $procurement->offers()
+                ->where('status', ProcurementOffer::STATUS_ACCEPTED)
+                ->exists(),
+            403,
+            'This procurement already has an accepted offer.'
         );
     }
 }

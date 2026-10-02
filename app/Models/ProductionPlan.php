@@ -16,6 +16,9 @@ class ProductionPlan extends Model
         'order_id',
         'coordinator_id',
         'created_by',
+        'coordinator_checked_by',
+        'coordinator_checked_at',
+        'coordinator_check_notes',
     ];
 
     public function order(): BelongsTo
@@ -31,6 +34,11 @@ class ProductionPlan extends Model
     public function createdBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function coordinatorCheckedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'coordinator_checked_by');
     }
 
     public function activities(): HasMany

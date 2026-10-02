@@ -519,6 +519,48 @@ class OrderController extends Controller
     }
 
 
+
+    public function confirmProductionComplete(Request $request, Order $order)
+    {
+        $this->authorize('confirmProductionComplete', $order);
+
+        $validated = $request->validate([
+            'notes' => ['nullable', 'string', 'max:5000'],
+        ]);
+
+        $plan = $order->productionPlan;
+
+        DB::transaction(function () use ($order, $plan, $validated): void {
+            $plan = ProductionPlan::query()
+                ->whereKey($plan->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $incomplete = $plan->activities()
+                ->whereNot('status', ProductionPlanActivity::STATUS_COMPLETED)
+                ->exists();
+
+            if ($incomplete) {
+                abort(422, 'All production activities must be completed before production can be confirmed.');
+            }
+
+            $order->update([
+                'status' => Order::STATUS_READY_FOR_QUALITY_CONTROL,
+            ]);
+
+            $plan->update([
+                'coordinator_checked_by' => auth()->id(),
+                'coordinator_checked_at' => now(),
+                'coordinator_check_notes' => $validated['notes'] ?? null,
+            ]);
+        });
+
+        return redirect()
+            ->route('orders.show', $order)
+            ->with('success', 'Production has been confirmed complete and the order is ready for Quality Control.');
+    }
+
+
     public function createProductionPlan(
         Request $request,
         Order $order
@@ -562,7 +604,7 @@ class OrderController extends Controller
             return back()
                 ->withErrors([
                     'activity_ids' =>
-                        'Quality Control and Delivery are required production activities.',
+                        'All required active production activities must be selected.',
                 ])
                 ->withInput();
         }

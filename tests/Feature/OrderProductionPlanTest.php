@@ -316,8 +316,6 @@ class OrderProductionPlanTest extends TestCase
             ->whereIn('name', [
                 'Material Purchase',
                 'Sewing',
-                'Quality Control',
-                'Delivery',
             ])
             ->pluck('id')
             ->all();
@@ -331,19 +329,35 @@ class OrderProductionPlanTest extends TestCase
         $plan = ProductionPlan::where('order_id', $order->id)
             ->firstOrFail();
 
-        $this->assertCount(4, $plan->activities);
+        $this->assertCount(2, $plan->activities);
 
         $this->assertDatabaseHas('production_plan_activities', [
             'production_plan_id' => $plan->id,
             'production_activity_id' => ProductionActivity::where(
                 'name',
-                'Quality Control'
+                'Sewing'
             )->value('id'),
             'status' => 'pending',
         ]);
+
+        $this->assertDatabaseMissing('production_plan_activities', [
+            'production_plan_id' => $plan->id,
+            'production_activity_id' => ProductionActivity::where(
+                'name',
+                'Quality Control'
+            )->value('id'),
+        ]);
+
+        $this->assertDatabaseMissing('production_plan_activities', [
+            'production_plan_id' => $plan->id,
+            'production_activity_id' => ProductionActivity::where(
+                'name',
+                'Delivery'
+            )->value('id'),
+        ]);
     }
 
-    public function test_quality_control_and_delivery_cannot_be_omitted(): void
+    public function test_quality_control_and_delivery_are_not_production_plan_activities(): void
     {
         $this->seedActivities();
 
@@ -390,9 +404,28 @@ class OrderProductionPlanTest extends TestCase
             ->post(route('orders.production-plan.store', $order), [
                 'activity_ids' => [$materialPurchase],
             ])
-            ->assertSessionHasErrors('activity_ids');
+            ->assertRedirect();
 
-        $this->assertDatabaseCount('production_plans', 0);
+        $plan = ProductionPlan::where('order_id', $order->id)
+            ->firstOrFail();
+
+        $this->assertDatabaseCount('production_plans', 1);
+
+        $this->assertDatabaseMissing('production_plan_activities', [
+            'production_plan_id' => $plan->id,
+            'production_activity_id' => ProductionActivity::where(
+                'name',
+                'Quality Control'
+            )->value('id'),
+        ]);
+
+        $this->assertDatabaseMissing('production_plan_activities', [
+            'production_plan_id' => $plan->id,
+            'production_activity_id' => ProductionActivity::where(
+                'name',
+                'Delivery'
+            )->value('id'),
+        ]);
     }
 
     public function test_non_coordinator_with_production_permission_cannot_create_plan(): void
@@ -465,6 +498,7 @@ class OrderProductionPlanTest extends TestCase
             ->assertRedirect();
 
         $required = ProductionActivity::where('is_required', true)
+            ->where('is_active', true)
             ->pluck('id')
             ->all();
 
@@ -630,6 +664,7 @@ class OrderProductionPlanTest extends TestCase
 
         $required = ProductionActivity::query()
             ->where('is_required', true)
+            ->where('is_active', true)
             ->pluck('id')
             ->all();
 
@@ -694,6 +729,7 @@ class OrderProductionPlanTest extends TestCase
 
         $required = ProductionActivity::query()
             ->where('is_required', true)
+            ->where('is_active', true)
             ->pluck('id')
             ->all();
 
@@ -1305,6 +1341,7 @@ class OrderProductionPlanTest extends TestCase
         $activity = $plan->activities()->create([
             'production_activity_id' => ProductionActivity::query()
                 ->where('is_required', true)
+                ->where('is_active', true)
                 ->firstOrFail()
                 ->id,
             'sort_order' => 1,
@@ -1367,6 +1404,7 @@ class OrderProductionPlanTest extends TestCase
         $activity = $plan->activities()->create([
             'production_activity_id' => ProductionActivity::query()
                 ->where('is_required', true)
+                ->where('is_active', true)
                 ->firstOrFail()
                 ->id,
             'sort_order' => 1,
@@ -1423,6 +1461,7 @@ class OrderProductionPlanTest extends TestCase
         $activity = $plan->activities()->create([
             'production_activity_id' => ProductionActivity::query()
                 ->where('is_required', true)
+                ->where('is_active', true)
                 ->firstOrFail()
                 ->id,
             'sort_order' => 1,
@@ -1469,6 +1508,7 @@ class OrderProductionPlanTest extends TestCase
         $activity = $plan->activities()->create([
             'production_activity_id' => ProductionActivity::query()
                 ->where('is_required', true)
+                ->where('is_active', true)
                 ->firstOrFail()
                 ->id,
             'sort_order' => 1,
@@ -1515,6 +1555,7 @@ class OrderProductionPlanTest extends TestCase
         $activity = $plan->activities()->create([
             'production_activity_id' => ProductionActivity::query()
                 ->where('is_required', true)
+                ->where('is_active', true)
                 ->firstOrFail()
                 ->id,
             'sort_order' => 1,
@@ -1564,6 +1605,7 @@ class OrderProductionPlanTest extends TestCase
         $activity = $plan->activities()->create([
             'production_activity_id' => ProductionActivity::query()
                 ->where('is_required', true)
+                ->where('is_active', true)
                 ->firstOrFail()
                 ->id,
             'sort_order' => 1,
@@ -1615,6 +1657,7 @@ class OrderProductionPlanTest extends TestCase
         $activity = $plan->activities()->create([
             'production_activity_id' => ProductionActivity::query()
                 ->where('is_required', true)
+                ->where('is_active', true)
                 ->firstOrFail()
                 ->id,
             'sort_order' => 1,
@@ -1666,6 +1709,7 @@ class OrderProductionPlanTest extends TestCase
         $activity = $plan->activities()->create([
             'production_activity_id' => ProductionActivity::query()
                 ->where('is_required', true)
+                ->where('is_active', true)
                 ->firstOrFail()
                 ->id,
             'sort_order' => 1,

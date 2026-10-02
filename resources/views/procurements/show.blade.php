@@ -23,6 +23,9 @@
                         $procurement->offer_deadline === null
                         || $procurement->offer_deadline->isFuture()
                     )
+                    && ! $procurement->offers->contains(
+                        fn ($offer) => $offer->status === \App\Models\ProcurementOffer::STATUS_ACCEPTED
+                    )
                 )
                     @can('submitOffer', $procurement)
                         <a
@@ -66,6 +69,105 @@
                     <li>{{ $error }}</li>
                 @endforeach
             </ul>
+        </div>
+    @endif
+
+    @php
+        $referencePhotos = $procurement->attachments
+            ->filter(function ($attachment) {
+                return $attachment->product_specification_artifact_id === null
+                    && in_array(
+                        $attachment->mime_type,
+                        [
+                            'image/jpeg',
+                            'image/jpg',
+                            'image/png',
+                            'image/webp',
+                        ],
+                        true
+                    );
+            })
+            ->values();
+
+        $referencePhotoData = $referencePhotos->map(function ($photo) use ($procurement) {
+            return [
+                'src' => route('procurements.attachments.show', [$procurement, $photo]),
+                'alt' => $photo->original_name ?: 'Procurement reference photo',
+            ];
+        })->values();
+    @endphp
+
+    {{-- Reference Photos --}}
+    @if($referencePhotos->isNotEmpty())
+        <div class="oy-card mb-6" data-procurement-photo-section>
+            <button
+                type="button"
+                class="oy-card-header flex w-full items-center justify-between gap-4 text-left"
+                data-procurement-photo-toggle
+                aria-expanded="false"
+                aria-controls="procurement-reference-photo-gallery"
+            >
+                <div>
+                    <h2 class="oy-card-title">
+                        Reference Photos
+                    </h2>
+
+                    <p class="oy-card-description">
+                        {{ $referencePhotos->count() }}
+                        {{ \Illuminate\Support\Str::plural('reference photo', $referencePhotos->count()) }}
+                        attached to this procurement requirement.
+                    </p>
+                </div>
+
+                <span
+                    class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition-transform duration-200"
+                    data-procurement-photo-chevron
+                    aria-hidden="true"
+                >
+                    <svg
+                        class="h-4 w-4"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                    >
+                        <path
+                            fill-rule="evenodd"
+                            d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.168l3.71-3.938a.75.75 0 1 1 1.08 1.04l-4.25 4.51a.75.75 0 0 1-1.08 0l-4.25-4.51a.75.75 0 0 1 .02-1.06Z"
+                            clip-rule="evenodd"
+                        />
+                    </svg>
+                </span>
+            </button>
+
+            <div
+                id="procurement-reference-photo-gallery"
+                class="hidden border-t border-slate-100"
+                data-procurement-photo-gallery
+            >
+                <div class="oy-card-body">
+                    <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                        @foreach($referencePhotos as $photo)
+                            <button
+                                type="button"
+                                class="group relative aspect-square overflow-hidden rounded-xl border border-slate-200 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2"
+                                data-procurement-photo-modal
+                                data-photo-index="{{ $loop->index }}"
+                                data-photo-images='@json($referencePhotoData)'
+                                aria-label="View {{ $photo->original_name ?: 'reference photo' }}"
+                            >
+                                <img
+                                    src="{{ route('procurements.attachments.show', [$procurement, $photo]) }}"
+                                    alt="{{ $photo->original_name ?: 'Procurement reference photo' }}"
+                                    class="h-full w-full object-cover transition duration-200 group-hover:scale-105"
+                                >
+
+                                <span class="absolute inset-x-0 bottom-0 bg-slate-950/60 px-3 py-2 text-left text-xs font-medium text-white opacity-0 transition group-hover:opacity-100">
+                                    View photo
+                                </span>
+                            </button>
+                        @endforeach
+                    </div>
+                </div>
+            </div>
         </div>
     @endif
 
@@ -278,6 +380,9 @@
                         $procurement->offer_deadline === null
                         || $procurement->offer_deadline->isFuture()
                     )
+                    && ! $procurement->offers->contains(
+                        fn ($offer) => $offer->status === \App\Models\ProcurementOffer::STATUS_ACCEPTED
+                    )
                 )
                     @can('submitOffer', $procurement)
                         <a
@@ -340,6 +445,32 @@
                                         >
                                             Edit
                                         </a>
+                                    @endcan
+
+                                    @can('accept', $offer)
+                                        <button
+                                            type="button"
+                                            class="oy-btn oy-btn-primary"
+                                            data-accept-offer
+                                            data-offer-id="{{ $offer->id }}"
+                                            data-offer-label="Offer #{{ $offer->id }}"
+                                            data-accept-action="{{ route('procurements.offers.accept', $offer) }}"
+                                        >
+                                            Accept Offer
+                                        </button>
+                                    @endcan
+
+                                    @can('reject', $offer)
+                                        <button
+                                            type="button"
+                                            class="oy-btn oy-btn-secondary"
+                                            data-reject-offer
+                                            data-offer-id="{{ $offer->id }}"
+                                            data-offer-label="Offer #{{ $offer->id }}"
+                                            data-reject-action="{{ route('procurements.offers.reject', $offer) }}"
+                                        >
+                                            Reject Offer
+                                        </button>
                                     @endcan
 
                                     @can('withdraw', $offer)
@@ -467,6 +598,177 @@
     </div>
 
     <div
+        id="procurement-offer-reject-modal"
+        class="hidden fixed inset-0 z-50 overflow-y-auto"
+        aria-labelledby="procurement-offer-reject-title"
+        role="dialog"
+        aria-modal="true"
+    >
+        <div class="flex min-h-full items-center justify-center p-4">
+            <div
+                class="fixed inset-0 bg-slate-900/50"
+                data-reject-modal-close
+                aria-hidden="true"
+            ></div>
+
+            <div class="relative w-full max-w-lg rounded-xl bg-white shadow-xl">
+                <div class="flex items-start justify-between border-b border-slate-200 px-6 py-4">
+                    <div>
+                        <h2
+                            id="procurement-offer-reject-title"
+                            class="text-lg font-semibold text-slate-900"
+                        >
+                            Reject Offer
+                        </h2>
+                        <p class="mt-1 text-sm text-slate-500">
+                            Confirm that you want to reject this procurement offer.
+                        </p>
+                    </div>
+
+                    <button
+                        type="button"
+                        class="text-2xl leading-none text-slate-400 hover:text-slate-600"
+                        data-reject-modal-close
+                        aria-label="Close rejection dialog"
+                    >
+                        &times;
+                    </button>
+                </div>
+
+                <form
+                    id="procurement-offer-reject-form"
+                    method="POST"
+                    action="#"
+                >
+                    @csrf
+
+                    <input
+                        type="hidden"
+                        id="procurement-offer-reject-offer-id"
+                        name="reject_offer_id"
+                        value=""
+                    >
+
+                    <div class="px-6 py-5">
+                        <div class="rounded-lg border border-amber-200 bg-amber-50 p-4">
+                            <p class="text-sm font-medium text-amber-900">
+                                This action will reject this offer.
+                            </p>
+                            <p class="mt-1 text-sm text-amber-800">
+                                The offer will no longer be available for acceptance.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end gap-3 border-t border-slate-200 px-6 py-4">
+                        <button
+                            type="button"
+                            class="oy-btn oy-btn-secondary"
+                            data-reject-modal-cancel
+                        >
+                            Cancel
+                        </button>
+
+                        <button
+                            type="submit"
+                            class="oy-btn oy-btn-primary"
+                        >
+                            Confirm Rejection
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div
+        id="procurement-offer-accept-modal"
+        class="hidden fixed inset-0 z-50 overflow-y-auto"
+        aria-labelledby="procurement-offer-accept-title"
+        role="dialog"
+        aria-modal="true"
+    >
+        <div class="flex min-h-full items-center justify-center p-4">
+            <div
+                class="fixed inset-0 bg-slate-900/50"
+                data-accept-modal-close
+                aria-hidden="true"
+            ></div>
+
+            <div class="relative w-full max-w-lg rounded-xl bg-white shadow-xl">
+                <div class="flex items-start justify-between border-b border-slate-200 px-6 py-4">
+                    <div>
+                        <h2
+                            id="procurement-offer-accept-title"
+                            class="text-lg font-semibold text-slate-900"
+                        >
+                            Accept Offer
+                        </h2>
+
+                        <p class="mt-1 text-sm text-slate-500">
+                            Confirm that you want to accept this procurement offer.
+                        </p>
+                    </div>
+
+                    <button
+                        type="button"
+                        class="text-2xl leading-none text-slate-400 hover:text-slate-600"
+                        data-accept-modal-close
+                        aria-label="Close acceptance dialog"
+                    >
+                        &times;
+                    </button>
+                </div>
+
+                <form
+                    id="procurement-offer-accept-form"
+                    method="POST"
+                    action="#"
+                >
+                    @csrf
+
+                    <input
+                        type="hidden"
+                        id="procurement-offer-accept-offer-id"
+                        name="accept_offer_id"
+                        value=""
+                    >
+
+                    <div class="px-6 py-5">
+                        <div class="rounded-lg border border-amber-200 bg-amber-50 p-4">
+                            <p class="text-sm font-medium text-amber-900">
+                                This action will select this offer.
+                            </p>
+
+                            <p class="mt-1 text-sm text-amber-800">
+                                Other submitted offers for this procurement
+                                requirement will be rejected.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end gap-3 border-t border-slate-200 px-6 py-4">
+                        <button
+                            type="button"
+                            class="oy-btn oy-btn-secondary"
+                            data-accept-modal-cancel
+                        >
+                            Cancel
+                        </button>
+
+                        <button
+                            type="submit"
+                            class="oy-btn oy-btn-primary"
+                        >
+                            Confirm Acceptance
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div
         id="procurement-offer-withdrawal-modal"
         class="{{ $errors->has('withdrawal_reason') ? '' : 'hidden' }} fixed inset-0 z-50 overflow-y-auto"
         data-reopen="{{ $errors->has('withdrawal_reason') && old('withdrawal_offer_id') ? 'true' : 'false' }}"
@@ -566,6 +868,67 @@
                         </button>
                     </div>
                 </form>
+            </div>
+        </div>
+    </div>
+
+
+    {{-- Procurement Reference Photo Modal --}}
+    <div
+        id="procurement-photo-modal"
+        class="fixed inset-0 z-50 hidden"
+        aria-hidden="true"
+    >
+        <div
+            class="absolute inset-0 bg-slate-950/80"
+            data-procurement-photo-close
+        ></div>
+
+        <div class="relative flex min-h-full items-center justify-center p-4 sm:p-6">
+            <div
+                class="relative w-full max-w-5xl rounded-2xl bg-white p-3 shadow-2xl sm:p-5"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="procurement-photo-modal-title"
+            >
+                <div class="mb-3 flex items-center justify-between gap-4">
+                    <div>
+                        <h2
+                            id="procurement-photo-modal-title"
+                            class="text-sm font-semibold text-slate-900"
+                        >
+                            Reference Photo
+                        </h2>
+
+                        <p
+                            id="procurement-photo-modal-count"
+                            class="mt-1 text-xs text-slate-500"
+                        ></p>
+                    </div>
+
+                    <button
+                        type="button"
+                        class="oy-btn oy-btn-secondary"
+                        data-procurement-photo-close
+                        aria-label="Close photo viewer"
+                    >
+                        Close
+                    </button>
+                </div>
+
+                <div class="overflow-hidden rounded-xl bg-slate-100">
+                    <img
+                        id="procurement-photo-modal-image"
+                        src=""
+                        alt=""
+                        class="mx-auto max-h-[75vh] w-auto max-w-full object-contain"
+                    >
+                </div>
+
+                <div
+                    id="procurement-photo-modal-thumbnails"
+                    class="mt-3 flex gap-2 overflow-x-auto"
+                ></div>
             </div>
         </div>
     </div>

@@ -40,6 +40,40 @@ class ProcurementOfferPolicy
             && $offer->status === ProcurementOffer::STATUS_SUBMITTED;
     }
 
+    public function accept(User $user, ProcurementOffer $offer): bool
+    {
+        if (! $user->hasPermission('procurement.manage')) {
+            return false;
+        }
+
+        if ($offer->status !== ProcurementOffer::STATUS_SUBMITTED) {
+            return false;
+        }
+
+        if ($this->isAdmin($user)) {
+            return true;
+        }
+
+        return $offer->procurement?->order?->currentAssignment?->user_id === $user->id;
+    }
+
+    public function reject(User $user, ProcurementOffer $offer): bool
+    {
+        if (! $user->hasPermission('procurement.manage')) {
+            return false;
+        }
+
+        if ($offer->status !== ProcurementOffer::STATUS_SUBMITTED) {
+            return false;
+        }
+
+        if ($this->isAdmin($user)) {
+            return true;
+        }
+
+        return $offer->procurement?->order?->currentAssignment?->user_id === $user->id;
+    }
+
     private function isAdmin(User $user): bool
     {
         return $user->roles()

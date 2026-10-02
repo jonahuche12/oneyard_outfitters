@@ -15,6 +15,7 @@ class Order extends Model
     public const STATUS_PENDING = 'pending';
     public const STATUS_APPROVED = 'approved';
     public const STATUS_IN_PRODUCTION = 'in_production';
+    public const STATUS_READY_FOR_QUALITY_CONTROL = 'ready_for_quality_control';
     public const STATUS_READY = 'ready';
     public const STATUS_DELIVERED = 'delivered';
     public const STATUS_CANCELLED = 'cancelled';

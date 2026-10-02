@@ -6,6 +6,7 @@ use App\Http\Requests\Procurement\StoreProcurementRequest;
 use App\Http\Requests\Procurement\UpdateProcurementRequest;
 use App\Models\Order;
 use App\Models\Procurement;
+use App\Models\ProcurementOffer;
 use App\Models\ProcurementAttachment;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -31,6 +32,14 @@ class ProcurementController extends Controller
                 'attachments:id,procurement_id,product_specification_artifact_id,original_name,mime_type,file_path',
             ])
             ->withCount('offers')
+            ->withExists([
+                'offers as has_accepted_offer' => function ($query) {
+                    $query->where(
+                        'status',
+                        ProcurementOffer::STATUS_ACCEPTED
+                    );
+                },
+            ])
             ->when($search !== '', function ($query) use ($search) {
                 $query->where(function ($query) use ($search) {
                     $query

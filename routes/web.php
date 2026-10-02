@@ -191,6 +191,16 @@ Route::middleware(['auth', 'active'])->group(function () {
         [ProcurementOfferController::class, 'withdraw']
     )->name('procurements.offers.withdraw');
 
+    Route::post(
+        '/procurement-offers/{offer}/accept',
+        [ProcurementOfferController::class, 'accept']
+    )->name('procurements.offers.accept');
+
+    Route::post(
+        '/procurement-offers/{offer}/reject',
+        [ProcurementOfferController::class, 'reject']
+    )->name('procurements.offers.reject');
+
 Route::resource('procurements', ProcurementController::class)
         ->except(['destroy']);
 
@@ -226,6 +236,11 @@ Route::resource('procurements', ProcurementController::class)
         '/orders/{order}/production-plan',
         [OrderController::class, 'createProductionPlan']
     )->name('orders.production-plan.store');
+
+    Route::post(
+        '/orders/{order}/production-plan/confirm-complete',
+        [OrderController::class, 'confirmProductionComplete']
+    )->name('orders.production-plan.confirm-complete');
 
     Route::post(
         '/quotations/{quotation}/items',

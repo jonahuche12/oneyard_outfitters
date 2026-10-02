@@ -127,8 +127,8 @@
                                 <tr>
                                     <td>
                                         @php
-                                            $firstReferencePhoto = $procurement->attachments
-                                                ->first(function ($attachment) {
+                                            $referencePhotos = $procurement->attachments
+                                                ->filter(function ($attachment) {
                                                     return $attachment->product_specification_artifact_id === null
                                                         && in_array(
                                                             $attachment->mime_type,
@@ -140,16 +140,41 @@
                                                             ],
                                                             true
                                                         );
-                                                });
+                                                })
+                                                ->values();
+
+                                            $firstReferencePhoto = $referencePhotos->first();
+
+                                            $referencePhotoData = $referencePhotos->map(function ($photo) use ($procurement) {
+                                                return [
+                                                    'src' => route('procurements.attachments.show', [$procurement, $photo]),
+                                                    'alt' => $photo->original_name ?: 'Procurement reference photo',
+                                                ];
+                                            })->values();
                                         @endphp
 
                                         <div class="flex items-center gap-3">
                                             @if($firstReferencePhoto)
-                                                <img
-                                                    src="{{ route('procurements.attachments.show', [$procurement, $firstReferencePhoto]) }}"
-                                                    alt="{{ $firstReferencePhoto->original_name ?: 'Procurement reference photo' }}"
-                                                    class="h-10 w-10 shrink-0 rounded-lg border border-slate-200 object-cover"
+                                                <button
+                                                    type="button"
+                                                    class="group relative h-10 w-10 shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2"
+                                                    data-procurement-photo-modal
+                                                    data-photo-index="0"
+                                                    data-photo-images='@json($referencePhotoData)'
+                                                    aria-label="View procurement reference photos"
                                                 >
+                                                    <img
+                                                        src="{{ route('procurements.attachments.show', [$procurement, $firstReferencePhoto]) }}"
+                                                        alt="{{ $firstReferencePhoto->original_name ?: 'Procurement reference photo' }}"
+                                                        class="h-full w-full object-cover transition duration-200 group-hover:scale-105"
+                                                    >
+
+                                                    @if($referencePhotos->count() > 1)
+                                                        <span class="absolute inset-0 flex items-center justify-center bg-slate-900/50 text-[10px] font-semibold text-white">
+                                                            +{{ $referencePhotos->count() - 1 }}
+                                                        </span>
+                                                    @endif
+                                                </button>
                                             @else
                                                 <div
                                                     class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-xs text-slate-400"
@@ -311,6 +336,67 @@
             @endif
 
         </div>
+
+
+    {{-- Procurement Reference Photo Modal --}}
+    <div
+        id="procurement-photo-modal"
+        class="fixed inset-0 z-50 hidden"
+        aria-hidden="true"
+    >
+        <div
+            class="absolute inset-0 bg-slate-950/80"
+            data-procurement-photo-close
+        ></div>
+
+        <div class="relative flex min-h-full items-center justify-center p-4 sm:p-6">
+            <div
+                class="relative w-full max-w-5xl rounded-2xl bg-white p-3 shadow-2xl sm:p-5"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="procurement-photo-modal-title"
+            >
+                <div class="mb-3 flex items-center justify-between gap-4">
+                    <div>
+                        <h2
+                            id="procurement-photo-modal-title"
+                            class="text-sm font-semibold text-slate-900"
+                        >
+                            Reference Photo
+                        </h2>
+
+                        <p
+                            id="procurement-photo-modal-count"
+                            class="mt-1 text-xs text-slate-500"
+                        ></p>
+                    </div>
+
+                    <button
+                        type="button"
+                        class="oy-btn oy-btn-secondary"
+                        data-procurement-photo-close
+                        aria-label="Close photo viewer"
+                    >
+                        Close
+                    </button>
+                </div>
+
+                <div class="overflow-hidden rounded-xl bg-slate-100">
+                    <img
+                        id="procurement-photo-modal-image"
+                        src=""
+                        alt=""
+                        class="mx-auto max-h-[75vh] w-auto max-w-full object-contain"
+                    >
+                </div>
+
+                <div
+                    id="procurement-photo-modal-thumbnails"
+                    class="mt-3 flex gap-2 overflow-x-auto"
+                ></div>
+            </div>
+        </div>
+    </div>
 
     </div>
 @endsection

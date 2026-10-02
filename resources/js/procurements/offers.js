@@ -1,89 +1,232 @@
 import $ from 'jquery';
 
 $(function () {
-    const $modal = $('#procurement-offer-withdrawal-modal');
-    const $form = $('#procurement-offer-withdrawal-form');
-    const $reason = $('#procurement-offer-withdrawal-reason');
-    const $offerId = $('#procurement-offer-withdrawal-offer-id');
-    const $title = $('#procurement-offer-withdrawal-title');
+    /*
+     * Offer withdrawal modal
+     */
+    const $withdrawalModal = $('#procurement-offer-withdrawal-modal');
+    const $withdrawalForm = $('#procurement-offer-withdrawal-form');
+    const $withdrawalReason = $('#procurement-offer-withdrawal-reason');
+    const $withdrawalOfferId = $('#procurement-offer-withdrawal-offer-id');
+    const $withdrawalTitle = $('#procurement-offer-withdrawal-title');
 
-    if (!$modal.length || !$form.length) {
-        return;
+    if ($withdrawalModal.length && $withdrawalForm.length) {
+        let $lastWithdrawalTrigger = null;
+
+        function openWithdrawalModal($trigger) {
+            const action = $trigger.attr('data-withdraw-action');
+            const offerId = $trigger.attr('data-offer-id');
+            const offerLabel = $trigger.attr('data-offer-label') || 'this offer';
+
+            if (!action || !offerId) {
+                return;
+            }
+
+            $lastWithdrawalTrigger = $trigger;
+
+            $withdrawalForm.attr('action', action);
+            $withdrawalOfferId.val(offerId);
+            $withdrawalTitle.text('Withdraw ' + offerLabel);
+
+            $withdrawalModal.removeClass('hidden');
+            $('body').addClass('overflow-hidden');
+
+            window.setTimeout(function () {
+                $withdrawalReason.trigger('focus');
+            }, 0);
+        }
+
+        function closeWithdrawalModal() {
+            $withdrawalModal.addClass('hidden');
+            $('body').removeClass('overflow-hidden');
+
+            if ($lastWithdrawalTrigger && $lastWithdrawalTrigger.length) {
+                $lastWithdrawalTrigger.trigger('focus');
+            }
+        }
+
+        $('[data-withdraw-offer]').on('click', function () {
+            openWithdrawalModal($(this));
+        });
+
+        $('[data-withdrawal-modal-close]').on('click', function () {
+            closeWithdrawalModal();
+        });
+
+        $withdrawalModal.on('click', function (event) {
+            if (event.target === this) {
+                closeWithdrawalModal();
+            }
+        });
+
+        const previousOfferId = String($withdrawalOfferId.val() || '');
+
+        if (
+            previousOfferId &&
+            $withdrawalModal.attr('data-reopen') === 'true'
+        ) {
+            const $trigger = $(
+                '[data-withdraw-offer][data-offer-id="' +
+                previousOfferId +
+                '"]'
+            );
+
+            if ($trigger.length) {
+                openWithdrawalModal($trigger);
+            } else {
+                $withdrawalModal.removeClass('hidden');
+                $('body').addClass('overflow-hidden');
+                $withdrawalReason.trigger('focus');
+            }
+        }
+
+        $(document).on('keydown', function (event) {
+            if (
+                event.key === 'Escape' &&
+                !$withdrawalModal.hasClass('hidden')
+            ) {
+                closeWithdrawalModal();
+            }
+        });
     }
-
-    let $lastTrigger = null;
-
-    function openModal($trigger) {
-        const action = $trigger.attr('data-withdraw-action');
-        const offerId = $trigger.attr('data-offer-id');
-        const offerLabel = $trigger.attr('data-offer-label') || 'this offer';
-
-        if (!action || !offerId) {
-            return;
-        }
-
-        $lastTrigger = $trigger;
-
-        $form.attr('action', action);
-        $offerId.val(offerId);
-        $title.text('Withdraw ' + offerLabel);
-
-        $modal.removeClass('hidden');
-        $('body').addClass('overflow-hidden');
-
-        window.setTimeout(function () {
-            $reason.trigger('focus');
-        }, 0);
-    }
-
-    function closeModal() {
-        $modal.addClass('hidden');
-        $('body').removeClass('overflow-hidden');
-
-        if ($lastTrigger && $lastTrigger.length) {
-            $lastTrigger.trigger('focus');
-        }
-    }
-
-    $('[data-withdraw-offer]').on('click', function () {
-        openModal($(this));
-    });
-
-    $('[data-withdrawal-modal-close]').on('click', function () {
-        closeModal();
-    });
-
-    $modal.on('click', function (event) {
-        if (event.target === this) {
-            closeModal();
-        }
-    });
-
-    $(document).on('keydown', function (event) {
-        if (event.key === 'Escape' && !$modal.hasClass('hidden')) {
-            closeModal();
-        }
-    });
 
     /*
-     * If Laravel redirected back because the withdrawal reason
-     * failed validation, reopen the modal for the offer that
-     * submitted the request.
+     * Offer acceptance confirmation modal
      */
-    const previousOfferId = String($offerId.val() || '');
+    const $acceptModal = $('#procurement-offer-accept-modal');
+    const $acceptForm = $('#procurement-offer-accept-form');
+    const $acceptTitle = $('#procurement-offer-accept-title');
+    const $acceptOfferId = $('#procurement-offer-accept-offer-id');
 
-    if (
-        previousOfferId &&
-        $modal.attr('data-reopen') === 'true'
-    ) {
-        const $trigger = $('[data-withdraw-offer][data-offer-id="' + previousOfferId + '"]');
+    if ($acceptModal.length && $acceptForm.length) {
+        let $lastAcceptTrigger = null;
 
-        if ($trigger.length) {
-            openModal($trigger);
-        } else {
-            $modal.removeClass('hidden');
+        function openAcceptModal($trigger) {
+            const action = $trigger.attr('data-accept-action');
+            const offerId = $trigger.attr('data-offer-id');
+            const offerLabel = $trigger.attr('data-offer-label') || 'this offer';
+
+            if (!action || !offerId) {
+                return;
+            }
+
+            $lastAcceptTrigger = $trigger;
+
+            $acceptForm.attr('action', action);
+            $acceptOfferId.val(offerId);
+            $acceptTitle.text('Accept ' + offerLabel);
+
+            $acceptModal.removeClass('hidden');
             $('body').addClass('overflow-hidden');
-            $reason.trigger('focus');
+
+            window.setTimeout(function () {
+                $('[data-accept-modal-cancel]').trigger('focus');
+            }, 0);
         }
+
+        function closeAcceptModal() {
+            $acceptModal.addClass('hidden');
+            $('body').removeClass('overflow-hidden');
+
+            if ($lastAcceptTrigger && $lastAcceptTrigger.length) {
+                $lastAcceptTrigger.trigger('focus');
+            }
+        }
+
+        $('[data-accept-offer]').on('click', function () {
+            openAcceptModal($(this));
+        });
+
+        $('[data-accept-modal-close], [data-accept-modal-cancel]').on(
+            'click',
+            function () {
+                closeAcceptModal();
+            }
+        );
+
+        $acceptModal.on('click', function (event) {
+            if (event.target === this) {
+                closeAcceptModal();
+            }
+        });
+
+        $(document).on('keydown', function (event) {
+            if (
+                event.key === 'Escape' &&
+                !$acceptModal.hasClass('hidden')
+            ) {
+                closeAcceptModal();
+            }
+        });
+    }
+
+    /*
+     * Offer rejection confirmation modal
+     */
+    const $rejectModal = $('#procurement-offer-reject-modal');
+    const $rejectForm = $('#procurement-offer-reject-form');
+    const $rejectTitle = $('#procurement-offer-reject-title');
+    const $rejectOfferId = $('#procurement-offer-reject-offer-id');
+
+    if ($rejectModal.length && $rejectForm.length) {
+        let $lastRejectTrigger = null;
+
+        function openRejectModal($trigger) {
+            const action = $trigger.attr('data-reject-action');
+            const offerId = $trigger.attr('data-offer-id');
+            const offerLabel = $trigger.attr('data-offer-label') || 'this offer';
+
+            if (!action || !offerId) {
+                return;
+            }
+
+            $lastRejectTrigger = $trigger;
+
+            $rejectForm.attr('action', action);
+            $rejectOfferId.val(offerId);
+            $rejectTitle.text('Reject ' + offerLabel);
+
+            $rejectModal.removeClass('hidden');
+            $('body').addClass('overflow-hidden');
+
+            window.setTimeout(function () {
+                $('[data-reject-modal-cancel]').trigger('focus');
+            }, 0);
+        }
+
+        function closeRejectModal() {
+            $rejectModal.addClass('hidden');
+            $('body').removeClass('overflow-hidden');
+
+            if ($lastRejectTrigger && $lastRejectTrigger.length) {
+                $lastRejectTrigger.trigger('focus');
+            }
+        }
+
+        $('[data-reject-offer]').on('click', function () {
+            openRejectModal($(this));
+        });
+
+        $('[data-reject-modal-close], [data-reject-modal-cancel]').on(
+            'click',
+            function () {
+                closeRejectModal();
+            }
+        );
+
+        $rejectModal.on('click', function (event) {
+            if (event.target === this) {
+                closeRejectModal();
+            }
+        });
+
+        $(document).on('keydown', function (event) {
+            if (
+                event.key === 'Escape' &&
+                !$rejectModal.hasClass('hidden')
+            ) {
+                closeRejectModal();
+            }
+        });
     }
 });

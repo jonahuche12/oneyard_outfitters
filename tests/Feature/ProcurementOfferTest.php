@@ -3,6 +3,10 @@
 namespace Tests\Feature;
 
 use App\Models\Permission;
+use App\Models\Order;
+use App\Models\OrderAssignment;
+use App\Models\Organization;
+use App\Models\Quotation;
 use App\Models\Procurement;
 use App\Models\ProcurementOffer;
 use App\Models\Role;
@@ -68,6 +72,38 @@ class ProcurementOfferTest extends TestCase
             'priority' => 'normal',
             'status' => Procurement::STATUS_READY,
         ], $overrides));
+    }
+
+    private function order(): Order
+    {
+        $user = User::factory()->create();
+        $organization = Organization::factory()->create();
+
+        $quotation = Quotation::create([
+            'quotation_number' => 'TMP-' . uniqid('', true),
+            'organization_id' => $organization->id,
+            'created_by' => $user->id,
+            'quotation_date' => now()->toDateString(),
+            'expected_delivery_days' => 30,
+            'status' => Quotation::STATUS_DRAFT,
+            'subtotal' => 0,
+            'discount' => 0,
+            'additional_charges' => 0,
+            'total' => 0,
+        ]);
+
+        return Order::create([
+            'order_number' => 'ORD-' . uniqid('', true),
+            'organization_id' => $organization->id,
+            'quotation_id' => $quotation->id,
+            'contact_id' => null,
+            'order_date' => now()->toDateString(),
+            'status' => Order::STATUS_IN_PRODUCTION,
+            'subtotal' => 0,
+            'discount' => 0,
+            'additional_charges' => 0,
+            'total' => 0,
+        ]);
     }
 
     private function offerPayload(array $overrides = []): array
@@ -1056,4 +1092,559 @@ class ProcurementOfferTest extends TestCase
             ->and($offer->status)
             ->toBe(ProcurementOffer::STATUS_SUBMITTED);
     }
+
+    public function test_admin_with_procurement_manage_can_accept_submitted_offer(): void
+    {
+        $admin = $this->userWithRole(
+            'admin',
+            ['procurement.manage']
+        );
+
+        $procurement = $this->procurement();
+
+        $acceptedOffer = ProcurementOffer::create([
+            'procurement_id' => $procurement->id,
+            'user_id' => User::factory()->create()->id,
+            'quantity' => 80,
+            'unit_price' => 3200,
+            'total_price' => 256000,
+            'status' => ProcurementOffer::STATUS_SUBMITTED,
+            'submitted_at' => now(),
+        ]);
+
+        $response = $this
+            ->actingAs($admin)
+            ->post(
+                route('procurements.offers.accept', $acceptedOffer)
+            );
+
+        $response->assertRedirect(
+            route('procurements.show', $procurement)
+        );
+
+        $this->assertDatabaseHas('procurement_offers', [
+            'id' => $acceptedOffer->id,
+            'status' => ProcurementOffer::STATUS_ACCEPTED,
+        ]);
+    }
+
+    public function test_coordinator_with_procurement_manage_can_accept_offer_for_assigned_order(): void
+    {
+        $coordinator = $this->userWithRole(
+            'coordinator',
+            ['procurement.manage']
+        );
+
+        $order = $this->order();
+
+        OrderAssignment::create([
+            'order_id' => $order->id,
+            'user_id' => $coordinator->id,
+            'assigned_by' => $coordinator->id,
+            'assigned_at' => now(),
+        ]);
+
+        $procurement = $this->procurement([
+            'order_id' => $order->id,
+        ]);
+
+        $offer = ProcurementOffer::create([
+            'procurement_id' => $procurement->id,
+            'user_id' => User::factory()->create()->id,
+            'quantity' => 80,
+            'unit_price' => 3200,
+            'total_price' => 256000,
+            'status' => ProcurementOffer::STATUS_SUBMITTED,
+            'submitted_at' => now(),
+        ]);
+
+        $this->assertTrue(
+            Gate::forUser($coordinator)->allows('accept', $offer)
+        );
+
+        $response = $this
+            ->actingAs($coordinator)
+            ->post(
+                route('procurements.offers.accept', $offer)
+            );
+
+        $response->assertRedirect(
+            route('procurements.show', $procurement)
+        );
+
+        $this->assertDatabaseHas('procurement_offers', [
+            'id' => $offer->id,
+            'status' => ProcurementOffer::STATUS_ACCEPTED,
+        ]);
+    }
+
+    public function test_coordinator_cannot_accept_offer_for_another_order(): void
+    {
+        $coordinator = $this->userWithRole(
+            'coordinator',
+            ['procurement.manage']
+        );
+
+        $assignedOrder = $this->order();
+        $otherOrder = $this->order();
+
+        OrderAssignment::create([
+            'order_id' => $assignedOrder->id,
+            'user_id' => $coordinator->id,
+            'assigned_by' => $coordinator->id,
+            'assigned_at' => now(),
+        ]);
+
+        $procurement = $this->procurement([
+            'order_id' => $otherOrder->id,
+        ]);
+
+        $offer = ProcurementOffer::create([
+            'procurement_id' => $procurement->id,
+            'user_id' => User::factory()->create()->id,
+            'quantity' => 80,
+            'unit_price' => 3200,
+            'total_price' => 256000,
+            'status' => ProcurementOffer::STATUS_SUBMITTED,
+            'submitted_at' => now(),
+        ]);
+
+        $this->assertFalse(
+            Gate::forUser($coordinator)->allows('accept', $offer)
+        );
+
+        $response = $this
+            ->actingAs($coordinator)
+            ->post(
+                route('procurements.offers.accept', $offer)
+            );
+
+        $response->assertForbidden();
+
+        $this->assertDatabaseHas('procurement_offers', [
+            'id' => $offer->id,
+            'status' => ProcurementOffer::STATUS_SUBMITTED,
+        ]);
+    }
+
+    public function test_accepting_one_offer_rejects_other_submitted_offers(): void
+    {
+        $admin = $this->userWithRole(
+            'admin',
+            ['procurement.manage']
+        );
+
+        $procurement = $this->procurement();
+
+        $firstOffer = ProcurementOffer::create([
+            'procurement_id' => $procurement->id,
+            'user_id' => User::factory()->create()->id,
+            'quantity' => 80,
+            'unit_price' => 3200,
+            'total_price' => 256000,
+            'status' => ProcurementOffer::STATUS_SUBMITTED,
+            'submitted_at' => now(),
+        ]);
+
+        $secondOffer = ProcurementOffer::create([
+            'procurement_id' => $procurement->id,
+            'user_id' => User::factory()->create()->id,
+            'quantity' => 80,
+            'unit_price' => 3000,
+            'total_price' => 240000,
+            'status' => ProcurementOffer::STATUS_SUBMITTED,
+            'submitted_at' => now(),
+        ]);
+
+        $withdrawnOffer = ProcurementOffer::create([
+            'procurement_id' => $procurement->id,
+            'user_id' => User::factory()->create()->id,
+            'quantity' => 80,
+            'unit_price' => 3100,
+            'total_price' => 248000,
+            'status' => ProcurementOffer::STATUS_WITHDRAWN,
+            'submitted_at' => now(),
+        ]);
+
+        $response = $this
+            ->actingAs($admin)
+            ->post(
+                route('procurements.offers.accept', $firstOffer)
+            );
+
+        $response->assertRedirect(
+            route('procurements.show', $procurement)
+        );
+
+        $this->assertDatabaseHas('procurement_offers', [
+            'id' => $firstOffer->id,
+            'status' => ProcurementOffer::STATUS_ACCEPTED,
+        ]);
+
+        $this->assertDatabaseHas('procurement_offers', [
+            'id' => $secondOffer->id,
+            'status' => ProcurementOffer::STATUS_REJECTED,
+        ]);
+
+        $this->assertDatabaseHas('procurement_offers', [
+            'id' => $withdrawnOffer->id,
+            'status' => ProcurementOffer::STATUS_WITHDRAWN,
+        ]);
+    }
+
+    public function test_staff_without_procurement_manage_cannot_accept_offer(): void
+    {
+        $user = $this->userWithRole(
+            'procurement-viewer',
+            ['procurement.view']
+        );
+
+        $procurement = $this->procurement();
+
+        $offer = ProcurementOffer::create([
+            'procurement_id' => $procurement->id,
+            'user_id' => User::factory()->create()->id,
+            'quantity' => 80,
+            'unit_price' => 3200,
+            'total_price' => 256000,
+            'status' => ProcurementOffer::STATUS_SUBMITTED,
+            'submitted_at' => now(),
+        ]);
+
+        $this->assertFalse(
+            Gate::forUser($user)->allows('accept', $offer)
+        );
+
+        $response = $this
+            ->actingAs($user)
+            ->post(
+                route('procurements.offers.accept', $offer)
+            );
+
+        $response->assertForbidden();
+
+        $this->assertDatabaseHas('procurement_offers', [
+            'id' => $offer->id,
+            'status' => ProcurementOffer::STATUS_SUBMITTED,
+        ]);
+    }
+
+    public function test_non_admin_procurement_manager_cannot_accept_independent_procurement_offer(): void
+    {
+        $manager = $this->userWithRole(
+            'procurement-manager',
+            ['procurement.manage']
+        );
+
+        $procurement = $this->procurement();
+
+        $offer = ProcurementOffer::create([
+            'procurement_id' => $procurement->id,
+            'user_id' => User::factory()->create()->id,
+            'quantity' => 80,
+            'unit_price' => 3200,
+            'total_price' => 256000,
+            'status' => ProcurementOffer::STATUS_SUBMITTED,
+            'submitted_at' => now(),
+        ]);
+
+        $this->assertFalse(
+            Gate::forUser($manager)->allows('accept', $offer)
+        );
+
+        $response = $this
+            ->actingAs($manager)
+            ->post(
+                route('procurements.offers.accept', $offer)
+            );
+
+        $response->assertForbidden();
+
+        $this->assertDatabaseHas('procurement_offers', [
+            'id' => $offer->id,
+            'status' => ProcurementOffer::STATUS_SUBMITTED,
+        ]);
+    }
+
+
+    public function test_admin_with_procurement_manage_can_reject_submitted_offer(): void
+    {
+        $admin = $this->userWithRole(
+            'admin',
+            ['procurement.manage']
+        );
+
+        $procurement = $this->procurement();
+
+        $offer = ProcurementOffer::create([
+            'procurement_id' => $procurement->id,
+            'user_id' => User::factory()->create()->id,
+            'quantity' => 80,
+            'unit_price' => 3200,
+            'total_price' => 256000,
+            'status' => ProcurementOffer::STATUS_SUBMITTED,
+            'submitted_at' => now(),
+        ]);
+
+        $response = $this
+            ->actingAs($admin)
+            ->post(
+                route('procurements.offers.reject', $offer)
+            );
+
+        $response->assertRedirect(
+            route('procurements.show', $procurement)
+        );
+
+        $this->assertDatabaseHas('procurement_offers', [
+            'id' => $offer->id,
+            'status' => ProcurementOffer::STATUS_REJECTED,
+        ]);
+    }
+
+    public function test_coordinator_with_procurement_manage_can_reject_offer_for_assigned_order(): void
+    {
+        $coordinator = $this->userWithRole(
+            'coordinator',
+            ['procurement.manage']
+        );
+
+        $order = $this->order();
+
+        OrderAssignment::create([
+            'order_id' => $order->id,
+            'user_id' => $coordinator->id,
+            'assigned_by' => $coordinator->id,
+            'assigned_at' => now(),
+        ]);
+
+        $procurement = $this->procurement([
+            'order_id' => $order->id,
+        ]);
+
+        $offer = ProcurementOffer::create([
+            'procurement_id' => $procurement->id,
+            'user_id' => User::factory()->create()->id,
+            'quantity' => 80,
+            'unit_price' => 3200,
+            'total_price' => 256000,
+            'status' => ProcurementOffer::STATUS_SUBMITTED,
+            'submitted_at' => now(),
+        ]);
+
+        $this->assertTrue(
+            Gate::forUser($coordinator)->allows('reject', $offer)
+        );
+
+        $response = $this
+            ->actingAs($coordinator)
+            ->post(
+                route('procurements.offers.reject', $offer)
+            );
+
+        $response->assertRedirect(
+            route('procurements.show', $procurement)
+        );
+
+        $this->assertDatabaseHas('procurement_offers', [
+            'id' => $offer->id,
+            'status' => ProcurementOffer::STATUS_REJECTED,
+        ]);
+    }
+
+    public function test_coordinator_cannot_reject_offer_for_another_order(): void
+    {
+        $coordinator = $this->userWithRole(
+            'coordinator',
+            ['procurement.manage']
+        );
+
+        $assignedOrder = $this->order();
+        $otherOrder = $this->order();
+
+        OrderAssignment::create([
+            'order_id' => $assignedOrder->id,
+            'user_id' => $coordinator->id,
+            'assigned_by' => $coordinator->id,
+            'assigned_at' => now(),
+        ]);
+
+        $procurement = $this->procurement([
+            'order_id' => $otherOrder->id,
+        ]);
+
+        $offer = ProcurementOffer::create([
+            'procurement_id' => $procurement->id,
+            'user_id' => User::factory()->create()->id,
+            'quantity' => 80,
+            'unit_price' => 3200,
+            'total_price' => 256000,
+            'status' => ProcurementOffer::STATUS_SUBMITTED,
+            'submitted_at' => now(),
+        ]);
+
+        $this->assertFalse(
+            Gate::forUser($coordinator)->allows('reject', $offer)
+        );
+
+        $response = $this
+            ->actingAs($coordinator)
+            ->post(
+                route('procurements.offers.reject', $offer)
+            );
+
+        $response->assertForbidden();
+
+        $this->assertDatabaseHas('procurement_offers', [
+            'id' => $offer->id,
+            'status' => ProcurementOffer::STATUS_SUBMITTED,
+        ]);
+    }
+
+    public function test_staff_without_procurement_manage_cannot_reject_offer(): void
+    {
+        $staff = $this->userWithRole(
+            'staff',
+            ['procurement.view']
+        );
+
+        $procurement = $this->procurement();
+
+        $offer = ProcurementOffer::create([
+            'procurement_id' => $procurement->id,
+            'user_id' => User::factory()->create()->id,
+            'quantity' => 80,
+            'unit_price' => 3200,
+            'total_price' => 256000,
+            'status' => ProcurementOffer::STATUS_SUBMITTED,
+            'submitted_at' => now(),
+        ]);
+
+        $this->assertFalse(
+            Gate::forUser($staff)->allows('reject', $offer)
+        );
+
+        $response = $this
+            ->actingAs($staff)
+            ->post(
+                route('procurements.offers.reject', $offer)
+            );
+
+        $response->assertForbidden();
+
+        $this->assertDatabaseHas('procurement_offers', [
+            'id' => $offer->id,
+            'status' => ProcurementOffer::STATUS_SUBMITTED,
+        ]);
+    }
+
+    public function test_non_submitted_offer_cannot_be_rejected(): void
+    {
+        $admin = $this->userWithRole(
+            'admin',
+            ['procurement.manage']
+        );
+
+        $procurement = $this->procurement();
+
+        foreach ([
+            ProcurementOffer::STATUS_ACCEPTED,
+            ProcurementOffer::STATUS_REJECTED,
+            ProcurementOffer::STATUS_WITHDRAWN,
+        ] as $status) {
+            $offer = ProcurementOffer::create([
+                'procurement_id' => $procurement->id,
+                'user_id' => User::factory()->create()->id,
+                'quantity' => 80,
+                'unit_price' => 3200,
+                'total_price' => 256000,
+                'status' => $status,
+                'submitted_at' => now(),
+            ]);
+
+            $this->assertFalse(
+                Gate::forUser($admin)->allows('reject', $offer)
+            );
+
+            $response = $this
+                ->actingAs($admin)
+                ->post(
+                    route('procurements.offers.reject', $offer)
+                );
+
+            $response->assertForbidden();
+
+            $this->assertDatabaseHas('procurement_offers', [
+                'id' => $offer->id,
+                'status' => $status,
+            ]);
+        }
+    }
+
+
+    public function test_offer_submission_is_blocked_after_an_offer_is_accepted(): void
+    {
+        $staff = $this->userWithRole(
+            'staff',
+            ['procurement.view']
+        );
+
+        $procurement = $this->procurement();
+
+        ProcurementOffer::create([
+            'procurement_id' => $procurement->id,
+            'user_id' => User::factory()->create()->id,
+            'quantity' => 80,
+            'unit_price' => 3200,
+            'total_price' => 256000,
+            'status' => ProcurementOffer::STATUS_ACCEPTED,
+            'submitted_at' => now(),
+        ]);
+
+        $this->assertFalse(
+            Gate::forUser($staff)->allows('submitOffer', $procurement)
+        );
+
+        $response = $this
+            ->actingAs($staff)
+            ->get(route('procurements.offers.create', $procurement));
+
+        $response->assertForbidden();
+    }
+
+    public function test_offer_store_is_blocked_after_an_offer_is_accepted(): void
+    {
+        $staff = $this->userWithRole(
+            'staff',
+            ['procurement.view']
+        );
+
+        $procurement = $this->procurement();
+
+        ProcurementOffer::create([
+            'procurement_id' => $procurement->id,
+            'user_id' => User::factory()->create()->id,
+            'quantity' => 80,
+            'unit_price' => 3200,
+            'total_price' => 256000,
+            'status' => ProcurementOffer::STATUS_ACCEPTED,
+            'submitted_at' => now(),
+        ]);
+
+        $response = $this
+            ->actingAs($staff)
+            ->post(
+                route('procurements.offers.store', $procurement),
+                [
+                    'quantity' => 50,
+                    'unit_price' => 3000,
+                    'notes' => 'Attempt after acceptance.',
+                ]
+            );
+
+        $response->assertForbidden();
+
+        $this->assertDatabaseCount('procurement_offers', 1);
+    }
+
 }

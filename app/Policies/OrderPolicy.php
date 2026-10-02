@@ -90,6 +90,17 @@ class OrderPolicy
             && $activity->production_plan_id === $order->productionPlan?->id;
     }
 
+    public function confirmProductionComplete(User $user, Order $order): bool
+    {
+        return $order->status === Order::STATUS_IN_PRODUCTION
+            && $order->currentAssignment?->user_id === $user->id
+            && $user->hasPermission('production.manage')
+            && $order->productionPlan !== null
+            && $order->productionPlan->activities()
+                ->whereNot('status', ProductionPlanActivity::STATUS_COMPLETED)
+                ->doesntExist();
+    }
+
     public function manageProductionPlan(User $user, Order $order): bool
     {
         return $order->status === Order::STATUS_IN_PRODUCTION
