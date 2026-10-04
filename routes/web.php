@@ -18,9 +18,11 @@ use App\Http\Controllers\StaffController;
 use App\Http\Controllers\QualityControlController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    return redirect()->route('dashboard');
-});
+Route::view('/', 'welcome')->name('home');
+Route::view('/how-it-works', 'how-it-works')->name('how-it-works');
+Route::view('/about', 'about')->name('about');
+Route::view('/faq', 'faq')->name('faq');
+Route::view('/contact', 'contact')->name('contact');
 
 Route::middleware(['auth', 'active'])->group(function () {
     Route::view('/dashboard', 'dashboard')->name('dashboard');

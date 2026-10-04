@@ -4556,3 +4556,138 @@ Do not duplicate the Delivery implementation blindly. First establish the existi
 **Delivery offline-payment review UI: VERIFIED**
 
 **Next: Quotation Offline Payment Collection + Activation**
+
+
+---
+
+## 2026-10-04 — Deployment Readiness: Brand & Public Website Layer — PLANNED
+
+### Strategic Direction
+
+The current financial and fulfillment workflow is paused at a stable checkpoint.
+
+The next phase will shift focus from internal operational workflow development to preparing Oneyard Outfitters for public presentation and deployment.
+
+### Objective
+
+Establish a professional public-facing Oneyard Outfitters website and brand layer around the existing Laravel application without disrupting the authenticated institutional supply and fulfillment system.
+
+### Planned Public Pages
+
+#### 1. Welcome / Home
+
+The landing page will introduce Oneyard Outfitters clearly and establish the company's primary positioning.
+
+Planned sections:
+
+- Oneyard Outfitters introduction
+- Institutional supply and uniform positioning
+- Core products and services
+- How the Oneyard process works
+- Why organizations work with Oneyard
+- Strong contact CTA
+- Email as the primary contact channel
+- WhatsApp as a secondary contact option
+
+#### 2. About
+
+The About page will explain:
+
+- Who Oneyard Outfitters is
+- What the business supplies and produces
+- Institutional and organizational focus
+- Approach to procurement and production
+- Quality-focused workflow
+
+Only confirmed business information will be published. Unsupported company history, claims, testimonials, certifications, statistics, or regulatory claims must not be invented.
+
+#### 3. FAQ
+
+The FAQ will answer common questions around:
+
+- Products and services
+- Custom uniforms
+- Institutional orders
+- Procurement
+- Quotations
+- Production
+- Quality control
+- Payments
+- Delivery
+- How organizations can get started
+
+#### 4. Contact
+
+Build a proper contact system with **email as the primary communication channel**.
+
+Planned contact form fields:
+
+- Name
+- Organization
+- Email
+- Phone
+- Subject/category
+- Message
+
+Requirements:
+
+- Laravel server-side validation
+- CSRF protection
+- Spam/rate protection where appropriate
+- Email notification to the configured business address
+- Clear success and validation/error states
+- Production-safe mail configuration
+
+WhatsApp will be provided as a secondary direct-contact option rather than replacing the email workflow.
+
+### Brand/UI Refinement
+
+The public-facing layer will establish a consistent Oneyard visual identity across:
+
+- Navigation
+- Typography
+- Colors
+- Buttons
+- Cards
+- Forms
+- Alerts
+- Footer
+- Responsive layouts
+- Accessibility and contrast
+
+The existing application interface should remain consistent with the new brand rather than becoming a disconnected public website.
+
+### Deployment Readiness
+
+After the public-facing layer is complete, perform a dedicated deployment-readiness pass covering:
+
+- Production environment configuration
+- Database configuration
+- Mail configuration
+- Queue configuration
+- Storage
+- Cache/config optimization
+- Vite production build
+- Route verification
+- Migration verification
+- Authorization/security review
+- Full automated test suite
+- Browser verification of public pages
+- Browser verification of critical authenticated workflows
+
+### Development Boundary
+
+Do not expand the quotation offline-payment workflow at this stage.
+
+The next implementation focus is the **public Oneyard Outfitters brand and website layer**.
+
+The existing institutional supply, quotation, order, production, quality control, delivery, and payment workflows remain intact and should not be unnecessarily refactored during this phase.
+
+### Planned Implementation Sequence
+
+**Brand Foundation → Welcome Page → About Page → FAQ → Contact/Email → WhatsApp CTA → UI Refinement → Deployment Readiness → Full Test → Browser Review → Production Release**
+
+### Status
+
+**PLANNED — Ready to begin Brand Foundation and Welcome Page**
+
