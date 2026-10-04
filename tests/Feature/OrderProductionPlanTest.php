@@ -497,7 +497,7 @@ class OrderProductionPlanTest extends TestCase
             ])
             ->assertRedirect();
 
-        $required = ProductionActivity::where('is_required', true)
+        $required = ProductionActivity::where('name', 'Sewing')
             ->where('is_active', true)
             ->pluck('id')
             ->all();
@@ -663,7 +663,7 @@ class OrderProductionPlanTest extends TestCase
             ->assertRedirect();
 
         $required = ProductionActivity::query()
-            ->where('is_required', true)
+            ->where('name', 'Sewing')
             ->where('is_active', true)
             ->pluck('id')
             ->all();
@@ -819,8 +819,6 @@ class OrderProductionPlanTest extends TestCase
             ->post(route('orders.production-plan.store', $order), [
                 'activity_ids' => ProductionActivity::whereIn('name', [
                     'Sewing',
-                    'Quality Control',
-                    'Delivery',
                 ])->pluck('id')->all(),
             ])
             ->assertRedirect();
@@ -896,8 +894,6 @@ class OrderProductionPlanTest extends TestCase
             ->post(route('orders.production-plan.store', $order), [
                 'activity_ids' => ProductionActivity::whereIn('name', [
                     'Sewing',
-                    'Quality Control',
-                    'Delivery',
                 ])->pluck('id')->all(),
             ])
             ->assertRedirect();
@@ -1022,8 +1018,6 @@ class OrderProductionPlanTest extends TestCase
             ->post(route('orders.production-plan.store', $order), [
                 'activity_ids' => ProductionActivity::whereIn('name', [
                     'Sewing',
-                    'Quality Control',
-                    'Delivery',
                 ])->pluck('id')->all(),
             ])
             ->assertRedirect();
@@ -1093,8 +1087,6 @@ class OrderProductionPlanTest extends TestCase
             ->post(route('orders.production-plan.store', $order), [
                 'activity_ids' => ProductionActivity::whereIn('name', [
                     'Sewing',
-                    'Quality Control',
-                    'Delivery',
                 ])->pluck('id')->all(),
             ])
             ->assertRedirect();
@@ -1218,8 +1210,6 @@ class OrderProductionPlanTest extends TestCase
                 ->post(route('orders.production-plan.store', $order), [
                     'activity_ids' => ProductionActivity::whereIn('name', [
                         'Sewing',
-                        'Quality Control',
-                        'Delivery',
                     ])->pluck('id')->all(),
                 ])
                 ->assertRedirect();
@@ -1285,8 +1275,6 @@ class OrderProductionPlanTest extends TestCase
             ->post(route('orders.production-plan.store', $order), [
                 'activity_ids' => ProductionActivity::whereIn('name', [
                     'Sewing',
-                    'Quality Control',
-                    'Delivery',
                 ])->pluck('id')->all(),
             ])
             ->assertRedirect();
@@ -1340,7 +1328,7 @@ class OrderProductionPlanTest extends TestCase
 
         $activity = $plan->activities()->create([
             'production_activity_id' => ProductionActivity::query()
-                ->where('is_required', true)
+                ->where('name', 'Sewing')
                 ->where('is_active', true)
                 ->firstOrFail()
                 ->id,
@@ -1403,7 +1391,7 @@ class OrderProductionPlanTest extends TestCase
 
         $activity = $plan->activities()->create([
             'production_activity_id' => ProductionActivity::query()
-                ->where('is_required', true)
+                ->where('name', 'Sewing')
                 ->where('is_active', true)
                 ->firstOrFail()
                 ->id,
@@ -1460,7 +1448,7 @@ class OrderProductionPlanTest extends TestCase
 
         $activity = $plan->activities()->create([
             'production_activity_id' => ProductionActivity::query()
-                ->where('is_required', true)
+                ->where('name', 'Sewing')
                 ->where('is_active', true)
                 ->firstOrFail()
                 ->id,
@@ -1507,7 +1495,7 @@ class OrderProductionPlanTest extends TestCase
 
         $activity = $plan->activities()->create([
             'production_activity_id' => ProductionActivity::query()
-                ->where('is_required', true)
+                ->where('name', 'Sewing')
                 ->where('is_active', true)
                 ->firstOrFail()
                 ->id,
@@ -1554,7 +1542,7 @@ class OrderProductionPlanTest extends TestCase
 
         $activity = $plan->activities()->create([
             'production_activity_id' => ProductionActivity::query()
-                ->where('is_required', true)
+                ->where('name', 'Sewing')
                 ->where('is_active', true)
                 ->firstOrFail()
                 ->id,
@@ -1604,7 +1592,7 @@ class OrderProductionPlanTest extends TestCase
 
         $activity = $plan->activities()->create([
             'production_activity_id' => ProductionActivity::query()
-                ->where('is_required', true)
+                ->where('name', 'Sewing')
                 ->where('is_active', true)
                 ->firstOrFail()
                 ->id,
@@ -1656,7 +1644,7 @@ class OrderProductionPlanTest extends TestCase
 
         $activity = $plan->activities()->create([
             'production_activity_id' => ProductionActivity::query()
-                ->where('is_required', true)
+                ->where('name', 'Sewing')
                 ->where('is_active', true)
                 ->firstOrFail()
                 ->id,
@@ -1708,7 +1696,7 @@ class OrderProductionPlanTest extends TestCase
 
         $activity = $plan->activities()->create([
             'production_activity_id' => ProductionActivity::query()
-                ->where('is_required', true)
+                ->where('name', 'Sewing')
                 ->where('is_active', true)
                 ->firstOrFail()
                 ->id,

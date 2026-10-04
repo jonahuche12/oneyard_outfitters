@@ -9,11 +9,13 @@ use App\Http\Controllers\OrganizationController;
 use App\Http\Controllers\FollowUpController;
 use App\Http\Controllers\ProductSpecificationController;
 use App\Http\Controllers\OrderController;
+use App\Http\Controllers\DeliveryController;
 use App\Http\Controllers\PublicOrderController;
 use App\Http\Controllers\ProductSpecificationArtifactController;
 use App\Http\Controllers\ProcurementController;
 use App\Http\Controllers\ProcurementOfferController;
 use App\Http\Controllers\StaffController;
+use App\Http\Controllers\QualityControlController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -214,7 +216,54 @@ Route::resource('procurements', ProcurementController::class)
         [ProcurementController::class, 'storeForOrder']
     )->name('orders.procurements.store');
 
-    Route::resource('orders', OrderController::class)
+    Route::post(
+        '/orders/{order}/production/correction',
+        [OrderController::class, 'returnToProductionForCorrection']
+    )->name('orders.production.correction');
+Route::post(
+    '/orders/{order}/production/correction/resubmit-quality-control',
+    [OrderController::class, 'resubmitCorrectionToQualityControl']
+)->name('orders.production.correction.resubmit-quality-control');
+
+    
+Route::get('deliveries', [DeliveryController::class, 'index'])
+    ->name('deliveries.index');
+
+Route::get('deliveries/{delivery}', [DeliveryController::class, 'show'])
+    ->name('deliveries.show');
+
+Route::post(
+    'orders/{order}/delivery',
+    [DeliveryController::class, 'store']
+)->name('orders.delivery.store');
+
+Route::post(
+    'deliveries/{delivery}/confirm',
+    [DeliveryController::class, 'confirm']
+)->name('deliveries.confirm');
+
+Route::post(
+    'deliveries/{delivery}/activation-invitations',
+    [DeliveryController::class, 'sendActivationInvitations']
+)->name('deliveries.activation-invitations.store');
+
+
+Route::post(
+    'deliveries/{delivery}/offline-payment/claim',
+    [DeliveryController::class, 'claimOfflinePayment']
+)->name('deliveries.offline-payment.claim');
+
+Route::post(
+    'deliveries/{delivery}/offline-payment/confirm',
+    [DeliveryController::class, 'confirmOfflinePayment']
+)->name('deliveries.offline-payment.confirm');
+
+Route::post(
+    'deliveries/{delivery}/offline-payment/reject',
+    [DeliveryController::class, 'rejectOfflinePayment']
+)->name('deliveries.offline-payment.reject');
+
+Route::resource('orders', OrderController::class)
         ->only(['index', 'show', 'edit', 'update']);
 
     Route::post(
@@ -264,6 +313,27 @@ Route::get(
 )->name('public.orders.show');
 
 Route::get(
+    '/public/deliveries/activate/{token}',
+    [\App\Http\Controllers\PublicDeliveryActivationController::class, 'show']
+)->name('public.deliveries.activate');
+
+Route::post(
+    '/public/deliveries/activate/{token}',
+    [\App\Http\Controllers\PublicDeliveryActivationController::class, 'activate']
+)->name('public.deliveries.activate.store');
+
+
+Route::post(
+    '/public/deliveries/pay-now/{token}',
+    [\App\Http\Controllers\PublicDeliveryActivationController::class, 'payNow']
+)->name('public.deliveries.pay-now');
+
+Route::get(
+    '/public/deliveries/payment/callback/{token}',
+    [\App\Http\Controllers\PublicDeliveryActivationController::class, 'paymentCallback']
+)->name('public.deliveries.payment.callback');
+
+Route::get(
     '/public/quotations/{token}',
     [\App\Http\Controllers\Public\QuotationController::class, 'show']
 )->name('public.quotations.show');
@@ -298,3 +368,18 @@ Route::post(
     '/orders/{order}/production-plan/activities/{activity}/unmark',
     [OrderController::class, 'unmarkProductionActivity']
 )->name('orders.production-plan.activities.unmark');
+
+
+Route::middleware('auth')->prefix('quality-control')->name('quality-control.')->group(function (): void {
+    Route::get('/', [QualityControlController::class, 'index'])
+        ->name('index');
+
+    Route::post('/orders/{order}/start', [QualityControlController::class, 'start'])
+        ->name('start');
+
+    Route::get('/inspections/{inspection}', [QualityControlController::class, 'show'])
+        ->name('show');
+
+    Route::post('/inspections/{inspection}/complete', [QualityControlController::class, 'complete'])
+        ->name('complete');
+});

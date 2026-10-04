@@ -3643,3 +3643,916 @@ Inspect confirmProductionComplete, OrderPolicy and migration state; approve and 
 
 ### Next
 Diagnose the 16 failures, fix, run the full suite to green; then Quality Control stage (backend and tests, then UI).
+
+---
+
+## 2026-10-02 — Production Plan Boundary Cleanup: VERIFIED
+
+### Completed
+
+Refined the Production Plan boundary so that Quality Control and Delivery are no longer treated as Production Plan activities.
+
+### Changes
+
+- Quality Control and Delivery remain inactive production activities.
+- Removed QC and Delivery from remaining Production Plan test fixtures.
+- Updated generic Production Plan tests to use the active `Sewing` activity.
+- Updated production-activity unmark tests to use `Sewing`.
+- Preserved explicit tests verifying that Quality Control and Delivery are excluded from Production Plans.
+- Updated `orders/show.blade.php` so the Production Plan description identifies Quality Control and Delivery as separate downstream stages.
+
+### Verification
+
+- `php artisan test tests/Feature/OrderProductionPlanTest.php`
+- **27 passed**
+- **115 assertions**
+- **0 failures**
+
+### Status
+
+**VERIFIED**
+
+The Production Plan can now complete its own production activities without requiring Quality Control or Delivery to exist inside the Production Plan.
+
+### Next Step
+
+Verify the existing **Order Coordinator Check** transition that moves an order from `in_production` to `ready_for_quality_control`, including its tests and frontend entry point, before implementing the independent Quality Control stage.
+
+
+
+---
+
+## 2026-10-02 — Production → Order Coordinator Check: VERIFIED
+
+### Milestone
+
+The Production → Order Coordinator → Quality Control handoff is now implemented and verified.
+
+### Completed
+
+- Production activities remain separate from Quality Control and Delivery.
+- Quality Control and Delivery are no longer selectable Production Plan activities.
+- Completing the final production activity does not automatically move the order into Quality Control.
+- Production completion now establishes an explicit handoff to the Order Coordinator.
+- The Order Coordinator performs the completion check before the order proceeds to Quality Control.
+- Quality Control remains an independent workflow stage.
+- The Production → Order Coordinator → Quality Control boundary is now enforced in the application workflow.
+
+### Verification Status
+
+**IMPLEMENTED + VERIFIED**
+
+The Production → Order Coordinator → Quality Control boundary is now established and should be preserved in subsequent Order, Quality Control, and Delivery work.
+
+### Next Step
+
+Proceed with the Quality Control module, beginning with its backend workflow and authorization boundaries before frontend refinement.
+
+2026-10-03 — Quality Control Failure → Coordinator Resubmission: IMPLEMENTED
+
+Milestone
+The Quality Control failure workflow has been extended so that an Order Coordinator can resubmit a corrected order for a new Quality Control inspection directly from `orders.show`.
+
+Completed
+
+* When an order has a completed failed Quality Control inspection and has returned to Production for correction, the order coordinator can see a Send Corrected Order to Quality Control action on `orders.show`.
+* The action is only available after the correction Production activities have been completed.
+* The action is protected by the `resubmitCorrectionToQualityControl` authorization policy.
+* Only the assigned Order Coordinator or authorized admin/super-admin can perform the resubmission.
+* Clicking the action opens a confirmation modal.
+* The modal requires the coordinator to confirm that the issues identified during the previous Quality Control inspection have been corrected.
+* The modal collects a short coordinator note explaining or confirming the completed correction.
+* The server validates both the confirmation and coordinator note.
+* The server verifies that a previous failed Quality Control inspection exists.
+* The server verifies that the Production Plan exists and all Production activities are completed.
+* The order is moved from `IN_PRODUCTION` to `READY_FOR_QUALITY_CONTROL`.
+* The coordinator check information is recorded on the Production Plan.
+* The previous failed Quality Control inspection remains part of the inspection history.
+* The order can therefore enter a new Quality Control inspection rather than modifying the previous inspection.
+
+Workflow
+
+```text
+Quality Control
+      ↓
+FAILED
+      ↓
+CORRECTION_REQUIRED
+      ↓
+Production Correction
+      ↓
+All Correction Activities Completed
+      ↓
+Order Coordinator sees:
+"Send Corrected Order to Quality Control"
+      ↓
+Confirmation Modal
+      ↓
+Coordinator confirms correction + enters note
+      ↓
+Server Authorization + Validation
+      ↓
+READY_FOR_QUALITY_CONTROL
+      ↓
+New Quality Control Inspection
+```
+
+Frontend
+
+* Added correction-resubmission panel to `resources/views/orders/show.blade.php`.
+* Added confirmation modal.
+* Added correction confirmation checkbox.
+* Added coordinator note field.
+* Added jQuery modal open/close behavior.
+* Modal supports close, cancel, and backdrop-click dismissal.
+* Existing Quality Control history remains visible independently of the new submission.
+
+Backend
+
+* Added `OrderPolicy::resubmitCorrectionToQualityControl()`.
+* Added `OrderController::resubmitCorrectionToQualityControl()`.
+* Added the correction-resubmission route: `orders.production.correction.resubmit-quality-control`.
+* Server-side checks prevent incomplete Production work from being sent to Quality Control.
+* Server-side authorization remains mandatory regardless of frontend visibility.
+
+Verification Status
+
+IMPLEMENTED — pending final local test/build/browser verification.
+
+Next Step
+
+Run the focused Quality Control, Order, and Production Plan regression tests, build the frontend, then browser-verify the complete workflow before marking this milestone VERIFIED:
+
+QC Failure → Production Correction → Coordinator Resubmission → New QC Inspection
+
+
+
+---
+
+## 2026-10-03 — Quality Control Correction Cycle: Production Activity State Preserved — DESIGN APPROVED
+
+### Decision
+
+The Quality Control correction cycle is confirmed as an **Order-level correction workflow**, not a restart of the Production Plan.
+
+Existing Production Plan activity status, timestamps, and evidence must remain unchanged after a QC failure and return to Production.
+
+### Confirmed Workflow
+
+**Production completed → Coordinator Check → Quality Control → QC Failure → Production Correction → Coordinator Confirmation → Quality Control**
+
+When QC fails an Order:
+
+- The Order moves to `correction_required`.
+- Returning the Order to Production moves it to `in_production` without resetting Production Plan activities.
+- Existing Production activity history remains intact.
+- The Order Coordinator confirms that the QC-required corrections have been completed using the resubmission confirmation and note.
+- Resubmission moves the Order to `ready_for_quality_control` for a new QC inspection.
+- The original failed QC inspection remains preserved in inspection history.
+
+### Explicit Constraint
+
+The existing Production activity state machine (`pending → started → completed`) is **not** reused to represent QC correction work.
+
+The initial Production completion requirement remains unchanged.
+
+### Next Implementation
+
+Update the Order correction controller and Blade wording to preserve Production activity state, remove the incorrect requirement to complete all Production activities again, then add focused regression tests before browser verification.
+
+
+---
+
+## 2026-10-03 — Quality Control Correction Cycle: Backend Regression Verified
+
+### Status
+
+**VERIFIED**
+
+### Validation
+
+Focused Quality Control feature tests were executed:
+
+```text
+php artisan test tests/Feature/QualityControlTest.php
+
+Tests:    9 passed (53 assertions)
+Duration: 1.51s
+```
+
+### Verified Workflow
+
+The focused suite verifies:
+
+* Quality Control queue authorization.
+* Quality Control inspection start.
+* Failed quantity validation.
+* Passing QC moves the Order to `ready`.
+* Failed QC moves the Order into the correction workflow.
+* Returning a failed Order to Production preserves existing Production activity state.
+* Coordinator resubmission moves the corrected Order to `ready_for_quality_control`.
+* Production activity status and timestamps remain unchanged during the correction cycle.
+* A new Quality Control attempt can be started after correction and coordinator handoff.
+
+### State Integrity
+
+The Production Plan activity state machine remains:
+
+`pending → started → completed`
+
+Quality Control correction does not reset or reuse Production activity state.
+
+The failed Quality Control inspection remains preserved as historical inspection data.
+
+### Full Suite Status
+
+The focused Quality Control suite is green.
+
+The overall project test suite is not yet green. Previously recorded full-suite failures remain unresolved and must be investigated before commit.
+
+### Next Step
+
+Browser verification of the Order Coordinator correction cycle:
+
+`QC Failure → Return to Production → Correction → Resubmit for QC → New QC Inspection`
+
+
+---
+
+## 2026-10-03 — Delivery Workflow: Initial Implementation & RBAC Test Correction Attempt
+
+### Milestone
+
+The first Delivery workflow has been introduced following successful Quality Control completion.
+
+### Workflow Designed
+
+The intended Order lifecycle is now:
+
+**Production → Order Coordinator Check → Quality Control → Delivery → Delivered**
+
+When Quality Control passes an Order:
+
+- Order status becomes `ready`.
+- An authorized user with `deliveries.create` can use **Proceed to Delivery**.
+- A Delivery record is created with `pending` status.
+- The Order remains `ready` while Delivery is in progress.
+- An authorized user with `deliveries.confirm` can confirm the Delivery.
+- Confirming the Delivery changes the Order status to `delivered`.
+
+### Delivery Module Scope
+
+Initial Delivery production unit includes:
+
+- Delivery model.
+- Delivery migration.
+- Delivery policy.
+- Delivery controller.
+- Delivery index view.
+- Delivery show view.
+- Delivery routes.
+- Order → Delivery handoff from the Order show page.
+- Delivery confirmation workflow.
+
+The implementation intentionally does not introduce a new Order status such as `ready_for_delivery`. The existing `ready` status represents an Order that has passed Quality Control and is ready to enter Delivery.
+
+### Authorization Boundary
+
+The Delivery handoff is intended to use the Order policy through:
+
+`OrderPolicy::proceedToDelivery()`
+
+with the required permission:
+
+`deliveries.create`
+
+Delivery confirmation uses:
+
+`DeliveryPolicy::confirm()`
+
+with the required permission:
+
+`deliveries.confirm`
+
+This keeps Delivery authorization separate from Production and Quality Control permissions.
+
+### Test Status
+
+The initial `DeliveryTest` suite currently contains four tests:
+
+- Delivery staff can move a ready Order into Delivery.
+- A user without `deliveries.create` cannot start Delivery.
+- Delivery cannot be started before Quality Control passes.
+- Delivery can be confirmed and the Order becomes delivered.
+
+The first test execution did not reach any application assertions because the test helper incorrectly referenced the Spatie Permission package:
+
+`Spatie\Permission\Models\Role`
+
+The project actually uses its own:
+
+`App\Models\Role`
+
+### Correction Attempt
+
+A patch was attempted to replace the Spatie Role implementation with the project's existing Role/permission factory pattern used by `QualityControlTest`.
+
+The patch stopped before making changes because the expected `userWithPermissions()` helper structure was not found in `DeliveryTest.php`.
+
+**Result:** No project changes from that correction attempt are being considered implemented or verified.
+
+### Current Status
+
+**Delivery workflow: IMPLEMENTED — focused tests NOT YET VERIFIED**
+
+**RBAC test correction: ATTEMPTED — NOT APPLIED**
+
+The next step is to inspect the current `DeliveryTest.php` structure and patch its RBAC setup using the verified `App\Models\Role` pattern already used by `QualityControlTest`.
+
+### Validation
+
+Last Delivery test execution:
+
+`php artisan test tests/Feature/DeliveryTest.php`
+
+Result:
+
+**4 failed, 0 assertions**
+
+Failure cause:
+
+`Class "Spatie\Permission\Models\Role" not found`
+
+No full-suite run has been performed for this Delivery milestone.
+
+
+
+---
+
+## 2026-10-03 — Delivery Workflow: Focused Regression Verified
+
+### Milestone
+
+The first Delivery workflow has been implemented and its focused feature tests are now green.
+
+### Verified Lifecycle
+
+The current fulfillment boundary is:
+
+**Production → Order Coordinator Check → Quality Control → Delivery → Delivered**
+
+After Quality Control passes:
+
+- Order status is `ready`.
+- An authorized user with `deliveries.create` can move the Order into Delivery.
+- A pending Delivery record is created.
+- The Order remains `ready` while Delivery is pending.
+- An authorized user with `deliveries.confirm` can confirm the Delivery.
+- Confirming the Delivery changes the Order status to `delivered`.
+
+### Authorization
+
+The Order-to-Delivery handoff uses:
+
+`OrderPolicy::proceedToDelivery()`
+
+Required permission:
+
+`deliveries.create`
+
+Delivery confirmation uses:
+
+`DeliveryPolicy::confirm()`
+
+Required permission:
+
+`deliveries.confirm`
+
+The Delivery workflow remains separate from Production and Quality Control permissions.
+
+### Focused Test Validation
+
+Command:
+
+`php artisan test tests/Feature/DeliveryTest.php`
+
+Result:
+
+**4 passed (12 assertions)**
+
+Covered scenarios:
+
+1. Delivery staff can move a ready Order into Delivery.
+2. A user without `deliveries.create` cannot start Delivery.
+3. Delivery cannot be started before Quality Control passes.
+4. Delivery can be confirmed and the Order becomes delivered.
+
+### Status
+
+**DELIVERY WORKFLOW: VERIFIED**
+
+### Full Suite
+
+The full project test suite has not yet been rerun for this milestone.
+
+The project-wide test status remains subject to the previously recorded failures. No commit should be made until the complete suite is green.
+
+### Next Step
+
+Continue with Delivery workflow review and frontend refinement, then proceed to the next fulfillment unit after the Delivery boundary is confirmed.
+
+
+---
+
+## 2026-10-03 — Delivery Contact Activation & Payment Choice Workflow: APPROVED
+
+### Milestone
+
+The Delivery workflow has been expanded conceptually so that the **Delivery Show** becomes the staff-facing control point for initiating customer delivery activation and balance-payment collection.
+
+This workflow is approved for implementation but has **not yet been implemented or verified**.
+
+### Approved Workflow
+
+The operational lifecycle is:
+
+```text
+Production
+    ↓
+Order Coordinator Check
+    ↓
+Quality Control
+    ↓
+Delivery
+    ↓
+Customer Delivery Activation
+    ↓
+Payment Collection / Pay on Delivery
+    ↓
+Physical Delivery
+    ↓
+Delivered
+```
+
+
+---
+
+## 2026-10-03 — Delivery Contact Activation & Payment Choice Workflow: APPROVED
+
+### Milestone
+
+The Delivery workflow has been expanded conceptually so that the **Delivery Show** becomes the staff-facing control point for initiating customer delivery activation and balance-payment collection.
+
+This workflow is approved for implementation but has **not yet been implemented or verified**.
+
+### Approved Workflow
+
+The operational lifecycle is:
+
+```text
+Production
+    ↓
+Order Coordinator Check
+    ↓
+Quality Control
+    ↓
+Delivery
+    ↓
+Customer Delivery Activation
+    ↓
+Payment Collection / Pay on Delivery
+    ↓
+Physical Delivery
+    ↓
+Delivered
+```
+
+Payment and physical fulfillment remain separate states.
+
+```text
+Physical Fulfillment:
+Delivery → Pending → Confirmed
+
+Financial Fulfillment:
+Payment → Pending → Paid
+             ↘ Pay on Delivery
+```
+
+### Delivery Show — Contact Selection
+
+The Delivery Show will provide an institution-contact section where staff can:
+
+* View active contacts belonging to the Order's organization.
+* Clearly identify the organization's primary contact.
+* Select one or more contacts using checkboxes.
+* Select the primary contact conveniently.
+* Select multiple active contacts when appropriate.
+* Initially notify contacts through email.
+* Keep the notification design extensible for a future WhatsApp channel.
+
+The selected contacts become the recipients of the Delivery Activation invitation.
+
+### Delivery Payment Choice
+
+Before sending the activation invitation, authorized staff will select the customer's available payment arrangement:
+
+* Complete payment now
+* Complete payment on delivery
+
+This payment arrangement belongs to the Delivery workflow and must not be inferred from the Order's physical status.
+
+### Secure Delivery Activation Link
+
+Selected contacts will receive a notification containing a secure Delivery Activation link.
+
+The link must:
+
+* Be tokenized and non-guessable.
+* Be tied specifically to the Delivery.
+* Be associated with the intended recipient/contact.
+* Have an expiration mechanism.
+* Be revocable/reissuable where appropriate.
+* Avoid exposing arbitrary Order or organization records.
+* Provide access only to the intended Delivery activation workflow.
+
+Each selected contact should receive their own secure invitation rather than relying on a shared predictable identifier.
+
+### Customer Activation Page
+
+The secure link will open a customer-facing Delivery Activation page.
+
+The page will present the relevant Delivery information and outstanding balance, then allow the recipient to choose:
+
+**Complete Payment Now**
+
+The customer proceeds through the existing Paystack payment infrastructure.
+
+Delivery must remain inactive until payment has been successfully verified.
+
+**Complete Payment on Delivery**
+
+The customer's choice is recorded as Pay on Delivery.
+
+Where the Delivery rules permit Pay on Delivery, the Delivery can then be activated without requiring advance online payment.
+
+### Delivery Confirmation Boundary
+
+Payment completion must not automatically mean that the physical Order has been delivered.
+
+The physical delivery confirmation remains a separate staff-controlled action.
+
+The intended separation is:
+
+```text
+Customer chooses payment method
+        ↓
+Payment verified OR Pay on Delivery selected
+        ↓
+Delivery becomes eligible for physical fulfillment
+        ↓
+Staff completes physical delivery
+        ↓
+Delivery confirmed
+        ↓
+Order marked delivered
+```
+
+### Existing Payment Infrastructure
+
+The project already contains payment infrastructure including:
+
+* Payment
+* PaymentTransaction
+* Paystack transaction initialization
+* Payment fulfillment
+* Public quotation payment callback
+
+The Delivery payment workflow should extend and reuse this existing payment foundation rather than creating a second independent payment system.
+
+Before implementation, the existing payment models, migrations, Paystack initialization, fulfillment logic, and public payment flow must be inspected.
+
+### Implementation Boundary
+
+The next implementation unit is:
+
+```text
+Delivery Center Navigation
+        ↓
+Delivery Show Contact Selection
+        ↓
+Delivery Payment Arrangement
+        ↓
+Secure Delivery Activation Invitation
+```
+
+The customer-facing activation page and Paystack integration will be implemented only after the existing payment architecture has been inspected and the correct integration boundary is established.
+
+### Current Status
+
+```text
+Workflow: APPROVED
+Delivery module: IMPLEMENTED
+Delivery RBAC: IMPLEMENTED
+Delivery focused tests: VERIFIED — 4 passed / 12 assertions
+Delivery contact-selection workflow: NOT IMPLEMENTED
+Delivery payment arrangement: NOT IMPLEMENTED
+Secure activation invitation: NOT IMPLEMENTED
+Customer activation page: NOT IMPLEMENTED
+WhatsApp notification: DEFERRED
+Paystack Delivery balance integration: NOT IMPLEMENTED
+Full application suite: NOT YET GREEN — previous known state was 335 passed / 16 failed
+```
+
+### Next Action
+
+Inspect the existing payment and Delivery presentation architecture before making code changes.
+
+Required inspection targets:
+
+```text
+app/Models/Payment.php
+app/Models/PaymentTransaction.php
+database/migrations/2026_09_27_070000_create_payments_table.php
+database/migrations/2026_09_27_040927_create_payment_transactions_table.php
+app/Actions/Payments/InitializePaystackTransaction.php
+app/Actions/Payments/FulfillVerifiedQuotationPayment.php
+app/Http/Controllers/DeliveryController.php
+resources/views/deliveries/index.blade.php
+resources/views/deliveries/show.blade.php
+resources/views/layouts/app.blade.php
+```
+
+No implementation should begin until this inspection establishes how the existing payment and contact structures should be extended.
+
+
+---
+
+## 2026-10-04 — Delivery Pay Now → Paystack Balance Payment: APPROVED
+
+### Milestone
+
+The Delivery customer activation workflow is being extended so that the **Pay Now** option becomes a real Paystack payment flow for the Order's outstanding balance.
+
+### Approved Workflow
+
+The Delivery Pay Now lifecycle will be:
+
+1. Customer opens the secure Delivery activation link.
+2. System identifies the associated Order and quotation.
+3. System calculates the outstanding balance from completed `Payment` records.
+4. Customer selects **Pay Now**.
+5. The system initializes a Paystack transaction for the exact outstanding balance.
+6. The customer completes payment through Paystack.
+7. The existing Paystack transaction verification infrastructure processes the payment.
+8. A completed `Payment` record is created for the delivery balance.
+9. The Order payment calculation reflects the completed balance payment.
+10. Once the full Order amount has been paid, the Order Show displays **Paid in Full**.
+11. Physical Delivery remains a separate staff-controlled completion step.
+12. Delivery is only marked confirmed after the customer activation/payment requirements and physical delivery confirmation are satisfied.
+
+### Architecture Decision
+
+The existing quotation Paystack infrastructure will be reused.
+
+No separate Delivery payment gateway or duplicated Paystack verification system will be introduced.
+
+The Delivery payment represents the **outstanding balance**, not a second copy of the original quotation payment.
+
+### Payment Calculation Rule
+
+Outstanding balance:
+
+`Order Total - SUM(completed Payment records for the quotation)`
+
+The calculated balance must be greater than zero before a Pay Now transaction is initialized.
+
+The system must not rely on `QuotationRecipient.amount_paid` as the final payment ledger because that field represents the existing quotation payment state.
+
+### Payment Record
+
+When the Paystack transaction is successfully verified, the resulting completed payment must reference:
+
+- organization
+- quotation
+- the existing quotation recipient associated with the Order contact
+- the verified Paystack payment transaction
+- the actual delivery balance paid
+- Paystack as the payment method
+- the verified transaction reference
+
+No new quotation recipient should be created for Delivery Pay Now.
+
+### Security Boundary
+
+The public Delivery activation token identifies the specific Delivery recipient and associated Order.
+
+The payable amount must be calculated server-side.
+
+The client must never be trusted to submit the balance amount.
+
+Paystack callback/verification must remain the authority for successful payment.
+
+### Delivery State Boundary
+
+Successful Pay Now payment does not by itself mean the physical Order has been delivered.
+
+Payment completion and physical Delivery completion remain separate states.
+
+The Delivery staff confirmation workflow will continue to handle physical completion.
+
+### Current Status
+
+- Delivery customer activation workflow: IMPLEMENTED
+- Pay on Delivery activation: IMPLEMENTED
+- Delivery balance ledger/payment recording: IMPLEMENTED
+- Delivery Pay Now through Paystack: APPROVED — NEXT BUILD UNIT
+- Existing quotation Paystack infrastructure: REUSE
+- New Delivery-specific Paystack gateway: NOT APPROVED
+- Full payment status calculation: IMPLEMENTED
+- Full suite: NOT GREEN; existing 16 failures remain under investigation
+- Commit: BLOCKED until the relevant implementation and regression tests are green
+
+### Next Production Unit
+
+Trace the existing quotation Paystack initialization and verification flow, then extend it to support a Delivery activation payment whose server-calculated amount is the outstanding Order balance.
+
+The next implementation must cover:
+
+1. Delivery Pay Now server-side balance calculation.
+2. Paystack initialization using the existing payment infrastructure.
+3. Delivery-specific transaction context.
+4. Successful Paystack verification.
+5. Creation of the completed balance `Payment`.
+6. Prevention of duplicate balance payments.
+7. Customer return/success handling.
+8. Regression tests for the Delivery Pay Now flow.
+9. Browser verification of the complete customer journey.
+
+
+---
+
+## 2026-10-04 — Delivery Confirmation Financial Integrity: VERIFIED
+
+### Milestone
+
+The Delivery confirmation workflow has been verified to enforce the business meaning of **completed delivery**:
+
+> Confirming a Delivery represents physical delivery completion and collection of any outstanding Order balance.
+
+### Verified Behavior
+
+When an authorized user confirms an activated Delivery:
+
+* The outstanding Order balance is calculated from completed Payment records.
+* If an outstanding balance exists, the balance is recorded as a completed Payment using the selected payment arrangement.
+* The Delivery is marked `confirmed`.
+* The Order is marked `delivered`.
+* The confirmation and balance Payment occur within the same database transaction.
+* If the Order was already fully paid, no duplicate balance Payment is created.
+* The resulting completed Payment total equals the Order total.
+
+### Regression Test
+
+`tests/Feature/DeliveryTest.php` was strengthened to verify the final financial invariant.
+
+Verified command:
+
+```text
+php artisan test tests/Feature/DeliveryTest.php
+```
+
+Result:
+
+```text
+Tests:    4 passed (14 assertions)
+```
+
+### Data Integrity Note
+
+An existing historical Order, `ORD-000006`, remains financially incomplete despite being marked delivered. Its outstanding balance is ₦33,280.
+
+This record is not being automatically modified. No payment record will be fabricated. Any reconciliation must be based on evidence of whether the outstanding balance was actually collected.
+
+### Boundary
+
+The current Delivery confirmation workflow is considered correct for new transactions.
+
+Historical financial inconsistencies remain a separate reconciliation task and must not be used as justification for weakening the Payment ledger or displaying an inaccurate `Paid in Full` status.
+
+### Next Step
+
+Investigate and determine the appropriate controlled reconciliation path for historically delivered Orders with outstanding balances before making any data correction.
+
+
+---
+
+## 2026-10-04 — Delivery Payment Resolution & Financial Completion: VERIFIED
+
+### Milestone
+
+The Delivery completion workflow has been verified and refined so that delivery completion can correctly resolve the quotation payment recipient even when older or manually-created quotations do not contain a direct contact or quotation recipient.
+
+### Completed
+
+- Delivery completion continues to require:
+  - Delivery activation.
+  - A selected payment arrangement.
+  - An Order in `ready` status.
+  - A valid quotation.
+- Quotation payment recipient resolution now follows this order:
+  1. Use the quotation contact when available.
+  2. If the quotation has no contact, fall back to the organization's primary active contact.
+  3. Locate the existing `QuotationRecipient` for that contact.
+  4. Create the missing `QuotationRecipient` when necessary.
+- Existing quotation recipients are preserved without attempting to overwrite their email value.
+- New quotation recipients require a valid contact email because `quotation_recipients.email` is non-nullable.
+- Delivery completion continues to record any outstanding balance as a completed payment.
+- The final payment invariant remains enforced: completed payments must equal the Order total after successful balance collection.
+- Historical/manual quotation data is handled without weakening database constraints.
+
+### Verification
+
+Focused Delivery feature tests verified successfully:
+
+- 4 tests passed.
+- 14 assertions passed.
+
+The previously encountered `quotation_recipient.email` integrity error was resolved without weakening the database schema.
+
+### Financial Integrity
+
+The Delivery completion workflow now maintains the same ledger behavior for outstanding balances regardless of whether the quotation recipient existed before the Delivery workflow or had to be resolved/created during completion.
+
+No payment is fabricated for historical records outside the actual Delivery completion transaction.
+
+### Next Objective
+
+Implement the third Delivery payment arrangement:
+
+**Already Paid Offline → Administrative Verification**
+
+Target workflow:
+
+`Offline Payment Claim → Admin/Super Admin Review → Confirm or Reject`
+
+- Rejection returns the Delivery workflow to an actionable state.
+- Confirmation records the outstanding amount as a completed offline payment.
+- Confirmation then marks the Delivery as completed and the Order as delivered.
+- Only Admin and Super Admin may approve or reject the offline-payment claim.
+- Pay Now and Pay on Delivery workflows must remain unchanged.
+
+
+---
+
+## 2026-10-04 — Delivery Offline Payment Review UI: VERIFIED
+
+### Milestone
+
+The Delivery `Already Paid Offline` review interface has been corrected so that offline payment claims remain accessible to authorized staff even before `activated_at` is set.
+
+### Completed
+
+- Moved the offline payment review panel outside the main Delivery `activated_at` conditional.
+- Admin/Super Admin users with `deliveries.review_offline_payment` can now see the pending offline payment claim.
+- Confirm Claim and Reject Claim controls remain protected by Laravel authorization.
+- The review interface no longer depends on the customer having an activated Delivery.
+- Preserved the existing Delivery activation and completion workflow.
+- Applied the project dark-theme treatment to the offline payment review panel for proper contrast.
+- Existing offline payment rejection/resubmission workflow remains intact.
+
+### Workflow Boundary
+
+The Delivery lifecycle now correctly supports:
+
+Customer selects **Already Paid Offline**
+→ Offline Payment Claim = Pending
+→ Admin/Super Admin Review
+→ Confirm or Reject
+→ Confirm = Delivery can be completed
+→ Reject = Customer can activate the Delivery again using the available payment options.
+
+### Next Financial Objective
+
+Extend the same offline-payment capability upstream to **Quotations and Quotation Activation**.
+
+The next design/build should investigate and define:
+
+- How a quotation recipient/customer activates a quotation.
+- Where the customer can select **Already Paid Offline** during quotation activation.
+- How an offline quotation payment claim is recorded.
+- Which staff permissions can review the claim.
+- Admin/Super Admin confirmation and rejection workflow.
+- How confirmed offline quotation payments are recorded against the quotation.
+- How quotation balance calculations respond to confirmed offline payments.
+- How rejected claims allow the customer to retry activation/payment selection.
+- How the quotation offline-payment lifecycle connects cleanly to the later Order and Delivery financial lifecycle.
+
+### Guardrail
+
+Do not duplicate the Delivery implementation blindly. First establish the existing Quotation activation/payment architecture and define the financial state transitions so that one payment cannot be counted twice across Quotation, Order, and Delivery.
+
+### Status
+
+**Delivery offline-payment review UI: VERIFIED**
+
+**Next: Quotation Offline Payment Collection + Activation**

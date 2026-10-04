@@ -13,6 +13,7 @@ class PaymentTransaction extends Model
 
     protected $fillable = [
         'quotation_recipient_id',
+        'delivery_id',
         'reference',
         'amount',
         'currency',
@@ -37,6 +38,12 @@ class PaymentTransaction extends Model
     public function quotationRecipient(): BelongsTo
     {
         return $this->belongsTo(QuotationRecipient::class);
+    }
+
+
+    public function delivery(): BelongsTo
+    {
+        return $this->belongsTo(Delivery::class);
     }
 
 

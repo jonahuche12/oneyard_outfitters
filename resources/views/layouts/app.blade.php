@@ -75,6 +75,21 @@
                 </a>
             @endcan
 
+            {{-- Quality Control --}}
+            @can('viewQualityControl', App\Models\Order::class)
+                <a
+                    href="{{ route('quality-control.index') }}"
+                    class="oy-nav-link
+                        {{ request()->routeIs('quality-control.*') ? 'is-active' : '' }}"
+                >
+                    <span>Quality Control</span>
+
+                    @if(request()->routeIs('quality-control.*'))
+                        <span class="text-xs opacity-70">Active</span>
+                    @endif
+                </a>
+            @endcan
+
             {{-- Procurement --}}
             @can('viewAny', App\Models\Procurement::class)
                 <a

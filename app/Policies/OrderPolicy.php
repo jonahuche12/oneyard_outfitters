@@ -3,11 +3,22 @@
 namespace App\Policies;
 
 use App\Models\Order;
+use App\Models\QualityControlInspection;
 use App\Models\ProductionPlanActivity;
 use App\Models\User;
 
 class OrderPolicy
 {
+    public function proceedToDelivery(
+        User $user,
+        Order $order
+    ): bool {
+        return $order->status === Order::STATUS_READY
+            && $order->delivery === null
+            && $user->hasPermission('deliveries.create');
+    }
+
+
     public function viewAny(User $user): bool
     {
         return $user->hasPermission('orders.view');
@@ -107,4 +118,93 @@ class OrderPolicy
             && $order->currentAssignment?->user_id === $user->id
             && $user->hasPermission('production.manage');
     }
+
+    public function resubmitCorrectionToQualityControl(
+        User $user,
+        Order $order
+    ): bool {
+        $isAdmin = $user->roles()
+            ->whereIn('slug', ['admin', 'super-admin'])
+            ->exists();
+
+        if ($order->status !== Order::STATUS_IN_PRODUCTION) {
+            return false;
+        }
+
+        $hasFailedInspection = $order->qualityControlInspections()
+            ->where(
+                'status',
+                QualityControlInspection::STATUS_COMPLETED
+            )
+            ->where(
+                'result',
+                QualityControlInspection::RESULT_FAIL
+            )
+            ->exists();
+
+        if (!$hasFailedInspection) {
+            return false;
+        }
+
+        if (!$order->currentAssignment) {
+            return $isAdmin;
+        }
+
+        return (
+            $user->hasPermission('production.manage')
+            || $user->hasPermission('orders.assign')
+            || $isAdmin
+        ) && (
+            $order->currentAssignment->user_id === $user->id
+            || $isAdmin
+        );
+    }
+
+    public function returnToProductionForCorrection(User $user, Order $order): bool
+    {
+        $isAdmin = $user->roles()
+            ->whereIn('slug', ['admin', 'super-admin'])
+            ->exists();
+
+        return $order->status === Order::STATUS_CORRECTION_REQUIRED
+            && (
+                $user->hasPermission('production.manage')
+                || $isAdmin
+            );
+    }
+
+    public function viewQualityControl(User $user, ?Order $order = null): bool
+    {
+        return $user->hasPermission('quality-control.view')
+            || $user->roles()
+                ->whereIn('slug', ['admin', 'super-admin'])
+                ->exists();
+    }
+
+    public function inspectQualityControl(User $user, Order $order): bool
+    {
+        $isAdmin = $user->roles()
+            ->whereIn('slug', ['admin', 'super-admin'])
+            ->exists();
+
+        return $order->status === Order::STATUS_READY_FOR_QUALITY_CONTROL
+            && (
+                $user->hasPermission('quality-control.inspect')
+                || $isAdmin
+            );
+    }
+
+    public function approveQualityControl(User $user, Order $order): bool
+    {
+        $isAdmin = $user->roles()
+            ->whereIn('slug', ['admin', 'super-admin'])
+            ->exists();
+
+        return $order->status === Order::STATUS_READY_FOR_QUALITY_CONTROL
+            && (
+                $user->hasPermission('quality-control.approve')
+                || $isAdmin
+            );
+    }
+
 }

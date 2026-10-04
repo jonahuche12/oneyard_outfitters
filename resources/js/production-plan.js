@@ -4,6 +4,7 @@ $(function () {
     var $planModal = $('#productionPlanModal');
     var $completionModal = $('#productionCompletionModal');
     var $unmarkModal = $('#productionUnmarkModal');
+    var $coordinatorHandoffModal = $('#productionCoordinatorHandoffModal');
 
     function lockBody() {
         $('body').addClass('overflow-hidden');
@@ -97,6 +98,46 @@ $(function () {
         }
     }
 
+    function openCoordinatorHandoffModal() {
+        $coordinatorHandoffModal
+            .removeClass('hidden')
+            .css('pointer-events', 'auto');
+
+        lockBody();
+
+        $('#productionCoordinatorHandoffNotes').val('');
+    }
+
+    function closeCoordinatorHandoffModal() {
+        $coordinatorHandoffModal
+            .addClass('hidden')
+            .css('pointer-events', 'none');
+
+        $('#productionCoordinatorHandoffNotes').val('');
+
+        unlockBody();
+
+        if (document.activeElement) {
+            document.activeElement.blur();
+        }
+    }
+
+    function updateCoordinatorHandoffState() {
+        var $activities = $('#productionPlanActivities [data-production-activity]');
+        var total = $activities.length;
+        var completed = $activities.filter('[data-status="completed"]').length;
+        var $handoff = $('#productionCoordinatorHandoff');
+
+        if (!$handoff.length) {
+            return;
+        }
+
+        $handoff.toggleClass(
+            'hidden',
+            total === 0 || completed !== total
+        );
+    }
+
     function showActivitySuccess(message) {
         var $success = $('#productionPlanAjaxSuccess');
 
@@ -152,6 +193,8 @@ $(function () {
             .attr('aria-valuenow', percentage);
 
         $('#productionPlanProgressPercent').text(percentage + '%');
+
+        updateCoordinatorHandoffState();
     }
 
     function setLoading($button, loadingText) {
@@ -535,6 +578,92 @@ $(function () {
         closeUnmarkModal();
     });
 
+    $('#openProductionCoordinatorHandoff').on('click', function () {
+        openCoordinatorHandoffModal();
+    });
+
+    $(
+        '#closeProductionCoordinatorHandoffModal, #cancelProductionCoordinatorHandoffModal'
+    ).on('click', function () {
+        closeCoordinatorHandoffModal();
+    });
+
+    $('#productionCoordinatorHandoffModalBackdrop').on('click', function () {
+        closeCoordinatorHandoffModal();
+    });
+
+    $('#productionCoordinatorHandoffForm').on('submit', function () {
+        var $submit = $('#confirmProductionCoordinatorHandoff');
+
+        setLoading($submit, 'Confirming...');
+    });
+
+        $('#openQualityControlCorrectionModal').on('click', function () {
+        $('#qualityControlCorrectionModal').removeClass('hidden');
+
+        $('body').addClass('overflow-hidden');
+        $('html').addClass('overflow-hidden');
+
+        $('#qualityControlCorrectionNotes').trigger('focus');
+    });
+
+    $(
+        '#closeQualityControlCorrectionModal, #cancelQualityControlCorrectionModal'
+    ).on('click', function () {
+        $('#qualityControlCorrectionModal').addClass('hidden');
+
+        $('body').removeClass('overflow-hidden');
+        $('html').removeClass('overflow-hidden');
+    });
+
+    $('#qualityControlCorrectionModalBackdrop').on('click', function () {
+        $('#qualityControlCorrectionModal').addClass('hidden');
+
+        $('body').removeClass('overflow-hidden');
+        $('html').removeClass('overflow-hidden');
+    });
+
+    $('#qualityControlCorrectionForm').on('submit', function () {
+        var $submit = $('#confirmQualityControlCorrection');
+
+        $submit
+            .prop('disabled', true)
+            .text('Returning to Production...');
+    });
+
+$('#openQualityControlResubmissionModal').on('click', function () {
+        $('#qualityControlResubmissionModal').removeClass('hidden');
+
+        $('body').addClass('overflow-hidden');
+        $('html').addClass('overflow-hidden');
+
+        $('#qualityControlResubmissionNotes').trigger('focus');
+    });
+
+    $(
+        '#closeQualityControlResubmissionModal, #cancelQualityControlResubmissionModal'
+    ).on('click', function () {
+        $('#qualityControlResubmissionModal').addClass('hidden');
+
+        $('body').removeClass('overflow-hidden');
+        $('html').removeClass('overflow-hidden');
+    });
+
+    $('#qualityControlResubmissionModalBackdrop').on('click', function () {
+        $('#qualityControlResubmissionModal').addClass('hidden');
+
+        $('body').removeClass('overflow-hidden');
+        $('html').removeClass('overflow-hidden');
+    });
+
+    $('#qualityControlResubmissionForm').on('submit', function () {
+        var $submit = $('#confirmQualityControlResubmission');
+
+        $submit
+            .prop('disabled', true)
+            .text('Resubmitting...');
+    });
+
     $(document).on('keydown', function (event) {
         if (event.key !== 'Escape') {
             return;
@@ -553,6 +682,14 @@ $(function () {
             !$unmarkModal.hasClass('hidden')
         ) {
             closeUnmarkModal();
+            return;
+        }
+
+        if (
+            $coordinatorHandoffModal.length &&
+            !$coordinatorHandoffModal.hasClass('hidden')
+        ) {
+            closeCoordinatorHandoffModal();
             return;
         }
 

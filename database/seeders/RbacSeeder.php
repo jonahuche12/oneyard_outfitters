@@ -297,6 +297,11 @@ class RbacSeeder extends Seeder
                 'slug' => 'deliveries.confirm',
                 'description' => 'Confirm completed deliveries.',
             ],
+            [
+                'name' => 'Review Offline Delivery Payments',
+                'slug' => 'deliveries.review_offline_payment',
+                'description' => 'Confirm or reject customer claims that a delivery balance was already paid offline.',
+            ],
 
             /*
              * Payments
@@ -623,6 +628,7 @@ class RbacSeeder extends Seeder
                     'deliveries.view',
                     'deliveries.create',
                     'deliveries.confirm',
+                    'deliveries.review_offline_payment',
 
                     'specifications.view',
                 ],

@@ -13,6 +13,8 @@
                     <span class="oy-badge oy-badge-success">Approved</span>
                 @elseif($order->status === 'in_production')
                     <span class="oy-badge oy-badge-neutral">In Production</span>
+                @elseif($order->status === \App\Models\Order::STATUS_CORRECTION_REQUIRED)
+                    <span class="oy-badge oy-badge-danger">Correction Required</span>
                 @elseif($order->status === 'ready')
                     <span class="oy-badge oy-badge-success">Ready</span>
                 @elseif($order->status === 'delivered')
@@ -312,8 +314,8 @@
                     <h2 class="oy-card-title">Production Plan</h2>
 
                     <p class="oy-card-description">
-                        Select all production activities required to complete this Order.
-                        Quality Control and Delivery are mandatory for every Order.
+                        Select the production activities required to complete this Order.
+                        Quality Control and Delivery are handled as separate downstream stages.
                     </p>
                 </div>
 
@@ -346,6 +348,8 @@
                     $progressPercent = $activityCount > 0
                         ? round(($startedActivities / $activityCount) * 100)
                         : 0;
+                    $allProductionActivitiesCompleted = $activityCount > 0
+                        && $completedActivities === $activityCount;
                 @endphp
 
                 <div>
@@ -563,6 +567,47 @@
                             </div>
                         @endforeach
                     </div>
+
+                    @if($allProductionActivitiesCompleted)
+                        <div
+                            id="productionCoordinatorHandoff"
+                            class="mt-5 rounded-xl border border-emerald-200 bg-emerald-50 p-5"
+                        >
+                            <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                                <div class="min-w-0">
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <h3 class="font-semibold text-emerald-900">
+                                            Production activities completed
+                                        </h3>
+
+                                        <span class="oy-badge oy-badge-success">
+                                            Ready for Coordinator Check
+                                        </span>
+                                    </div>
+
+                                    <p class="mt-2 text-sm leading-6 text-emerald-800">
+                                        All selected production activities have been completed.
+                                        The Order Coordinator must check and confirm production
+                                        before this Order can enter Quality Control.
+                                    </p>
+                                </div>
+
+                                @can('confirmProductionComplete', $order)
+                                    <button
+                                        type="button"
+                                        id="openProductionCoordinatorHandoff"
+                                        class="oy-btn oy-btn-primary shrink-0"
+                                    >
+                                        Check &amp; Send to Quality Control
+                                    </button>
+                                @else
+                                    <div class="shrink-0 rounded-lg border border-emerald-200 bg-white px-4 py-3 text-sm text-emerald-800">
+                                        Waiting for the assigned Order Coordinator to confirm completion.
+                                    </div>
+                                @endcan
+                            </div>
+                        </div>
+                    @endif
                 </div>
             @elseif($productionActivities->isEmpty())
                 <div class="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
@@ -579,6 +624,111 @@
     </div>
 
     @if($order->productionPlan)
+        @can('confirmProductionComplete', $order)
+            <div
+                id="productionCoordinatorHandoffModal"
+                class="fixed inset-0 z-50 hidden overflow-y-auto"
+                aria-labelledby="productionCoordinatorHandoffModalTitle"
+                aria-modal="true"
+                role="dialog"
+            >
+                <div
+                    id="productionCoordinatorHandoffModalBackdrop"
+                    class="fixed inset-0 bg-slate-900/60"
+                ></div>
+
+                <div class="relative flex min-h-full items-center justify-center p-4">
+                    <div class="relative w-full max-w-lg rounded-xl bg-white shadow-xl">
+                        <div class="flex items-start justify-between border-b border-slate-200 p-6">
+                            <div>
+                                <h2
+                                    id="productionCoordinatorHandoffModalTitle"
+                                    class="text-lg font-semibold text-slate-900"
+                                >
+                                    Confirm Production Complete
+                                </h2>
+
+                                <p class="mt-1 text-sm text-slate-600">
+                                    Check the completed Production Plan before sending this Order to Quality Control.
+                                </p>
+                            </div>
+
+                            <button
+                                type="button"
+                                id="closeProductionCoordinatorHandoffModal"
+                                class="text-2xl leading-none text-slate-400 hover:text-slate-700"
+                                aria-label="Close"
+                            >
+                                &times;
+                            </button>
+                        </div>
+
+                        <form
+                            id="productionCoordinatorHandoffForm"
+                            method="POST"
+                            action="{{ route('orders.production-plan.confirm-complete', $order) }}"
+                            class="oy-form"
+                        >
+                            @csrf
+
+                            <div class="space-y-5 p-6">
+                                <div class="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
+                                    <div class="text-xs font-medium uppercase tracking-wide text-emerald-700">
+                                        Coordinator Check
+                                    </div>
+
+                                    <div class="mt-1 font-medium text-emerald-900">
+                                        {{ $completedActivities }} of {{ $activityCount }} production activities completed
+                                    </div>
+
+                                    <p class="mt-2 text-sm leading-6 text-emerald-800">
+                                        Confirming this action will move the Order to
+                                        <strong>Ready for Quality Control</strong>.
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <label
+                                        for="productionCoordinatorHandoffNotes"
+                                        class="block text-sm font-medium text-slate-700"
+                                    >
+                                        Coordinator Note
+                                    </label>
+
+                                    <textarea
+                                        id="productionCoordinatorHandoffNotes"
+                                        name="notes"
+                                        rows="4"
+                                        maxlength="5000"
+                                        class="mt-2 block w-full rounded-lg border border-slate-300 p-3 text-sm text-slate-700"
+                                        placeholder="Optional: record any final production check note."
+                                    ></textarea>
+                                </div>
+                            </div>
+
+                            <div class="flex justify-end gap-3 border-t border-slate-200 p-6">
+                                <button
+                                    type="button"
+                                    id="cancelProductionCoordinatorHandoffModal"
+                                    class="oy-btn oy-btn-secondary"
+                                >
+                                    Cancel
+                                </button>
+
+                                <button
+                                    type="submit"
+                                    id="confirmProductionCoordinatorHandoff"
+                                    class="oy-btn oy-btn-primary"
+                                >
+                                    Confirm &amp; Send to Quality Control
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        @endcan
+
         <div
             id="productionUnmarkModal"
             class="fixed inset-0 z-50 hidden overflow-y-auto"
@@ -972,6 +1122,670 @@
         </div>
     @endif
 @endcan
+
+
+@can('returnToProductionForCorrection', $order)
+    <div class="oy-card oy-section">
+        <div class="oy-card-body">
+            <div class="rounded-xl border border-red-200 bg-red-50 p-5">
+                <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                    <div class="min-w-0">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <h2 class="font-semibold text-red-900">
+                                Quality Control Correction Required
+                            </h2>
+
+                            <span class="oy-badge oy-badge-danger">
+                                QC Failed
+                            </span>
+                        </div>
+
+                        <p class="mt-2 text-sm leading-6 text-red-800">
+                            Quality Control has identified corrections that must be completed
+                            before this Order can be inspected again. Return the Order to
+                            Production to reopen its production activities for correction.
+                        </p>
+                    </div>
+
+                    <button
+                        type="button"
+                        id="openQualityControlCorrectionModal"
+                        class="oy-btn oy-btn-primary shrink-0"
+                    >
+                        Return to Production
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div
+        id="qualityControlCorrectionModal"
+        class="fixed inset-0 z-50 hidden overflow-y-auto"
+        aria-labelledby="qualityControlCorrectionModalTitle"
+        aria-modal="true"
+        role="dialog"
+    >
+        <div
+            id="qualityControlCorrectionModalBackdrop"
+            class="fixed inset-0 bg-slate-900/60"
+        ></div>
+
+        <div class="relative flex min-h-full items-center justify-center p-4">
+            <div class="relative w-full max-w-lg rounded-xl bg-white shadow-xl">
+                <div class="flex items-start justify-between border-b border-slate-200 p-6">
+                    <div>
+                        <h2
+                            id="qualityControlCorrectionModalTitle"
+                            class="text-lg font-semibold text-slate-900"
+                        >
+                            Return to Production for Correction
+                        </h2>
+
+                        <p class="mt-1 text-sm text-slate-600">
+                            Confirm that this Order should be reopened for Production correction.
+                        </p>
+                    </div>
+
+                    <button
+                        type="button"
+                        id="closeQualityControlCorrectionModal"
+                        class="text-2xl leading-none text-slate-400 hover:text-slate-700"
+                        aria-label="Close"
+                    >
+                        &times;
+                    </button>
+                </div>
+
+                <form
+                    id="qualityControlCorrectionForm"
+                    method="POST"
+                    action="{{ route('orders.production.correction', $order) }}"
+                    class="oy-form"
+                >
+                    @csrf
+
+                    <div class="space-y-5 p-6">
+                        <div class="rounded-lg border border-red-200 bg-red-50 p-4">
+                            <div class="text-xs font-medium uppercase tracking-wide text-red-700">
+                                Coordinator Confirmation
+                            </div>
+
+                            <p class="mt-2 text-sm leading-6 text-red-800">
+                                The existing Production activities will be reopened so the
+                                required corrections can be completed. The failed Quality
+                                Control inspection will remain in the Order's inspection history.
+                            </p>
+                        </div>
+
+                        <div>
+                            <label
+                                for="qualityControlCorrectionNotes"
+                                class="block text-sm font-medium text-slate-700"
+                            >
+                                Coordinator Note
+                            </label>
+
+                            <textarea
+                                id="qualityControlCorrectionNotes"
+                                name="notes"
+                                rows="4"
+                                maxlength="5000"
+                                class="mt-2 block w-full rounded-lg border border-slate-300 p-3 text-sm text-slate-700"
+                                placeholder="Add a brief note about the correction work required or the action being taken."
+                            ></textarea>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end gap-3 border-t border-slate-200 p-6">
+                        <button
+                            type="button"
+                            id="cancelQualityControlCorrectionModal"
+                            class="oy-btn oy-btn-secondary"
+                        >
+                            Cancel
+                        </button>
+
+                        <button
+                            type="submit"
+                            id="confirmQualityControlCorrection"
+                            class="oy-btn oy-btn-primary"
+                        >
+                            Confirm &amp; Return to Production
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+@endcan
+
+@can('resubmitCorrectionToQualityControl', $order)
+    <div class="oy-card oy-section">
+        <div class="oy-card-body">
+            <div class="rounded-xl border border-amber-200 bg-amber-50 p-5">
+                <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                    <div class="min-w-0">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <h2 class="font-semibold text-amber-900">
+                                Quality Control Correction
+                            </h2>
+
+                            <span class="oy-badge oy-badge-warning">
+                                Correction Completed
+                            </span>
+                        </div>
+
+                        <p class="mt-2 text-sm leading-6 text-amber-800">
+                            Quality Control previously failed this Order and returned it
+                            to Production for correction. Confirm that all required
+                            corrections have been completed before sending it back
+                            for a new Quality Control inspection.
+                        </p>
+                    </div>
+
+                    <button
+                        type="button"
+                        id="openQualityControlResubmissionModal"
+                        class="oy-btn oy-btn-primary shrink-0"
+                    >
+                        Resubmit for Quality Control
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div
+        id="qualityControlResubmissionModal"
+        class="fixed inset-0 z-50 hidden overflow-y-auto"
+        aria-labelledby="qualityControlResubmissionModalTitle"
+        aria-modal="true"
+        role="dialog"
+    >
+        <div
+            id="qualityControlResubmissionModalBackdrop"
+            class="fixed inset-0 bg-slate-900/60"
+        ></div>
+
+        <div class="relative flex min-h-full items-center justify-center p-4">
+            <div class="relative w-full max-w-lg rounded-xl bg-white shadow-xl">
+                <div class="flex items-start justify-between border-b border-slate-200 p-6">
+                    <div>
+                        <h2
+                            id="qualityControlResubmissionModalTitle"
+                            class="text-lg font-semibold text-slate-900"
+                        >
+                            Resubmit for Quality Control
+                        </h2>
+
+                        <p class="mt-1 text-sm text-slate-600">
+                            Confirm that the Quality Control corrections have been completed.
+                        </p>
+                    </div>
+
+                    <button
+                        type="button"
+                        id="closeQualityControlResubmissionModal"
+                        class="text-2xl leading-none text-slate-400 hover:text-slate-700"
+                        aria-label="Close"
+                    >
+                        &times;
+                    </button>
+                </div>
+
+                <form
+                    id="qualityControlResubmissionForm"
+                    method="POST"
+                    action="{{ route('orders.production.correction.resubmit-quality-control', $order) }}"
+                    class="oy-form"
+                >
+                    @csrf
+
+                    <div class="space-y-5 p-6">
+                        <div class="rounded-lg border border-amber-200 bg-amber-50 p-4">
+                            <div class="text-xs font-medium uppercase tracking-wide text-amber-700">
+                                Coordinator Confirmation
+                            </div>
+
+                            <p class="mt-2 text-sm leading-6 text-amber-800">
+                                By continuing, you confirm that the required Production
+                                corrections have been completed and the Order is ready
+                                for a new Quality Control inspection.
+                            </p>
+                        </div>
+
+                        <label class="flex items-start gap-3">
+                            <input
+                                type="checkbox"
+                                name="correction_confirmed"
+                                value="1"
+                                required
+                                class="mt-1 h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                            >
+
+                            <span class="text-sm leading-6 text-slate-700">
+                                I confirm that all required corrections have been completed
+                                and checked.
+                            </span>
+                        </label>
+
+                        <div>
+                            <label
+                                for="qualityControlResubmissionNotes"
+                                class="block text-sm font-medium text-slate-700"
+                            >
+                                Coordinator Note
+                            </label>
+
+                            <textarea
+                                id="qualityControlResubmissionNotes"
+                                name="notes"
+                                rows="4"
+                                maxlength="5000"
+                                required
+                                class="mt-2 block w-full rounded-lg border border-slate-300 p-3 text-sm text-slate-700"
+                                placeholder="Briefly describe the corrections completed before resubmission."
+                            ></textarea>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end gap-3 border-t border-slate-200 p-6">
+                        <button
+                            type="button"
+                            id="cancelQualityControlResubmissionModal"
+                            class="oy-btn oy-btn-secondary"
+                        >
+                            Cancel
+                        </button>
+
+                        <button
+                            type="submit"
+                            id="confirmQualityControlResubmission"
+                            class="oy-btn oy-btn-primary"
+                        >
+                            Confirm &amp; Resubmit
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+@endcan
+
+
+@if($order->status === \App\Models\Order::STATUS_READY)
+    <div class="oy-card oy-section">
+        <div class="oy-card-body">
+            <div class="rounded-xl border border-blue-200 bg-blue-50 p-5">
+                <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <h2 class="font-semibold text-blue-900">
+                                Ready for Delivery
+                            </h2>
+
+                            <span class="oy-badge oy-badge-success">
+                                Quality Control Passed
+                            </span>
+                        </div>
+
+                        <p class="mt-2 text-sm leading-6 text-blue-800">
+                            Quality Control has passed this Order. The Order can now
+                            be moved into the Delivery workflow.
+                        </p>
+                    </div>
+
+                    @can('proceedToDelivery', $order)
+                        <form
+                            method="POST"
+                            action="{{ route('orders.delivery.store', $order) }}"
+                            class="shrink-0"
+                        >
+                            @csrf
+
+                            <button
+                                type="submit"
+                                class="oy-btn oy-btn-primary"
+                            >
+                                Proceed to Delivery
+                            </button>
+                        </form>
+                    @endcan
+                </div>
+            </div>
+        </div>
+    </div>
+@endif
+
+@if($order->delivery)
+    <div class="oy-card oy-section">
+        <div class="oy-card-body">
+
+            @if($order->delivery->status === \App\Models\Delivery::STATUS_CONFIRMED)
+
+                <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-5">
+                    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                            <div class="flex flex-wrap items-center gap-2">
+                                <h2 class="font-semibold text-emerald-900">
+                                    Order Delivered
+                                </h2>
+
+                                <span class="oy-badge oy-badge-success">
+                                    Balance Collected
+                                </span>
+
+                                <span class="oy-badge oy-badge-success">
+                                    Delivery Confirmed
+                                </span>
+                            </div>
+
+                            <p class="mt-2 text-sm leading-6 text-emerald-800">
+                                The outstanding balance has been collected and
+                                the Order has been delivered successfully.
+                            </p>
+                        </div>
+
+                        <a
+                            href="{{ route('deliveries.show', $order->delivery) }}"
+                            class="oy-btn oy-btn-secondary shrink-0"
+                        >
+                            View Delivery
+                        </a>
+                    </div>
+                </div>
+
+            @elseif($order->delivery->activated_at)
+
+                <div class="rounded-xl border border-amber-200 bg-amber-50 p-5">
+                    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                            <div class="flex flex-wrap items-center gap-2">
+                                <h2 class="font-semibold text-amber-900">
+                                    Delivery Activated
+                                </h2>
+
+                                @php
+                                    $deliveryPaymentArrangement =
+                                        $order->delivery->payment_arrangement;
+
+                                    $deliveryTotalPaid = (float) $order->quotation->payments
+                                        ->where('status', 'completed')
+                                        ->sum(fn ($payment) => (float) $payment->amount);
+
+                                    $deliveryBalanceDue = max(
+                                        0,
+                                        round(
+                                            (float) $order->total - $deliveryTotalPaid,
+                                            2
+                                        )
+                                    );
+                                @endphp
+
+                                @if(
+                                    $deliveryPaymentArrangement ===
+                                    \App\Models\Delivery::PAYMENT_ARRANGEMENT_PAY_NOW
+                                    && $deliveryBalanceDue <= 0.01
+                                )
+                                    <span class="oy-badge oy-badge-success">
+                                        Payment Complete · Awaiting Delivery
+                                    </span>
+                                @elseif(
+                                    $deliveryPaymentArrangement ===
+                                    \App\Models\Delivery::PAYMENT_ARRANGEMENT_PAY_ON_DELIVERY
+                                )
+                                    <span class="oy-badge oy-badge-warning">
+                                        Awaiting Payment & Delivery
+                                    </span>
+                                @else
+                                    <span class="oy-badge oy-badge-warning">
+                                        Balance Due & Delivery Pending
+                                    </span>
+                                @endif
+                            </div>
+
+                            <p class="mt-2 text-sm leading-6 text-amber-800">
+                                The customer has activated the Delivery.
+
+                                @if(
+                                    $deliveryPaymentArrangement ===
+                                    \App\Models\Delivery::PAYMENT_ARRANGEMENT_PAY_NOW
+                                    && $deliveryBalanceDue <= 0.01
+                                )
+                                    Payment has been completed. Staff must complete
+                                    the physical delivery.
+                                @else
+                                    Any outstanding balance will be settled when
+                                    Delivery is completed.
+                                @endif
+                            </p>
+                        </div>
+
+                        @can('confirm', $order->delivery)
+                            <button
+                                type="button"
+                                class="oy-btn oy-btn-primary shrink-0"
+                                data-open-complete-delivery
+                            >
+                                Complete Delivery
+                            </button>
+                        @else
+                            <a
+                                href="{{ route('deliveries.show', $order->delivery) }}"
+                                class="oy-btn oy-btn-secondary shrink-0"
+                            >
+                                View Delivery
+                            </a>
+                        @endcan
+                    </div>
+                </div>
+
+                @can('confirm', $order->delivery)
+                    <div
+                        id="complete-delivery-modal"
+                        class="fixed inset-0 z-50 hidden"
+                        aria-labelledby="complete-delivery-modal-title"
+                        aria-modal="true"
+                        role="dialog"
+                    >
+                        <div
+                            class="absolute inset-0 bg-slate-950/60"
+                            data-close-complete-delivery
+                        ></div>
+
+                        <div class="relative flex min-h-full items-center justify-center p-4">
+                            <div class="w-full max-w-lg rounded-2xl bg-white shadow-2xl">
+
+                                <div class="border-b border-slate-200 px-6 py-5">
+                                    <div class="flex items-start justify-between gap-4">
+                                        <div>
+                                            <h2
+                                                id="complete-delivery-modal-title"
+                                                class="text-lg font-semibold text-slate-900"
+                                            >
+                                                Confirm Delivery Completion
+                                            </h2>
+
+                                            <p class="mt-1 text-sm leading-6 text-slate-600">
+                                                Confirm that the outstanding balance has been received
+                                                and the Order has been physically delivered.
+                                            </p>
+                                        </div>
+
+                                        <button
+                                            type="button"
+                                            class="text-2xl leading-none text-slate-400 hover:text-slate-700"
+                                            data-close-complete-delivery
+                                            aria-label="Close"
+                                        >
+                                            &times;
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <form
+                                    method="POST"
+                                    action="{{ route('deliveries.confirm', $order->delivery) }}"
+                                >
+                                    @csrf
+
+                                    <div class="space-y-5 px-6 py-6">
+
+                                        <label class="flex cursor-pointer items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
+                                            <input
+                                                type="checkbox"
+                                                name="confirmation"
+                                                value="1"
+                                                required
+                                                class="mt-1 rounded border-slate-300"
+                                            >
+
+                                            <span class="text-sm leading-6 text-amber-900">
+                                                I confirm that the outstanding balance has been
+                                                received and the Order has been delivered to
+                                                the customer.
+                                            </span>
+                                        </label>
+
+                                        <div>
+                                            <label
+                                                for="order-delivery-completion-notes"
+                                                class="block text-sm font-medium text-slate-700"
+                                            >
+                                                Completion Notes
+                                            </label>
+
+                                            <textarea
+                                                id="order-delivery-completion-notes"
+                                                name="notes"
+                                                rows="4"
+                                                maxlength="5000"
+                                                class="mt-2 block w-full rounded-xl border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500"
+                                                placeholder="Record any relevant payment or delivery details..."
+                                            >{{ old('notes') }}</textarea>
+                                        </div>
+                                    </div>
+
+                                    <div class="flex flex-col-reverse gap-3 border-t border-slate-200 px-6 py-5 sm:flex-row sm:justify-end">
+                                        <button
+                                            type="button"
+                                            class="oy-btn oy-btn-secondary"
+                                            data-close-complete-delivery
+                                        >
+                                            Cancel
+                                        </button>
+
+                                        <button
+                                            type="submit"
+                                            class="oy-btn oy-btn-primary"
+                                        >
+                                            Confirm & Close Order
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    <script>
+                        document.addEventListener('DOMContentLoaded', function () {
+                            const modal = document.getElementById('complete-delivery-modal');
+                            const openButton = document.querySelector(
+                                '[data-open-complete-delivery]'
+                            );
+                            const closeButtons = document.querySelectorAll(
+                                '[data-close-complete-delivery]'
+                            );
+
+                            if (!modal || !openButton) {
+                                return;
+                            }
+
+                            const openModal = function () {
+                                modal.classList.remove('hidden');
+                                document.body.classList.add('overflow-hidden');
+                            };
+
+                            const closeModal = function () {
+                                modal.classList.add('hidden');
+                                document.body.classList.remove('overflow-hidden');
+                            };
+
+                            openButton.addEventListener('click', openModal);
+
+                            closeButtons.forEach(function (button) {
+                                button.addEventListener('click', closeModal);
+                            });
+
+                            document.addEventListener('keydown', function (event) {
+                                if (
+                                    event.key === 'Escape' &&
+                                    !modal.classList.contains('hidden')
+                                ) {
+                                    closeModal();
+                                }
+                            });
+                        });
+                    </script>
+                @endcan
+
+            @else
+
+                <div class="rounded-xl border border-slate-200 bg-slate-50 p-5">
+                    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                            <h2 class="font-semibold text-slate-900">
+                                Delivery Pending Customer Activation
+                            </h2>
+
+                            <p class="mt-2 text-sm leading-6 text-slate-600">
+                                This Order has entered the Delivery workflow
+                                and is awaiting customer activation.
+                            </p>
+                        </div>
+
+                        <a
+                            href="{{ route('deliveries.show', $order->delivery) }}"
+                            class="oy-btn oy-btn-secondary shrink-0"
+                        >
+                            View Delivery
+                        </a>
+                    </div>
+                </div>
+
+            @endif
+
+        </div>
+    </div>
+@endif
+
+@if($order->status === \App\Models\Order::STATUS_READY_FOR_QUALITY_CONTROL)
+    <div class="oy-card oy-section">
+        <div class="oy-card-body">
+            <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-5">
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <h2 class="font-semibold text-emerald-900">
+                                Ready for Quality Control
+                            </h2>
+
+                            <span class="oy-badge oy-badge-success">
+                                Production Complete
+                            </span>
+                        </div>
+
+                        <p class="mt-2 text-sm leading-6 text-emerald-800">
+                            The Order Coordinator has confirmed that all production activities
+                            are complete. The Order is now awaiting Quality Control.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+@endif
 
 @can('approve', $order)
         <div class="oy-card oy-section">
@@ -1377,9 +2191,19 @@
 
                     $isFullyPaid = $balanceDue <= 0.01;
 
-                    $paymentComplete =
-                        $isFullyPaid &&
-                        $order->status === 'delivered';
+                    $paymentArrangement =
+                        $order->delivery?->payment_arrangement;
+
+                    $paymentArrangementLabel = match ($paymentArrangement) {
+                        \App\Models\Delivery::PAYMENT_ARRANGEMENT_PAY_NOW =>
+                            'Pay Now',
+
+                        \App\Models\Delivery::PAYMENT_ARRANGEMENT_PAY_ON_DELIVERY =>
+                            'Pay on Delivery',
+
+                        default =>
+                            'Not Selected',
+                    };
                 @endphp
 
                 <div class="mb-5 rounded-lg border border-slate-200 p-4">
@@ -1388,8 +2212,18 @@
                             Payment Status
                         </span>
 
-                        <span class="oy-badge {{ $paymentComplete ? 'oy-badge-success' : 'oy-badge-warning' }}">
-                            {{ $paymentComplete ? 'Paid in Full' : 'Partially Paid' }}
+                        <span class="oy-badge {{ $isFullyPaid ? 'oy-badge-success' : 'oy-badge-warning' }}">
+                            {{ $isFullyPaid ? 'Paid in Full' : 'Partially Paid' }}
+                        </span>
+                    </div>
+
+                    <div class="mt-3 flex justify-between gap-4">
+                        <span class="text-sm text-slate-500">
+                            Payment Arrangement
+                        </span>
+
+                        <span class="font-medium text-slate-900">
+                            {{ $paymentArrangementLabel }}
                         </span>
                     </div>
 

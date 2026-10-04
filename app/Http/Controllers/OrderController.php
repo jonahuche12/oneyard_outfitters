@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Order;
+use App\Models\QualityControlInspection;
 use App\Models\OrderNotificationRecipient;
 use App\Models\OrderAssignment;
 use App\Models\ProductionActivity;
@@ -520,9 +521,144 @@ class OrderController extends Controller
 
 
 
+    public function resubmitCorrectionToQualityControl(
+        Request $request,
+        Order $order
+    ): RedirectResponse {
+        Gate::authorize('resubmitCorrectionToQualityControl', $order);
+
+        $validated = $request->validate([
+            'correction_confirmed' => ['required', 'accepted'],
+            'notes' => ['required', 'string', 'max:5000'],
+        ]);
+
+        DB::transaction(function () use ($order, $validated): void {
+            $lockedOrder = Order::query()
+                ->whereKey($order->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if ($lockedOrder->status !== Order::STATUS_IN_PRODUCTION) {
+                abort(
+                    422,
+                    'This order is not currently in Production correction.'
+                );
+            }
+
+            $failedInspection = $lockedOrder->qualityControlInspections()
+                ->where(
+                    'status',
+                    QualityControlInspection::STATUS_COMPLETED
+                )
+                ->where(
+                    'result',
+                    QualityControlInspection::RESULT_FAIL
+                )
+                ->latest('id')
+                ->first();
+
+            if (!$failedInspection) {
+                abort(
+                    422,
+                    'A failed Quality Control inspection is required before this order can be resubmitted.'
+                );
+            }
+
+            $plan = $lockedOrder->productionPlan;
+
+            if (!$plan) {
+                abort(
+                    422,
+                    'This order does not have a Production Plan.'
+                );
+            }
+
+            $lockedOrder->update([
+                'status' => Order::STATUS_READY_FOR_QUALITY_CONTROL,
+            ]);
+
+            $plan->update([
+                'coordinator_checked_by' => auth()->id(),
+                'coordinator_checked_at' => now(),
+                'coordinator_check_notes' => $validated['notes'],
+            ]);
+        });
+
+        return redirect()
+            ->route('orders.show', $order)
+            ->with(
+                'success',
+                'The corrected order has been sent back to Quality Control for a new inspection.'
+            );
+    }
+
+    public function returnToProductionForCorrection(
+        Request $request,
+        Order $order
+    ): RedirectResponse {
+        Gate::authorize('returnToProductionForCorrection', $order);
+
+        $validated = $request->validate([
+            'notes' => ['nullable', 'string', 'max:5000'],
+        ]);
+
+        DB::transaction(function () use ($order, $validated): void {
+            $lockedOrder = Order::query()
+                ->whereKey($order->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if ($lockedOrder->status !== Order::STATUS_CORRECTION_REQUIRED) {
+                abort(
+                    422,
+                    'Only orders requiring Quality Control correction can be returned to Production.'
+                );
+            }
+
+            $inspection = $lockedOrder->qualityControlInspections()
+                ->where(
+                    'status',
+                    QualityControlInspection::STATUS_COMPLETED
+                )
+                ->where(
+                    'result',
+                    QualityControlInspection::RESULT_FAIL
+                )
+                ->latest('id')
+                ->first();
+
+            if (!$inspection) {
+                abort(
+                    422,
+                    'A failed Quality Control inspection is required before correction can begin.'
+                );
+            }
+
+            $plan = $lockedOrder->productionPlan;
+
+            if (!$plan) {
+                abort(
+                    422,
+                    'This order does not have a Production Plan for correction.'
+                );
+            }
+
+            $lockedOrder->update([
+                'status' => Order::STATUS_IN_PRODUCTION,
+            ]);
+        });
+
+        return redirect()
+            ->route('orders.show', $order)
+            ->with(
+                'success',
+                'The order has been returned to Production for correction. Existing Production activity history remains unchanged. The coordinator can resubmit the order to Quality Control after confirming the required corrections.'
+            );
+    }
+
     public function confirmProductionComplete(Request $request, Order $order)
     {
-        $this->authorize('confirmProductionComplete', $order);
+        Gate::authorize('confirmProductionComplete', $order);
 
         $validated = $request->validate([
             'notes' => ['nullable', 'string', 'max:5000'],
