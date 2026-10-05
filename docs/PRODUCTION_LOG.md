@@ -3,18 +3,17 @@
 ## CURRENT STATE
 
 PROJECT: Oneyard Outfitters — Institutional Supply & Uniform Management System
-CURRENT PHASE: Phase 6 — Financial / Fulfillment (in progress)
-CURRENT FEATURE: Procurement Center frontend refinement; fulfillment lifecycle (Production → Coordinator Check → QC → Delivery → Balance Collection) queued
-CURRENT STAGE: Procurement reference-photo refinement — build, Blade compile and procurement tests verified; browser verification pending
-STATUS: Full suite 351 tests: 335 passed, 16 failed (2026-10-02, cause undiagnosed); Procurement-filtered tests 86 passed (earlier run)
-LAST COMPLETED: Procurement offer withdrawal reason + modal (2026-09-30, browser verified)
-CURRENT WORK: Diagnose 16 failing tests, then Quality Control stage design/build
-NEXT STEP: Close photo refinement → approve Coordinator Check → QC design → build; then Procurement Offer Award/Selection
-BLOCKERS: 16 failing tests in full suite (2026-10-02); do not commit until green
-KNOWN ISSUES: Quotation/Order browser verification not logged; Order::currentAssignment() fix never marked verified; no Paystack webhook or queue-worker note logged
-OPEN QUESTIONS: Coordinator Check actor and status names; QC permission gating; offer award rules; commission rules
-DEFERRED SCOPE: Product catalogue, supplier portal, customer portal, advanced reporting, complex inventory, broad automation
-
+CURRENT PHASE: Phase 6 — Financial / Fulfillment (stable checkpoint); public website built; deployment readiness next
+CURRENT FEATURE: Close-out hardening before merge to main and deployment readiness
+CURRENT STAGE: Full suite green; open verification and coverage gaps listed in KNOWN ISSUES
+STATUS: Full suite 364 passed / 1253 assertions / 0 failed (2026-10-05). Branch wip/coordinator-check-offers, 5 commits ahead of main (acacf60), pushed.
+LAST COMPLETED: Stale ExampleTest and RbacTest fixed; suite green (2026-10-05)
+CURRENT WORK: None in build
+NEXT STEP: Harden Coordinator Check (tests, status filter, row lock) -> browser-verify open items -> merge to main -> Deployment Readiness
+BLOCKERS: None
+KNOWN ISSUES: Browser verification pending: procurement photo gallery, QC resubmission, public pages, rewritten email templates. No tests for Coordinator Check or Delivery activation / Pay on Delivery / offline-claim flows (DeliveryTest has 4 tests). OrderController status filter omits ready_for_quality_control. confirmProductionComplete lacks row lock and in-transaction status re-check. ORD-000006 delivered with 33,280 outstanding (reconciliation pending). Delivery Pay Now via Paystack approved, not implemented. Order::currentAssignment() unverified. Paystack webhook and queue-worker notes not logged. Duplicate docs/production-log.md. Permission slug deliveries.review_offline_payment uses an underscore unlike other slugs (left as is).
+OPEN QUESTIONS: Commission rules; registration policy (log says disabled)
+DEFERRED SCOPE: Quotation offline payment, product catalogue, supplier/customer portals, advanced reporting, complex inventory, broad automation, WhatsApp notifications
 ---
 
 # PRODUCT OVERVIEW
@@ -4691,3 +4690,32 @@ The existing institutional supply, quotation, order, production, quality control
 
 **PLANNED — Ready to begin Brand Foundation and Welcome Page**
 
+
+---
+
+## 2026-10-05 — Test Suite Restored to Green; Branch State Reconciled
+
+**Type:** TEST / FIX / DOCUMENTATION
+**Status:** COMPLETED / VERIFIED
+
+### Verified (user-run output)
+- Full suite: 364 passed / 1253 assertions / 0 failed. The 16 failures logged on 2026-10-02 were reduced to 2 by earlier work (not individually logged), then fixed.
+- The 2 remaining failures were stale tests, not application bugs:
+  - ExampleTest expected `/` to redirect to `/dashboard`; `/` is now the public welcome page (`Route::view('/', 'welcome')`). Test updated to assert 200 and the welcome view.
+  - RbacTest expected 58 permissions; the seeder has 59. Added `deliveries.review_offline_payment` to the expected list.
+- Removed 18 zero-byte stray files from the project root (names such as `access_token`, `activationToken`, `trackingToken`, `order_number,`); never committed.
+
+### Git state
+- main remains at acacf60. Branch wip/coordinator-check-offers carries: e0dbe77 (coordinator check, offer selection, photo refinement), dccf71f (delivery offline payment review), e8d2ca2 (public website and responsive app shell), b76224b (test fixes), 9d8cd09 (transactional email template updates).
+
+### Findings (code and tests observed, behaviour not reviewed)
+- Public views exist and are committed: welcome, about, faq, contact, how-it-works. Browser verification not logged.
+- Six transactional email templates were rewritten (9d8cd09); Blade compiles (`view:cache` passed); rendering not verified.
+- Procurement offer award/selection (accept/reject, accepting one rejects other submitted offers, submission blocked after acceptance) is covered by tests in ProcurementOfferTest. Earlier log entries said "not started".
+
+### Not yet verified
+- No automated tests found for Coordinator Check, Delivery activation, Pay on Delivery or the offline-claim review.
+- Open browser verification: procurement photo gallery, QC resubmission, public pages, email rendering.
+
+### Next
+Harden Coordinator Check (tests, status filter, row lock), browser-verify open items, merge to main, then Deployment Readiness.
