@@ -1,7 +1,7 @@
 <?php
 
-test('the application redirects the root URL to the dashboard', function () {
-    $response = $this->get('/');
-
-    $response->assertRedirect('/dashboard');
+test('the public home page is available to guests', function () {
+    $this->get('/')
+        ->assertOk()
+        ->assertViewIs('welcome');
 });

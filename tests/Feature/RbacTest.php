@@ -295,6 +295,7 @@ class RbacTest extends TestCase
             'users.activate',
             'users.deactivate',
             'users.assign-roles',
+            'deliveries.review_offline_payment',
         ];
 
         $this->assertDatabaseCount(
