@@ -198,7 +198,7 @@ class DeliveryTest extends TestCase
                     'notes' => 'Order delivered and confirmed.',
                 ]
             )
-            ->assertRedirect(route('orders.show', $order));
+            ->assertRedirect(route('deliveries.show', $delivery));
 
         $this->assertDatabaseHas('payments', [
             'organization_id' => $order->organization_id,
@@ -230,4 +230,28 @@ class DeliveryTest extends TestCase
             $totalPaid
         );
     }
+
+    public function test_delivery_staff_can_view_delivery_without_orders_view(): void
+    {
+        $user = $this->userWithPermissions([
+            'deliveries.view',
+        ]);
+
+        $order = $this->readyOrder();
+
+        $delivery = Delivery::create([
+            'order_id' => $order->id,
+            'created_by' => $user->id,
+            'status' => Delivery::STATUS_PENDING,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('deliveries.show', $delivery))
+            ->assertOk()
+            ->assertSee($order->order_number)
+            ->assertSee($order->organization->name)
+            ->assertDontSee('Back to Order');
+    }
+
+
 }

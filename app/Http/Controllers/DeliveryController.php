@@ -34,7 +34,7 @@ class DeliveryController extends Controller
         return view('deliveries.index', compact('deliveries'));
     }
 
-        public function show(Delivery $delivery): View
+    public function show(Delivery $delivery): View
     {
         Gate::authorize('view', $delivery);
 
@@ -43,12 +43,33 @@ class DeliveryController extends Controller
             'order.organization.contacts',
             'order.contact',
             'order.items',
+            'order.quotation.payments',
             'creator',
             'confirmer',
             'activationRecipients.contact',
         ]);
 
-        return view('deliveries.show', compact('delivery'));
+        $orderTotal = (float) $delivery->order->total;
+
+        $amountPaid = (float) $delivery->order->quotation
+            ->payments
+            ->where('status', 'completed')
+            ->sum('amount');
+
+        $balanceDue = max(0, $orderTotal - $amountPaid);
+
+        $amountToCollect = $delivery->payment_arrangement
+            === Delivery::PAYMENT_ARRANGEMENT_PAY_ON_DELIVERY
+            ? $balanceDue
+            : 0;
+
+        return view('deliveries.show', compact(
+            'delivery',
+            'orderTotal',
+            'amountPaid',
+            'balanceDue',
+            'amountToCollect',
+        ));
     }
 
     public function store(Request $request, Order $order): RedirectResponse
@@ -577,7 +598,7 @@ class DeliveryController extends Controller
         });
 
         return redirect()
-            ->route('orders.show', $delivery->order_id)
+            ->route('deliveries.show', $delivery)
             ->with(
                 'success',
                 $balanceCollected

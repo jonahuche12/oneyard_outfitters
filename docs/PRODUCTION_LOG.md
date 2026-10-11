@@ -4719,3 +4719,230 @@ The existing institutional supply, quotation, order, production, quality control
 
 ### Next
 Harden Coordinator Check (tests, status filter, row lock), browser-verify open items, merge to main, then Deployment Readiness.
+
+---
+
+## 2026-10-07 — Public Contact → Lead Capture with Email: IMPLEMENTED + VERIFIED
+
+### Milestone
+
+The public Contact workflow has been completed and verified as a working lead-capture pipeline.
+
+The public contact form now collects and persists the visitor's email address alongside the existing enquiry information. The submission is processed through the Laravel `PublicContactController`, stored in the `leads` table, and then handed off to WhatsApp for direct conversation with Oneyard Outfitters.
+
+### Implemented
+
+- Added email collection to the public Contact form.
+- Added server-side email validation.
+- Added email persistence to `Lead::create()`.
+- Confirmed the `Lead` model accepts the email field.
+- Applied the Leads database migration to the active application database.
+- Confirmed the public AJAX submission uses the project's existing jQuery pattern.
+- Preserved CSRF protection on the public form.
+- Updated the WhatsApp handoff message to include the submitted email address.
+- Preserved the official Oneyard Outfitters WhatsApp contact number.
+
+### Verification
+
+- Browser contact-form submission: **PASSED**
+- Lead creation in database: **PASSED**
+- WhatsApp handoff: **PASSED**
+- Full automated test suite: **379 passed**
+- Assertions: **1,309**
+- Failures: **0**
+- Test duration: **23.20s**
+
+### Root Cause Resolved
+
+The initial HTTP 500 encountered during browser verification was traced to the `leads` table not yet being present in the active MySQL database.
+
+The Lead migration was subsequently applied successfully. No frontend architecture change was required to resolve the 500.
+
+### Status
+
+**IMPLEMENTED + VERIFIED**
+
+The public Contact → Lead Capture workflow is closed for this production unit.
+
+### Next Step
+
+Proceed to the next approved Oneyard production unit. Do not reopen this feature unless a new defect or requirement is identified.
+
+
+
+---
+
+## 2026-10-07 — Lead Management Navigation & RBAC Visibility: VERIFIED
+
+### Milestone
+
+Lead Management navigation and permission-controlled visibility have been completed and browser-verified.
+
+### RBAC Resolution
+
+The Lead navigation was initially not visible to Super Admin because the existing database `super-admin` role had not yet received the newly introduced Lead permissions.
+
+The existing `RbacSeeder` was inspected and confirmed to use:
+
+- `Permission::updateOrCreate()` for permission definitions.
+- `Role::updateOrCreate()` for role definitions.
+- `$role->permissions()->sync($permissionIds)` to synchronize each role's permissions from the seeder definition.
+
+The existing RBAC synchronization mechanism was therefore used rather than introducing a separate permission-assignment mechanism.
+
+After synchronization, the Super Admin role was verified to contain:
+
+- `leads.view`
+- `leads.create`
+- `leads.update`
+- `leads.assign`
+- `leads.convert`
+
+No `leads.delete` permission was introduced.
+
+### Browser Verification
+
+Verified while authenticated as Super Admin:
+
+- Desktop Leads navigation is visible.
+- Mobile Leads navigation is visible.
+- Dashboard Leads management card is visible.
+- Leads navigation links to `/leads`.
+- Leads navigation active state displays correctly.
+- Permission-controlled navigation visibility functions correctly.
+
+### Architectural Integrity
+
+No changes were made to the Lead policy, authorization architecture, routes, or navigation permission checks to bypass RBAC.
+
+The authorization chain remains:
+
+`@can('viewAny', Lead::class)` → `LeadPolicy::viewAny()` → `User::hasPermission('leads.view')` → role-permission relationship.
+
+### Verification Status
+
+**VERIFIED**
+
+The Lead Management navigation and Super Admin RBAC visibility are now confirmed working in the browser.
+
+### Testing Note
+
+No additional automated test suite was executed for this milestone. The issue was isolated to stale database role-permission synchronization, and browser verification was the appropriate final verification step.
+
+### Next Step
+
+Continue Lead Management workflow review from the current verified UI state before beginning the next production unit.
+---
+
+## 2026-10-10 — Procurement Offers & Display Rework — SCOPE CHANGE (design pending)
+
+### Change Requested
+- Accepting a procurement offer must NOT auto-reject other offers; multiple offers may be accepted per procurement.
+- On acceptance, send a WhatsApp message with offer details to the offering staff member.
+- Procurement Center index changes from table to card grid (3–4 per row), first photo on top, details below.
+
+### Decision / Change Control
+- Supersedes the 2026-10-05 behaviour: "accepting one offer rejects other submitted offers; submission blocked after acceptance". Existing ProcurementOfferTest cases for these rules will be rewritten.
+- Lead Management workflow review paused; procurement takes priority per user direction.
+
+### Status
+DESIGN PRESENTED — awaiting WhatsApp mechanism decision (Cloud API vs wa.me link) and CONTINUE. No code changed or verified.
+
+### Next
+Inspect offer controller/model/policy, procurement index view and ProcurementOfferTest; finalize design; build backend acceptance change first.
+
+### 2026-10-10 — Procurement Offers Stage 1A (revised): Acceptance Rule — IMPLEMENTED (not yet verified)
+- Decisions: multiple offers may be accepted per procurement with NO quantity cap; accepting an offer no longer auto-rejects others; WhatsApp notification via Cloud API (automatic).
+- ProcurementOfferController::accept() now only marks the selected offer accepted (auto-reject removed; cap, if applied earlier, removed).
+- Tests: rewrote test_accepting_one_offer_rejects_other_submitted_offers; added multi-accept-beyond-quantity test.
+- Pending: run ProcurementOfferTest; Stage 1B (submission rule: remove accepted-offer blocks in store(), ensureAcceptingOffers(), ProcurementPolicy::submitOffer(), likely StoreProcurementOfferRequest; rewrite 2 blocking tests); Stage 2 users.phone; Stage 3 Cloud API job + Meta template; Stage 4 card grid.
+
+
+### 2026-10-10 — Procurement Offers Stage 1B: Submission Stays Open After Acceptance — IMPLEMENTED (not yet verified)
+- Removed accepted-offer submission blocks: ProcurementOfferController::store() (row lock retained for 3-offer limit), ensureAcceptingOffers(), ProcurementPolicy::submitOffer() (and unused import), and the Submit Offer condition in procurements/show.blade.php (2 places).
+- StoreProcurementOfferRequest verified to have no accepted-offer rule; unchanged.
+- Offer collection now closes only by procurement status (not `ready`) or offer deadline.
+- Tests: replaced the two "blocked after acceptance" tests with "remains open after acceptance" equivalents.
+- Pending: run ProcurementOfferTest and --filter=Procurement; browser check; Stage 2 users.phone; Stage 3 Cloud API; Stage 4 card grid.
+
+### 2026-10-10 — Procurement Offers Stage 2: Staff Phone Number — IMPLEMENTED (not yet verified)
+- Added nullable users.phone (migration 2026_10_10_000000), User #[Fillable] updated.
+- StoreStaffRequest/UpdateStaffRequest: phone nullable, E.164 regex (^\+[1-9]\d{7,14}$), formatting chars (space - ( ) .) stripped in prepareForValidation; local-format numbers rejected.
+- StaffController: store saves phone; update changes phone only when the key is present (omitted key preserves existing value, blank clears).
+- Staff create/edit views: Phone number (WhatsApp) field added. Staff show view not changed (not inspected).
+- Tests: tests/Feature/Staff/StaffPhoneTest.php (6 tests). UserPolicy not inspected; test helper assumes users.view/create/update suffice.
+- Purpose: recipient number for Stage 3 WhatsApp Cloud API notification on offer acceptance.
+- Pending: migrate, run Staff tests + full suite, browser check; Stage 3; Stage 4 card grid. Remember to run migrate on any other environment before deploy.
+
+### 2026-10-10 — Test Run: 394 passed / 1 failed (1355 assertions)
+- Only failure: OrderTest "notification token only grants access to …" (line ~491). Cause: flaky assertion — checked that the public URL does not contain '/<order id>' as a substring; the random access token started with "1" and the order ID was 1. Application behaviour correct (token random, URL does not expose order ID as the path segment).
+- Fix: assert parse_url path !== '/public/orders/<order id>' instead of a substring check. Pending re-run.
+- Total test count (395) equals the previous run, so Stage 3 (ProcurementOfferWhatsAppTest, 7 tests) is not confirmed in this run; run that file explicitly.
+- Stage 2 phone tests: not reported failing in this run (inferred passing; unconfirmed).
+
+### 2026-10-10 — Test Run: 402 passed / 1376 assertions / 0 failed
+- ProcurementOfferWhatsAppTest: 7 passed. Stage 3 (WhatsApp Cloud API job/action/config) VERIFIED at test level; live Meta send NOT yet performed (credentials/template pending; WHATSAPP_ENABLED defaults false).
+- Stage 2 (users.phone) tests now passing. OrderTest flaky token assertion fix applied earlier (confirmed no recurrence in this run).
+- Stage 1A/1B application to be confirmed via grep (not reported).
+
+### 2026-10-10 — Procurement Offers Stage 4: Procurement Center Card Grid — IMPLEMENTED (not yet verified)
+- procurements/index.blade.php: table replaced by card grid (1/2/3 columns, 4 at 2xl); first reference photo on top (placeholder if none, "+N" badge, same photo-modal data attributes), then status/priority badges, name, description, quantity, order/Independent, max unit price, required-by, offers count with accepted count, Submit Offer/View actions. Search, filters, pagination, modal unchanged.
+- ProcurementController::index: added accepted_offers_count; page size 15 -> 12 (assumed; user did not specify).
+- Tests: tests/Feature/ProcurementIndexCardsTest.php (4 tests).
+- Pending: npm run build, run tests, browser verification (breakpoints, photo modal, empty state, pagination).
+
+### 2026-10-10 — Verification Findings (grep)
+- Stage 1A/1B CONFIRMED applied: auto-reject, "already has an accepted offer" blocks and policy accepted-offer check all absent (counts 0). Suite green (402) → verified at test level.
+- Stage 4 partly applied: card view (data-procurement-card present, no <table>) and controller (accepted_offers_count, paginate(12)) applied; tests/Feature/ProcurementIndexCardsTest.php was missing (reason test count stayed 402). Re-issued test file only.
+- Pending: view:clear, npm run build, run new tests (expect 406 total), browser verification of grid breakpoints/photo modal/placeholder/pagination.
+
+
+---
+
+
+## 2026-10-11 — Procurement Offers Rework: Browser-Verified; Live WhatsApp Setup PAUSED
+
+CURRENT FEATURE: Delivery activation — resend after offline-claim rejection; WhatsApp channel for activation message
+CURRENT STAGE: Diagnosis (files requested)
+NEXT STEP: Inspect delivery code -> fix resend visibility -> design WhatsApp channel for approval
+BLOCKERS: Meta WhatsApp template approval (procurement live send and any new WhatsApp template)
+
+### Status
+- Procurement Stages 1A–4 (multi-accept with no auto-reject, submissions open after acceptance, staff phone number, WhatsApp Cloud API job, card grid) browser-verified working per user report. Last full suite: 406 passed / 1390 assertions / 0 failed. Stage 3B (message wording v2, 9 variables, admin contact) was patched; its test result was not reported.
+- WhatsApp live send NOT verified. Progress: (1) 401 code 190 — WHATSAPP_ACCESS_TOKEN was a 32-char non-token value (likely App Secret); corrected. (2) Now 404 #132001 "Template name does not exist in the translation" (offer 7) — template `procurement_offer_accepted_v2` (9 variables, Utility) not yet created/approved in Meta, or its language does not match WHATSAPP_TEMPLATE_LANGUAGE. Meta's sample `3p_direct_integration_test_template` (en_US, no variables) is for pipeline testing only.
+- Decision: pause live WhatsApp setup; resume after the Meta template exists and is approved.
+
+### Open / Pending (procurement WhatsApp)
+- Create and approve the template; align language code; direct tinker send; retry failed job 11470eb6-7fd2-4ede-bf37-b1d6ad525f70 (never `queue:retry all`); decide fate of failed job c82a9b84-dbb9-4838-bc16-9409cc5934e3.
+- Test-mode limits: recipients must be on Meta's allow-list; APP_URL is still http://localhost:10000 so in-message links are unusable on phones.
+- Security follow-ups: Mailtrap credentials were pasted in chat (reset them); if a Meta App Secret was ever exposed, reset it; GIT_TOKEN in .env should move to a git credential manager.
+
+### Known Issue Added
+- ~35 failed mail jobs in failed_jobs (2026-09-27 to 2026-10-08): OrderCreated, PaymentConfirmed, OrderApproved, OrderApprovedInternal, DeliveryActivationInvitation. Cause not yet diagnosed.
+
+### Next Work Queued (not started)
+1. TROUBLESHOOT Delivery: when Admin/Super Admin rejects an Already-Paid-Offline claim, the "resend delivery activation" action must be shown again.
+2. CHANGE: send the delivery activation message to the selected contact's WhatsApp (when available), in addition to email. Requires a separate approved WhatsApp template and its own design approval.
+
+### 2026-10-11 — Delivery: Resend After Offline-Claim Rejection (TROUBLESHOOT) + WhatsApp Channel (DESIGN)
+- Code read (DeliveryController, DeliveryPolicy, Delivery, DeliveryActivationRecipient, DeliveryActivationInvitation, deliveries/show.blade.php): rejectOfflinePayment() nulls payment_arrangement and activated_at, sets offline_payment_status=rejected, and resets all activation recipients to pending. show view displays the Send Activation Link(s) form when status != confirmed, activated_at is null, and an active contact has an email. By code the form should reappear after a rejection; the reported symptom is NOT reproduced by reading. Cause undetermined (hypotheses: another path leaves activated_at set; no contact with email; customer-side page). Evidence requested: staff-page state after rejection, DB dump of rejected delivery + recipients, public activation controller/view, DeliveryTest helpers. Plan: reproduction test (reject -> show -> assert form visible).
+- Observation: sendActivationInvitations() authorizes with 'view' only (deliveries.view); stricter permission under consideration. Not changed.
+- Customer is not notified when a claim is rejected; open question whether the resent message should mention it.
+- DESIGN (awaiting approval): WhatsApp channel for delivery activation invitations. contacts.whatsapp already exists. New SendDeliveryActivationWhatsApp job reusing SendWhatsAppTemplate; number normalizer (assumed default country code 234); template delivery_activation_invitation (Utility, 3 variables); recipients migration (whatsapp snapshot, whatsapp_notified_at; email nullability to be confirmed); selection filter to include contacts with email OR whatsapp; email unchanged. Dependencies: Meta template approval, customer opt-in, public APP_URL. Four failed DeliveryActivationInvitation email jobs (2026-10-04, 2026-10-08) still undiagnosed.
+- No code changed.
+### 2026-10-11 — Delivery Access, Offline-Payment Rejection and Reactivation
+
+**Implemented**
+- Delivery staff can view delivery details without requiring the separate `orders.view` permission.
+- Delivery confirmation redirects back to the delivery detail page.
+- Rejecting an offline-payment claim restores the activation invitation workflow.
+- Activation links can be resent after a rejected offline-payment claim.
+
+**Verification**
+- Browser workflow: user confirmed working.
+- `php artisan test tests/Feature/DeliveryTest.php`: 5 passed, 18 assertions.
+- `php artisan test tests/Feature/DeliveryRejectionResendTest.php`: 2 passed, 15 assertions.
+- Combined focused result: 7 passed, 33 assertions, 0 failures.
+
+**Boundary**
+- Live WhatsApp delivery activation notifications are not claimed as implemented or verified. WhatsApp integration remains a separate task requiring approved configuration and template details.
