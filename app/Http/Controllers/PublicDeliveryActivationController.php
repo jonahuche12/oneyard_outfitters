@@ -46,11 +46,14 @@ class PublicDeliveryActivationController extends Controller
             ]);
         }
 
+        $isFullyPaid = $balanceDue <= 0.01;
+
         return view(
             'public.deliveries.activate',
             compact(
                 'recipient',
-                'balanceDue'
+                'balanceDue',
+                'isFullyPaid'
             )
         );
     }
@@ -59,15 +62,8 @@ class PublicDeliveryActivationController extends Controller
         Request $request,
         string $token
     ): RedirectResponse {
-        $validated = $request->validate([
-            'payment_arrangement' => [
-                'required',
-                'in:pay_now,pay_on_delivery,paid_offline',
-            ],
-        ]);
-
         $recipient = DeliveryActivationRecipient::query()
-            ->with('delivery')
+            ->with('delivery.order.quotation')
             ->where('access_token', $token)
             ->firstOrFail();
 
@@ -87,6 +83,38 @@ class PublicDeliveryActivationController extends Controller
                 ->with('error', 'This delivery is no longer available for activation.');
         }
 
+        // Query current completed payments instead of trusting a page-load balance.
+        $quotation = $delivery->order->quotation;
+
+        $totalPaid = $quotation
+            ? (float) $quotation->payments()
+                ->where('status', 'completed')
+                ->sum('amount')
+            : 0.0;
+
+        $balanceDue = max(
+            0,
+            round((float) $delivery->order->total - $totalPaid, 2)
+        );
+
+        // Fully paid orders do not need another payment arrangement.
+        if ($balanceDue <= 0.01) {
+            $activatedAt = now();
+
+            $delivery->update([
+                'activated_at' => $activatedAt,
+            ]);
+
+            $recipient->update([
+                'status' => DeliveryActivationRecipient::STATUS_ACTIVATED,
+                'activated_at' => $activatedAt,
+            ]);
+
+            return redirect()
+                ->route('public.deliveries.activate', $token)
+                ->with('success', 'Your order is fully paid. Your delivery has been activated.');
+        }
+
         if (
             $delivery->payment_arrangement === Delivery::PAYMENT_ARRANGEMENT_PAID_OFFLINE
             && $delivery->offline_payment_status === Delivery::OFFLINE_PAYMENT_STATUS_PENDING
@@ -98,6 +126,13 @@ class PublicDeliveryActivationController extends Controller
                     'Your offline payment claim is awaiting Admin verification. Please wait for the claim to be reviewed.'
                 );
         }
+
+        $validated = $request->validate([
+            'payment_arrangement' => [
+                'required',
+                'in:pay_now,pay_on_delivery,paid_offline',
+            ],
+        ]);
 
         if (
             $validated['payment_arrangement']
@@ -139,14 +174,16 @@ class PublicDeliveryActivationController extends Controller
                 );
         }
 
+        $activatedAt = now();
+
         $delivery->update([
             'payment_arrangement' => Delivery::PAYMENT_ARRANGEMENT_PAY_ON_DELIVERY,
-            'activated_at' => now(),
+            'activated_at' => $activatedAt,
         ]);
 
         $recipient->update([
             'status' => DeliveryActivationRecipient::STATUS_ACTIVATED,
-            'activated_at' => now(),
+            'activated_at' => $activatedAt,
         ]);
 
         return redirect()
@@ -156,13 +193,12 @@ class PublicDeliveryActivationController extends Controller
                 'Your delivery has been activated. Payment will be completed when the order is delivered.'
             );
     }
-
     public function payNow(
         Request $request,
         string $token
     ): RedirectResponse {
         $recipient = DeliveryActivationRecipient::query()
-            ->with('delivery.order.quotation')
+            ->with('delivery.order.quotation.payments')
             ->where('access_token', $token)
             ->firstOrFail();
 
@@ -188,6 +224,28 @@ class PublicDeliveryActivationController extends Controller
                 ->with(
                     'error',
                     'This Delivery is no longer available for payment.'
+                );
+        }
+
+        $quotation = $delivery->order->quotation;
+
+        $totalPaid = $quotation
+            ? (float) $quotation->payments
+                ->where('status', 'completed')
+                ->sum('amount')
+            : 0.0;
+
+        $balanceDue = max(
+            0,
+            round((float) $delivery->order->total - $totalPaid, 2)
+        );
+
+        if ($balanceDue <= 0.01) {
+            return redirect()
+                ->route('public.deliveries.activate', $token)
+                ->with(
+                    'info',
+                    'Your order is already fully paid. Return to the activation page to activate your delivery.'
                 );
         }
 

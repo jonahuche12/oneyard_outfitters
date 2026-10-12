@@ -27,10 +27,28 @@ class DeliveryPolicy
 
     public function confirm(User $user, Delivery $delivery): bool
     {
+        $order = $delivery->order;
+        $quotation = $order?->quotation;
+
+        $amountPaid = $quotation
+            ? (float) $quotation->payments()
+                ->where('status', 'completed')
+                ->sum('amount')
+            : 0.0;
+
+        $isFullyPaid = $order !== null
+            && ((float) $order->total - $amountPaid) <= 0.01;
+
+        $hasEligibleArrangement =
+            $delivery->payment_arrangement !== null
+            && $delivery->payment_arrangement !== Delivery::PAYMENT_ARRANGEMENT_PAID_OFFLINE;
+
         return $delivery->status === Delivery::STATUS_PENDING
             && $delivery->activated_at !== null
-            && $delivery->payment_arrangement !== null
-            && $delivery->payment_arrangement !== Delivery::PAYMENT_ARRANGEMENT_PAID_OFFLINE
+            && (
+                $hasEligibleArrangement
+                || ($isFullyPaid && $delivery->payment_arrangement === null)
+            )
             && $user->hasPermission('deliveries.confirm');
     }
 

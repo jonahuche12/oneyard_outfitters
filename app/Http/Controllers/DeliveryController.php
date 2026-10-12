@@ -463,13 +463,6 @@ class DeliveryController extends Controller
                 );
             }
 
-            if ($lockedDelivery->payment_arrangement === null) {
-                abort(
-                    422,
-                    'A payment arrangement must be selected before the Delivery can be completed.'
-                );
-            }
-
             $lockedOrder = Order::query()
                 ->with('quotation')
                 ->whereKey($lockedDelivery->order_id)
@@ -489,6 +482,35 @@ class DeliveryController extends Controller
                 abort(
                     422,
                     'The Order cannot be completed because its quotation is missing.'
+                );
+            }
+
+            $totalPaidBeforeCompletion = (float) $quotation->payments()
+                ->where('status', 'completed')
+                ->sum('amount');
+
+            $balanceBeforeCompletion = max(
+                0,
+                round((float) $lockedOrder->total - $totalPaidBeforeCompletion, 2)
+            );
+
+            if (
+                $lockedDelivery->payment_arrangement === null
+                && $balanceBeforeCompletion > 0.01
+            ) {
+                abort(
+                    422,
+                    'A payment arrangement must be selected before the Delivery can be completed.'
+                );
+            }
+
+            if (
+                $lockedDelivery->payment_arrangement
+                    === Delivery::PAYMENT_ARRANGEMENT_PAID_OFFLINE
+            ) {
+                abort(
+                    422,
+                    'Offline payments must be verified through the offline-payment workflow.'
                 );
             }
 
