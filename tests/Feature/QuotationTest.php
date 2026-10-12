@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Mail\QuotationInvitation;
+use App\Jobs\SendQuotationSentWhatsApp;
 use App\Models\Contact;
 use App\Models\Organization;
 use App\Models\Permission;
@@ -16,6 +17,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
 class QuotationTest extends TestCase
@@ -488,6 +490,8 @@ class QuotationTest extends TestCase
     public function test_authorized_user_can_send_a_quotation_to_selected_contacts(): void
     {
         Mail::fake();
+        Queue::fake();
+        config(['services.whatsapp.enabled' => true]);
 
         $user = $this->userWithPermissions('quotations.send');
 
@@ -575,6 +579,8 @@ class QuotationTest extends TestCase
             QuotationInvitation::class,
             2
         );
+
+        Queue::assertPushed(SendQuotationSentWhatsApp::class, 2);
     }
 
     public function test_quotation_email_transport_failure_is_handled_without_marking_recipient_as_sent(): void
@@ -773,7 +779,7 @@ class QuotationTest extends TestCase
         $response = $this->post(
             route('public.quotations.accept', $recipient->access_token),
             [
-                'payment_percentage' => 30,
+                'payment_percentage' => 60,
             ]
         );
 
@@ -784,8 +790,8 @@ class QuotationTest extends TestCase
         $freshRecipient = $recipient->fresh();
 
         expect($freshRecipient->response_status)->toBe('pending');
-        expect($freshRecipient->payment_percentage)->toBe(30);
-        expect((float) $freshRecipient->payment_amount)->toBe(30000.0);
+        expect($freshRecipient->payment_percentage)->toBe(60);
+        expect((float) $freshRecipient->payment_amount)->toBe(60000.0);
         expect((float) $freshRecipient->amount_paid)->toBe(0.0);
 
         $transaction = PaymentTransaction::query()
@@ -793,7 +799,7 @@ class QuotationTest extends TestCase
             ->firstOrFail();
 
         expect($transaction->reference)->not->toBeNull();
-        expect((float) $transaction->amount)->toBe(30000.0);
+        expect((float) $transaction->amount)->toBe(60000.0);
         expect($transaction->status)->toBe('initialized');
         expect($transaction->authorization_url)
             ->toBe('https://checkout.paystack.com/test-reference');

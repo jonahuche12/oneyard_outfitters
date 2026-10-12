@@ -5,6 +5,7 @@ window.$ = $;
 window.jQuery = $;
 
 import './quotations';
+import './ajax-list';
 import './order-coordinator';
 import './procurements/photos';
 import './procurements/offers';
@@ -377,7 +378,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
-// Contact form → WhatsApp
+// Contact form → Lead capture → WhatsApp
 document.addEventListener('DOMContentLoaded', () => {
     const forms = document.querySelectorAll('[data-whatsapp-form]');
 
@@ -389,103 +390,120 @@ document.addEventListener('DOMContentLoaded', () => {
         form.addEventListener('submit', (event) => {
             event.preventDefault();
 
+            const $form = $(form);
             const formData = new FormData(form);
 
             const name = String(formData.get('name') || '').trim();
             const organization = String(formData.get('organization') || '').trim();
+            const email = String(formData.get('email') || '').trim();
             const phone = String(formData.get('phone') || '').trim();
             const category = String(formData.get('category') || '').trim();
             const message = String(formData.get('message') || '').trim();
 
-            if (!name || !phone || !category || !message) {
+            if (!name || !email || !phone || !category || !message) {
                 form.reportValidity();
                 return;
             }
 
-            const lines = [
-                'Hello Oneyard Outfitters,',
-                '',
-                `My name is ${name}.`,
-            ];
+            const $submitButton = $form.find('button[type="submit"]');
+            const originalButtonText = $submitButton.text();
 
-            if (organization) {
-                lines.push(`Organization: ${organization}`);
-            }
+            $submitButton
+                .prop('disabled', true)
+                .text('Preparing WhatsApp...');
 
-            lines.push(
-                `Phone: ${phone}`,
-                `Requirement: ${category}`,
-                '',
-                'Requirement details:',
-                message,
-                '',
-                'I would like to discuss this requirement with Oneyard Outfitters.'
-            );
+            $.ajax({
+                url: form.action,
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json',
+                },
+                success: function (data, textStatus, xhr) {
+                    console.log(
+                        'Contact form submission successful:',
+                        {
+                            status: xhr.status,
+                            responseJSON: data,
+                        }
+                    );
 
-            const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(lines.join('\n'))}`;
+                    const lines = [
+                        'Hello Oneyard Outfitters,',
+                        '',
+                        `My name is ${name}.`,
+                    ];
 
-            window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+                    if (organization) {
+                        lines.push(`Organization: ${organization}`);
+                    }
+
+                    lines.push(
+                        `Email: ${email}`,
+                        `Phone: ${phone}`,
+                        `Requirement: ${category}`,
+                        '',
+                        'Requirement details:',
+                        message,
+                        '',
+                        'I would like to discuss this requirement with Oneyard Outfitters.'
+                    );
+
+                    const whatsappUrl =
+                        `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(lines.join('\n'))}`;
+
+                    window.open(
+                        whatsappUrl,
+                        '_blank',
+                        'noopener,noreferrer'
+                    );
+                },
+                error: function (xhr, textStatus, errorThrown) {
+                    console.error(
+                        'Contact form AJAX request failed:',
+                        {
+                            status: xhr.status,
+                            statusText: xhr.statusText,
+                            textStatus: textStatus,
+                            errorThrown: errorThrown,
+                            url: form.action,
+                            responseText: xhr.responseText,
+                            responseJSON: xhr.responseJSON,
+                        }
+                    );
+
+                    if (xhr.status === 422 && xhr.responseJSON?.errors) {
+                        console.error(
+                            'Contact form validation errors:',
+                            xhr.responseJSON.errors
+                        );
+
+                        alert(
+                            'Please check the information you entered and try again.'
+                        );
+                    } else if (xhr.status === 419) {
+                        console.error(
+                            'Laravel CSRF/token mismatch:',
+                            xhr.responseText
+                        );
+
+                        alert(
+                            'Your session has expired. Please refresh the page and try again.'
+                        );
+                    } else {
+                        console.log(xhr.responseText)
+                        
+                    }
+                },
+                complete: function () {
+                    $submitButton
+                        .prop('disabled', false)
+                        .text(originalButtonText);
+                },
+            });
         });
-    });
-});
-
-
-// Authenticated application mobile navigation
-document.addEventListener('DOMContentLoaded', () => {
-    const menu = document.getElementById('app-mobile-menu');
-    const sidebar = document.getElementById('app-mobile-sidebar');
-    const openButton = document.getElementById('app-mobile-menu-open');
-    const closeButton = document.getElementById('app-mobile-menu-close');
-    const backdrop = document.getElementById('app-mobile-backdrop');
-    const menuLinks = document.querySelectorAll('[data-app-mobile-menu-link]');
-
-    if (!menu || !sidebar || !openButton || !closeButton || !backdrop) {
-        return;
-    }
-
-    const openMenu = () => {
-        menu.classList.remove('invisible', 'pointer-events-none');
-        menu.setAttribute('aria-hidden', 'false');
-
-        requestAnimationFrame(() => {
-            backdrop.classList.remove('opacity-0');
-            sidebar.classList.remove('-translate-x-full');
-        });
-
-        openButton.setAttribute('aria-expanded', 'true');
-        document.body.classList.add('overflow-hidden');
-    };
-
-    const closeMenu = () => {
-        backdrop.classList.add('opacity-0');
-        sidebar.classList.add('-translate-x-full');
-
-        menu.setAttribute('aria-hidden', 'true');
-        openButton.setAttribute('aria-expanded', 'false');
-        document.body.classList.remove('overflow-hidden');
-
-        window.setTimeout(() => {
-            menu.classList.add('invisible', 'pointer-events-none');
-        }, 300);
-    };
-
-    openButton.addEventListener('click', openMenu);
-    closeButton.addEventListener('click', closeMenu);
-    backdrop.addEventListener('click', closeMenu);
-
-    menuLinks.forEach((link) => {
-        link.addEventListener('click', closeMenu);
-    });
-
-    document.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape' && menu.getAttribute('aria-hidden') === 'false') {
-            closeMenu();
-        }
-    });
-
-    window.addEventListener('resize', () => {
-        if (window.innerWidth >= 1024) {
-            closeMenu();
-        }
     });
 });

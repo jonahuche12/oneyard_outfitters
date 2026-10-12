@@ -3,167 +3,94 @@
 @section('content')
 <div class="oy-page">
 
+    {{-- Page Header --}}
     <div class="oy-page-header">
         <div class="oy-page-header-content">
-            <h1 class="oy-page-title">Orders</h1>
+            <div class="oy-page-title-row">
+                <h1 class="oy-page-title">Orders</h1>
+
+                <span id="orders-total-badge" data-list-total-badge class="oy-badge oy-badge-neutral">
+                    {{ $orders->total() }}
+                </span>
+            </div>
+
             <p class="oy-page-description">
                 Manage accepted customer orders through fulfillment.
             </p>
         </div>
     </div>
 
+    {{-- Feedback (the layout already shows "status" messages and the first error) --}}
+    @if (session('success'))
+        <div class="oy-alert oy-alert-success mb-5">
+            {{ session('success') }}
+        </div>
+    @endif
+
+    {{-- Search / Filters --}}
     <div class="oy-card mb-6">
         <div class="oy-card-body">
-            <form method="GET" action="{{ route('orders.index') }}" class="oy-form">
-                <div class="grid gap-4 md:grid-cols-3">
+            <form
+                id="orders-filter-form"
+                data-ajax-list-form
+                method="GET"
+                action="{{ route('orders.index') }}"
+                class="oy-form"
+            >
+                <div class="oy-filter-row">
+                    <div class="oy-filter-grow">
+                        <label for="order-search" class="oy-form-label">Search</label>
 
-                    <div class="oy-form-group md:col-span-2">
-                        <label class="oy-form-label">Search</label>
                         <input
-                            type="text"
+                            id="order-search"
+                            type="search"
                             name="search"
                             value="{{ $search }}"
+                            placeholder="Search by order number, organization or quotation..."
+                            autocomplete="off"
                             class="oy-input"
-                            placeholder="Order number, organization or quotation..."
                         >
                     </div>
 
-                    <div class="oy-form-group">
-                        <label class="oy-form-label">Status</label>
-                        <select name="status" class="oy-select">
-                            <option value="">All statuses</option>
-                            @foreach([
-                                'pending' => 'Pending',
-                                'approved' => 'Approved',
-                                'in_production' => 'In Production',
-                                'ready' => 'Ready',
-                                'delivered' => 'Delivered',
-                                'cancelled' => 'Cancelled',
-                            ] as $value => $label)
-                                <option
-                                    value="{{ $value }}"
-                                    @selected($status === $value)
-                                >
+                    <div class="sm:w-64">
+                        <label for="order-status" class="oy-form-label">Status</label>
+
+                        <select id="order-status" name="status" class="oy-select">
+                            <option value="">Active orders (excluding delivered)</option>
+
+                            @foreach ($statuses as $value => $label)
+                                <option value="{{ $value }}" @selected($status === $value)>
                                     {{ $label }}
                                 </option>
                             @endforeach
                         </select>
                     </div>
 
-                </div>
+                    <div class="oy-page-actions sm:mt-7">
+                        <button
+                            type="button"
+                            id="orders-clear-button"
+                            data-list-clear
+                            data-list-clear-toggle
+                            class="oy-btn oy-btn-secondary"
+                            @if ($search === '' && ! $status) style="display: none;" @endif
+                        >
+                            Clear
+                        </button>
 
-                <div class="mt-4 flex justify-end gap-2">
-                    <a href="{{ route('orders.index') }}" class="oy-btn oy-btn-secondary">
-                        Clear
-                    </a>
-
-                    <button type="submit" class="oy-btn oy-btn-primary">
-                        Search
-                    </button>
+                        <button type="submit" class="oy-btn oy-btn-primary">
+                            Search
+                        </button>
+                    </div>
                 </div>
             </form>
         </div>
     </div>
 
-    @if($orders->isEmpty())
-
-        <div class="oy-card">
-            <div class="oy-card-body">
-                <div class="oy-empty-state">
-                    <div class="oy-empty-state-title">No orders found</div>
-                    <div class="oy-empty-state-description">
-                        Orders are created automatically after a verified quotation payment.
-                    </div>
-                </div>
-            </div>
-        </div>
-
-    @else
-
-        <div class="oy-card overflow-hidden">
-            <div class="overflow-x-auto">
-                <table class="oy-table">
-                    <thead>
-                        <tr>
-                            <th>Order</th>
-                            <th>Organization</th>
-                            <th>Quotation</th>
-                            <th>Date</th>
-                            <th>Status</th>
-                            <th>Total</th>
-                            <th class="text-right">Action</th>
-                        </tr>
-                    </thead>
-
-                    <tbody>
-                        @foreach($orders as $order)
-                            <tr>
-                                <td>
-                                    <div class="font-medium text-slate-900">
-                                        {{ $order->order_number }}
-                                    </div>
-                                </td>
-
-                                <td>
-                                    <div class="font-medium text-slate-900">
-                                        {{ $order->organization->name }}
-                                    </div>
-
-                                    <div class="oy-code mt-1">
-                                        {{ $order->organization->organization_code }}
-                                    </div>
-                                </td>
-
-                                <td>
-                                    {{ $order->quotation->quotation_number }}
-                                </td>
-
-                                <td>
-                                    {{ $order->order_date->format('d M Y') }}
-                                </td>
-
-                                <td>
-                                    @if($order->status === 'approved')
-                                        <span class="oy-badge oy-badge-success">Approved</span>
-                                    @elseif($order->status === 'in_production')
-                                        <span class="oy-badge oy-badge-neutral">In Production</span>
-                                    @elseif($order->status === 'ready')
-                                        <span class="oy-badge oy-badge-success">Ready</span>
-                                    @elseif($order->status === 'delivered')
-                                        <span class="oy-badge oy-badge-success">Delivered</span>
-                                    @elseif($order->status === 'cancelled')
-                                        <span class="oy-badge oy-badge-danger">Cancelled</span>
-                                    @else
-                                        <span class="oy-badge oy-badge-warning">Pending</span>
-                                    @endif
-                                </td>
-
-                                <td class="font-medium text-slate-900">
-                                    ₦{{ number_format((float) $order->total, 2) }}
-                                </td>
-
-                                <td class="text-right">
-                                    <a
-                                        href="{{ route('orders.show', $order) }}"
-                                        class="oy-btn oy-btn-secondary oy-btn-sm"
-                                    >
-                                        View
-                                    </a>
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
-
-            @if($orders->hasPages())
-                <div class="oy-card-footer">
-                    {{ $orders->links() }}
-                </div>
-            @endif
-        </div>
-
-    @endif
+    {{-- Results (refreshed in place by resources/js/ajax-list.js) --}}
+    <div id="orders-results" data-ajax-list-results>
+        @include('orders.partials.table')
+    </div>
 
 </div>
 @endsection

@@ -5,12 +5,17 @@ namespace App\Http\Controllers;
 use App\Http\Requests\Procurement\StoreProcurementOfferRequest;
 use App\Http\Requests\Procurement\UpdateProcurementOfferRequest;
 use App\Http\Requests\WithdrawProcurementOfferRequest;
+use App\Jobs\SendProcurementOfferAcceptedWhatsApp;
+use App\Mail\ProcurementOfferAccepted;
 use App\Models\Procurement;
 use App\Models\ProcurementOffer;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\View\View;
+use Throwable;
 
 class ProcurementOfferController extends Controller
 {
@@ -40,18 +45,11 @@ class ProcurementOfferController extends Controller
             $procurement,
             $validated
         ): void {
-            $lockedProcurement = Procurement::query()
+            // Lock the procurement row so the per-staff offer limit is counted atomically.
+            Procurement::query()
                 ->whereKey($procurement->id)
                 ->lockForUpdate()
                 ->firstOrFail();
-
-            abort_if(
-                $lockedProcurement->offers()
-                    ->where('status', ProcurementOffer::STATUS_ACCEPTED)
-                    ->exists(),
-                403,
-                'This procurement already has an accepted offer.'
-            );
 
             $existingOfferCount = ProcurementOffer::query()
                 ->where('procurement_id', $procurement->id)
@@ -164,22 +162,56 @@ class ProcurementOfferController extends Controller
             $selectedOffer->update([
                 'status' => ProcurementOffer::STATUS_ACCEPTED,
             ]);
-
-            ProcurementOffer::query()
-                ->where('procurement_id', $procurement->id)
-                ->where('status', ProcurementOffer::STATUS_SUBMITTED)
-                ->where('id', '!=', $selectedOffer->id)
-                ->update([
-                    'status' => ProcurementOffer::STATUS_REJECTED,
-                ]);
         });
+
+        $message = 'The procurement offer was accepted successfully.';
+
+        $offer->loadMissing([
+            'user:id,name,email,phone',
+            'procurement:id,item_name,unit,required_by',
+        ]);
+
+        // Email is an independent notification channel, not a WhatsApp fallback.
+        if (filled($offer->user?->email)) {
+            try {
+                Mail::to($offer->user->email)
+                    ->queue(new ProcurementOfferAccepted($offer));
+
+                $message .= ' An email notification has been queued for the staff member.';
+            } catch (Throwable $exception) {
+                report($exception);
+                Log::error('Accepted procurement offer email could not be queued.', [
+                    'offer_id' => $offer->id,
+                    'error' => $exception->getMessage(),
+                ]);
+            }
+        } else {
+            Log::warning('Accepted procurement offer has no staff email recipient.', [
+                'offer_id' => $offer->id,
+            ]);
+        }
+
+        if (config('services.whatsapp.enabled')) {
+            if (blank($offer->user?->phone)) {
+                $message .= ' WhatsApp was not queued because this staff member has no phone number saved.';
+            } else {
+                try {
+                    SendProcurementOfferAcceptedWhatsApp::dispatch($offer->id);
+
+                    $message .= ' A WhatsApp notification has been queued for the staff member.';
+                } catch (Throwable $exception) {
+                    report($exception);
+                    Log::error('Accepted procurement offer WhatsApp notification could not be queued.', [
+                        'offer_id' => $offer->id,
+                        'error' => $exception->getMessage(),
+                    ]);
+                }
+            }
+        }
 
         return redirect()
             ->route('procurements.show', $offer->procurement_id)
-            ->with(
-                'success',
-                'The procurement offer was accepted successfully.'
-            );
+            ->with('success', $message);
     }
 
     public function reject(ProcurementOffer $offer): RedirectResponse
@@ -250,14 +282,6 @@ class ProcurementOfferController extends Controller
                 && $procurement->offer_deadline->isPast(),
             403,
             'The offer deadline for this procurement has passed.'
-        );
-
-        abort_if(
-            $procurement->offers()
-                ->where('status', ProcurementOffer::STATUS_ACCEPTED)
-                ->exists(),
-            403,
-            'This procurement already has an accepted offer.'
         );
     }
 }

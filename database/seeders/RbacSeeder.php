@@ -347,6 +347,35 @@ class RbacSeeder extends Seeder
             ],
 
             /*
+             * Leads
+             */
+            [
+                'name' => 'View Leads',
+                'slug' => 'leads.view',
+                'description' => 'View prospective customer enquiries.',
+            ],
+            [
+                'name' => 'Create Leads',
+                'slug' => 'leads.create',
+                'description' => 'Create prospective customer enquiries.',
+            ],
+            [
+                'name' => 'Update Leads',
+                'slug' => 'leads.update',
+                'description' => 'Update prospective customer enquiries.',
+            ],
+            [
+                'name' => 'Assign Leads',
+                'slug' => 'leads.assign',
+                'description' => 'Assign prospective customer enquiries to staff.',
+            ],
+            [
+                'name' => 'Convert Leads',
+                'slug' => 'leads.convert',
+                'description' => 'Convert qualified leads into organization records.',
+            ],
+
+            /*
              * Product Specifications
              */
             [
@@ -466,6 +495,12 @@ class RbacSeeder extends Seeder
                     'specifications.view',
                     'specifications.create',
                     'specifications.update',
+
+                    'leads.view',
+                    'leads.create',
+                    'leads.update',
+                    'leads.assign',
+                    'leads.convert',
                 ],
             ],
 
@@ -511,6 +546,11 @@ class RbacSeeder extends Seeder
                     'specifications.view',
                     'specifications.create',
                     'specifications.update',
+
+                    'leads.view',
+                    'leads.create',
+                    'leads.update',
+                    'leads.convert',
                 ],
             ],
 
@@ -623,7 +663,6 @@ class RbacSeeder extends Seeder
                     'contact-notes.view',
                     'contact-notes.create',
                     'contact-notes.update',
-                    'orders.view',
 
                     'deliveries.view',
                     'deliveries.create',

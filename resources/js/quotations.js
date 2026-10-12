@@ -159,3 +159,58 @@ $(function () {
 
     calculateCreateTotals();
 });
+
+/* Organization quotations AJAX pagination */
+$(document).on(
+    'click',
+    "#organization-quotations-content nav[role='navigation'] a",
+    function (event) {
+        event.preventDefault();
+
+        const $link = $(this);
+        const url = $link.attr('href');
+        const $panel = $('#organization-quotations-content');
+
+        if (!url || !$panel.length) {
+            return;
+        }
+
+        const scrollTop = window.scrollY;
+
+        $panel.addClass('opacity-60 pointer-events-none');
+
+        $.ajax({
+            url: url,
+            method: 'GET',
+            dataType: 'html',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+        })
+            .done(function (html) {
+                const $incoming = $('<div>').append($.parseHTML(html));
+                const $content = $incoming.find(
+                    '#organization-quotations-content'
+                );
+
+                $panel.html($content.length ? $content.html() : html);
+
+                if (window.history && window.history.pushState) {
+                    window.history.pushState(
+                        { organizationQuotations: true },
+                        '',
+                        url
+                    );
+                }
+
+                window.scrollTo(0, scrollTop);
+            })
+            .fail(function () {
+                window.location.href = url;
+            })
+            .always(function () {
+                $panel.removeClass('opacity-60 pointer-events-none');
+            });
+    }
+);
+

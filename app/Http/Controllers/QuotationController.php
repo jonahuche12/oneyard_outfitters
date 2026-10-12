@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\SendQuotationSentWhatsApp;
 use App\Actions\Quotations\CalculateQuotationTotals;
 use App\Actions\Quotations\CreateQuotation;
 use App\Models\Contact;
@@ -12,6 +13,7 @@ use App\Models\QuotationRecipient;
 use App\Mail\QuotationInvitation;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -20,17 +22,71 @@ use Illuminate\View\View;
 
 class QuotationController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): Response
     {
         Gate::authorize('viewAny', Quotation::class);
 
+        $statuses = [
+            Quotation::STATUS_DRAFT,
+            Quotation::STATUS_SENT,
+            Quotation::STATUS_ACCEPTED,
+            Quotation::STATUS_REJECTED,
+            Quotation::STATUS_EXPIRED,
+            Quotation::STATUS_CANCELLED,
+        ];
+
+        $search = is_string($request->input('search'))
+            ? trim($request->input('search'))
+            : '';
+
+        $status = $request->input('status');
+        $status = is_string($status) && in_array($status, $statuses, true)
+            ? $status
+            : null;
+
         $quotations = Quotation::query()
             ->with(['organization', 'contact'])
+            ->withCount('items')
+            ->when($search !== '', function ($query) use ($search) {
+                $query->where(function ($query) use ($search) {
+                    $query
+                        ->where('quotation_number', 'like', "%{$search}%")
+                        ->orWhereHas('organization', function ($query) use ($search) {
+                            $query
+                                ->where('name', 'like', "%{$search}%")
+                                ->orWhere('organization_code', 'like', "%{$search}%");
+                        });
+                });
+            })
+            ->when(
+                $status !== null,
+                fn ($query) => $query->where('status', $status)
+            )
             ->latest('quotation_date')
             ->latest('id')
-            ->paginate(20);
+            ->paginate(15)
+            ->withQueryString();
 
-        return view('quotations.index', compact('quotations'));
+        // The same URL serves the full page and the in-place table refresh,
+        // so caches must treat the two responses as different.
+        if ($request->ajax()) {
+            return response()
+                ->view('quotations.partials.table', [
+                    'quotations' => $quotations,
+                    'search' => $search,
+                    'status' => $status,
+                ])
+                ->header('Vary', 'X-Requested-With', false);
+        }
+
+        return response()
+            ->view('quotations.index', [
+                'quotations' => $quotations,
+                'search' => $search,
+                'status' => $status,
+                'statuses' => $statuses,
+            ])
+            ->header('Vary', 'X-Requested-With', false);
     }
 
     public function create(Request $request): View
@@ -431,6 +487,8 @@ class QuotationController extends Controller
                 ->withInput();
         }
 
+        $whatsappRecipientIds = [];
+
         foreach ($contacts as $contact) {
             $recipient = QuotationRecipient::query()->firstOrCreate(
                 [
@@ -471,11 +529,20 @@ class QuotationController extends Controller
                 'email' => $contact->email,
                 'sent_at' => now(),
             ]);
+
+            $whatsappRecipientIds[] = $recipient->id;
         }
 
         $quotation->update([
             'status' => Quotation::STATUS_SENT,
         ]);
+
+        if (config('services.whatsapp.enabled')) {
+            foreach ($whatsappRecipientIds as $recipientId) {
+                SendQuotationSentWhatsApp::dispatch($recipientId)
+                    ->afterCommit();
+            }
+        }
 
         return back()->with(
             'status',

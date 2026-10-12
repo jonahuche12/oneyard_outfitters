@@ -1,19 +1,10 @@
-<!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+@extends('layouts.public.app')
 
-    <title>Delivery Activation</title>
+@php($title = 'Delivery Activation')
 
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
-</head>
-
-<body class="min-h-screen bg-slate-50 text-slate-900">
-
-    <main class="mx-auto max-w-3xl px-4 py-10 sm:px-6 lg:px-8">
-
-        <div class="mb-8 text-center">
+@section('content')
+<div class="mx-auto max-w-6xl">
+<div class="mx-auto mb-8 max-w-3xl text-center">
             <p class="text-sm font-semibold uppercase tracking-wider text-emerald-700">
                 {{ config('app.name') }}
             </p>
@@ -47,9 +38,9 @@
             </div>
         @endif
 
-        <div class="space-y-6">
+        <div class="mt-8 space-y-6">
 
-            <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <section class="oy-card p-6 sm:p-7">
                 <h2 class="text-lg font-semibold text-slate-900">
                     Order Information
                 </h2>
@@ -79,7 +70,7 @@
                 </dl>
             </section>
 
-            <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <section class="oy-card p-6 sm:p-7">
                 <div class="flex items-start justify-between gap-4">
                     <div>
                         <p class="text-sm font-medium text-slate-500">
@@ -159,7 +150,7 @@
 
             @else
 
-                <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                <section class="oy-card p-6 sm:p-7">
 
                     <div>
                         <h2 class="text-xl font-semibold text-slate-900">
@@ -172,12 +163,12 @@
                         </p>
                     </div>
 
-                    <div class="mt-6 grid gap-5 md:grid-cols-3">
+                    <div class="mt-7 grid items-stretch gap-5 lg:grid-cols-3">
 
                         <form
                             method="POST"
                             action="{{ route('public.deliveries.pay-now', $recipient->access_token) }}"
-                            class="flex flex-col rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
+                            class="flex h-full flex-col rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-slate-300 hover:shadow-md sm:p-6"
                         >
                             @csrf
 
@@ -202,7 +193,7 @@
                             <button
                                 type="submit"
                                 @disabled($balanceDue <= 0.01)
-                                class="mt-6 w-full rounded-lg bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                class="mt-6 min-h-12 w-full rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                             >
                                 Pay ₦{{ number_format($balanceDue, 2) }} with Paystack
                             </button>
@@ -212,7 +203,7 @@
                         <form
                             method="POST"
                             action="{{ route('public.deliveries.activate.store', $recipient->access_token) }}"
-                            class="flex flex-col rounded-xl border-2 border-emerald-200 bg-emerald-50/50 p-5 shadow-sm"
+                            class="flex h-full flex-col rounded-2xl border-2 border-emerald-200 bg-emerald-50/50 p-5 shadow-sm transition hover:shadow-md sm:p-6"
                         >
                             @csrf
 
@@ -244,7 +235,7 @@
                             <button
                                 type="submit"
                                 @disabled($balanceDue <= 0.01)
-                                class="mt-6 w-full rounded-lg bg-emerald-700 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                class="mt-6 min-h-12 w-full rounded-xl bg-emerald-700 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                             >
                                 Activate Delivery
                             </button>
@@ -254,7 +245,7 @@
                         <form
                             method="POST"
                             action="{{ route('public.deliveries.activate.store', $recipient->access_token) }}"
-                            class="flex flex-col rounded-xl border-2 border-amber-200 bg-amber-50/50 p-5 shadow-sm"
+                            class="flex h-full flex-col rounded-2xl border-2 border-amber-200 bg-amber-50/50 p-5 shadow-sm transition hover:shadow-md sm:p-6"
                         >
                             @csrf
 
@@ -286,7 +277,7 @@
 
                             <button
                                 type="submit"
-                                class="mt-6 inline-flex w-full items-center justify-center rounded-xl bg-slate-950 px-5 py-4 text-sm font-bold text-white shadow-lg ring-1 ring-slate-800 transition duration-200 hover:bg-slate-900 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-slate-950 focus:ring-offset-2"
+                                class="mt-6 inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-slate-950 px-5 py-4 text-sm font-bold text-white shadow-lg ring-1 ring-slate-800 transition duration-200 hover:bg-slate-900 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-slate-950 focus:ring-offset-2"
                             >
                                 Submit Offline Payment Claim
                             </button>
@@ -306,6 +297,5 @@
             @endif
 
         </div>
-    </main>
-</body>
-</html>
+</div>
+@endsection

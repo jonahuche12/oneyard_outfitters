@@ -1,6 +1,11 @@
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
+    <link
+        rel="icon"
+        type="image/png"
+        href="{{ asset('images/oneyard/oneyard_favicon.png') }}"
+    >
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
@@ -295,6 +300,10 @@
 
                         <a href="{{ url('/contact') }}" class="block text-slate-300 hover:text-white">
                             Contact
+                        </a>
+
+                        <a href="{{ route('dashboard') }}" class="block text-slate-300 hover:text-white">
+                            Staff Dashboard
                         </a>
                     </div>
                 </div>

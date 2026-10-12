@@ -29,7 +29,8 @@ class OrganizationPolicy
 
     public function update(User $user, Organization $organization): bool
     {
-        return $user->hasPermission('organizations.update');
+        return $user->isAdministrator()
+            && $user->hasPermission('organizations.update');
     }
 
     public function activate(User $user, Organization $organization): bool

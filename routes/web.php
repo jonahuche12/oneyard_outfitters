@@ -16,6 +16,8 @@ use App\Http\Controllers\ProcurementController;
 use App\Http\Controllers\ProcurementOfferController;
 use App\Http\Controllers\StaffController;
 use App\Http\Controllers\QualityControlController;
+use App\Http\Controllers\PublicContactController;
+use App\Http\Controllers\LeadController;
 use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'welcome')->name('home');
@@ -23,6 +25,12 @@ Route::view('/how-it-works', 'how-it-works')->name('how-it-works');
 Route::view('/about', 'about')->name('about');
 Route::view('/faq', 'faq')->name('faq');
 Route::view('/contact', 'contact')->name('contact');
+
+Route::post(
+    '/contact',
+    [PublicContactController::class, 'store']
+)->name('contact.store');
+
 
 Route::middleware(['auth', 'active'])->group(function () {
     Route::view('/dashboard', 'dashboard')->name('dashboard');
@@ -39,6 +47,24 @@ Route::middleware(['auth', 'active'])->group(function () {
 
     Route::patch('/staff/{user}/deactivate', [StaffController::class, 'deactivate'])
         ->name('staff.deactivate');
+
+    Route::resource('leads', LeadController::class)
+        ->except(['destroy']);
+
+    Route::delete(
+        '/leads/{lead}',
+        [LeadController::class, 'destroy']
+    )->name('leads.destroy');
+
+    Route::patch(
+        '/leads/{lead}/assign',
+        [LeadController::class, 'assign']
+    )->name('leads.assign');
+
+    Route::post(
+        '/leads/{lead}/convert',
+        [LeadController::class, 'convert']
+    )->name('leads.convert');
 
     Route::resource('organizations', OrganizationController::class)
         ->except(['destroy']);
@@ -58,6 +84,11 @@ Route::middleware(['auth', 'active'])->group(function () {
         '/organizations/{organization}/export-intelligence',
         [OrganizationController::class, 'exportIntelligenceData']
     )->name('organizations.export-intelligence');
+
+    Route::get(
+        '/organizations/{organization}/quotations',
+        [OrganizationController::class, 'quotations']
+    )->name('organizations.quotations');
 
 
     Route::resource('contacts', ContactController::class)

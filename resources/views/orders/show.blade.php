@@ -13,6 +13,8 @@
                     <span class="oy-badge oy-badge-success">Approved</span>
                 @elseif($order->status === 'in_production')
                     <span class="oy-badge oy-badge-neutral">In Production</span>
+                @elseif($order->status === \App\Models\Order::STATUS_READY_FOR_QUALITY_CONTROL)
+                    <span class="oy-badge oy-badge-info">Ready for QC</span>
                 @elseif($order->status === \App\Models\Order::STATUS_CORRECTION_REQUIRED)
                     <span class="oy-badge oy-badge-danger">Correction Required</span>
                 @elseif($order->status === 'ready')
@@ -45,11 +47,13 @@
         </div>
     </div>
 
-    @if(session('status'))
-        <div class="mb-6 rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
-            {{ session('status') }}
-        </div>
-    @endif
+    @foreach(['status', 'success'] as $flashKey)
+        @if(session($flashKey))
+            <div class="oy-alert oy-alert-success mb-6">
+                {{ session($flashKey) }}
+            </div>
+        @endif
+    @endforeach
 
     @if($errors->any())
         <div class="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">

@@ -295,10 +295,12 @@ it('denies viewing an organization without organizations.view', function () {
     $response->assertForbidden();
 });
 
-it('allows an authorized user to access the organization edit form', function () {
-    $user = organizationUserWithPermissions([
-        'organizations.update',
-    ]);
+it('allows an administrator to access the organization edit form', function () {
+    $user = organizationUserWithRole(
+        'admin',
+        'Administrator',
+        ['organizations.update']
+    );
 
     $organization = Organization::factory()->create([
         'name' => 'Example Academy',
@@ -325,10 +327,12 @@ it('denies access to the organization edit form without organizations.update', f
     $response->assertForbidden();
 });
 
-it('allows an authorized user to update organization information', function () {
-    $user = organizationUserWithPermissions([
-        'organizations.update',
-    ]);
+it('allows an administrator to update organization information', function () {
+    $user = organizationUserWithRole(
+        'admin',
+        'Administrator',
+        ['organizations.update']
+    );
 
     $organization = Organization::factory()->create([
         'name' => 'Original Organization',
@@ -387,9 +391,11 @@ it('denies organization updates without organizations.update', function () {
 });
 
 it('preserves the organization code when organization details are updated', function () {
-    $user = organizationUserWithPermissions([
-        'organizations.update',
-    ]);
+    $user = organizationUserWithRole(
+        'admin',
+        'Administrator',
+        ['organizations.update']
+    );
 
     $organization = Organization::factory()->create([
         'organization_code' => 'ORG-000123',
@@ -408,6 +414,56 @@ it('preserves the organization code when organization details are updated', func
 
     expect($organization->fresh()->organization_code)
         ->toBe('ORG-000123');
+});
+
+it('sales cannot access the organization edit form even with organizations.update', function () {
+    $user = organizationUserWithRole(
+        'sales',
+        'Sales',
+        ['organizations.update']
+    );
+
+    $organization = Organization::factory()->create([
+        'name' => 'Sales Protected Organization',
+    ]);
+
+    $response = $this
+        ->actingAs($user)
+        ->get(route('organizations.edit', $organization));
+
+    $response->assertForbidden();
+});
+
+it('sales cannot update an organization even with organizations.update', function () {
+    $user = organizationUserWithRole(
+        'sales',
+        'Sales',
+        ['organizations.update']
+    );
+
+    $organization = Organization::factory()->create([
+        'name' => 'Original Organization',
+        'type' => 'school',
+        'ownership' => 'private',
+    ]);
+
+    $response = $this
+        ->actingAs($user)
+        ->put(route('organizations.update', $organization), [
+            'name' => 'Unauthorized Sales Update',
+            'type' => 'company',
+            'ownership' => 'public',
+            'phone' => '08098765432',
+            'email' => 'sales-update@example.test',
+            'city' => 'Port Harcourt',
+            'state' => 'Rivers',
+            'country' => 'Nigeria',
+        ]);
+
+    $response->assertForbidden();
+
+    expect($organization->fresh()->name)
+        ->toBe('Original Organization');
 });
 
 it('allows an administrator to deactivate an organization', function () {

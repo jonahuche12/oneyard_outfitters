@@ -14,7 +14,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['name', 'email', 'password','is_active',])]
+#[Fillable(['name', 'email', 'phone', 'password', 'is_active'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -111,4 +111,16 @@ class User extends Authenticatable
         return $this->hasMany(ProcurementOffer::class);
     }
 
+    public function assignedLeads(): HasMany
+    {
+        return $this->hasMany(Lead::class, 'assigned_to');
+    }
+
+
+    public function isAdministrator(): bool
+    {
+        return $this->roles()
+            ->whereIn('slug', ['admin', 'super-admin'])
+            ->exists();
+    }
 }

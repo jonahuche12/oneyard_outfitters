@@ -36,6 +36,10 @@ return [
                 'WHATSAPP_TEMPLATE_ORDER_APPROVED',
                 'order_approved_v1'
             ),
+            'quotation_sent' => env(
+                'WHATSAPP_TEMPLATE_QUOTATION_SENT',
+                'quotation_sent_v1'
+            ),
         ],
     ],
 

@@ -63,7 +63,7 @@
                 </p>
 
                 <h3 class="mt-3 text-2xl font-semibold">
-                    +234 903 621 9812
+                    +234 903 651 8913
                 </h3>
 
                 <p class="mt-3 text-sm leading-7 text-slate-300">
@@ -104,6 +104,7 @@
                 class="space-y-6"
                 data-whatsapp-form
             >
+                @csrf
 
                 <div class="grid gap-6 sm:grid-cols-2">
 
@@ -148,6 +149,25 @@
 
 
                 <div class="grid gap-6 sm:grid-cols-2">
+
+                    <div>
+                        <label
+                            for="contact-email"
+                            class="block text-sm font-medium text-slate-900"
+                        >
+                            Email address
+                        </label>
+
+                        <input
+                            id="contact-email"
+                            name="email"
+                            type="email"
+                            autocomplete="email"
+                            required
+                            class="mt-2 block w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-amber-500 focus:ring-2 focus:ring-amber-200"
+                            placeholder="you@example.com"
+                        >
+                    </div>
 
                     <div>
                         <label

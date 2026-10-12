@@ -3,117 +3,105 @@
 @section('content')
 <div class="oy-page">
 
+    {{-- Page Header --}}
     <div class="oy-page-header">
         <div class="oy-page-header-content">
-            <h1 class="oy-page-title">Quotations</h1>
+            <div class="oy-page-title-row">
+                <h1 class="oy-page-title">Quotations</h1>
+
+                <span id="quotations-total-badge" data-list-total-badge class="oy-badge oy-badge-neutral">
+                    {{ $quotations->total() }}
+                </span>
+            </div>
+
             <p class="oy-page-description">
-                Manage commercial offers issued to organizations.
+                Manage commercial offers issued to organizations. Quotations are created from an organization's account.
             </p>
         </div>
 
-        <div class="oy-page-actions">
-            @can('create', App\Models\Quotation::class)
-                <a href="{{ route('quotations.create') }}" class="oy-btn oy-btn-primary">
-                    New Quotation
+        @can('viewAny', App\Models\Organization::class)
+            <div class="oy-page-actions">
+                <a href="{{ route('organizations.index') }}" class="oy-btn oy-btn-secondary">
+                    Open Organizations
                 </a>
-            @endcan
+            </div>
+        @endcan
+    </div>
+
+    {{-- Feedback --}}
+    @if (session('success'))
+        <div class="oy-alert oy-alert-success mb-5">
+            {{ session('success') }}
+        </div>
+    @endif
+
+    {{-- Search / Filters --}}
+    <div class="oy-card mb-6">
+        <div class="oy-card-body">
+            <form
+                id="quotations-filter-form"
+                data-ajax-list-form
+                method="GET"
+                action="{{ route('quotations.index') }}"
+                class="oy-form"
+            >
+                <div class="oy-filter-row">
+                    <div class="oy-filter-grow">
+                        <label for="quotation-search" class="oy-form-label">Search</label>
+
+                        <input
+                            id="quotation-search"
+                            type="search"
+                            name="search"
+                            value="{{ $search }}"
+                            placeholder="Search by quotation number, organization name or code..."
+                            autocomplete="off"
+                            class="oy-input"
+                        >
+                    </div>
+
+                    <div class="sm:w-56">
+                        <label for="quotation-status" class="oy-form-label">Status</label>
+
+                        <select id="quotation-status" name="status" class="oy-select">
+                            <option value="">All statuses</option>
+
+                            @foreach ($statuses as $quotationStatus)
+                                <option
+                                    value="{{ $quotationStatus }}"
+                                    @selected($status === $quotationStatus)
+                                >
+                                    {{ ucfirst($quotationStatus) }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div class="oy-page-actions sm:mt-7">
+                        <button
+                            type="button"
+                            id="quotations-clear-button"
+                            data-list-clear
+                            data-list-clear-toggle
+                            class="oy-btn oy-btn-secondary"
+                            @if ($search === '' && ! $status) style="display: none;" @endif
+                        >
+                            Clear
+                        </button>
+
+                        <button type="submit" class="oy-btn oy-btn-primary">
+                            Search
+                        </button>
+                    </div>
+                </div>
+            </form>
         </div>
     </div>
 
-    @if($quotations->isEmpty())
-
-        <div class="oy-card">
-            <div class="oy-card-body">
-                <div class="oy-empty-state">
-                    <div class="oy-empty-state-title">No quotations yet</div>
-                    <div class="oy-empty-state-description">
-                        Create a quotation when an organization's requirements are ready for a commercial offer.
-                    </div>
-                </div>
-            </div>
-        </div>
-
-    @else
-
-        <div class="oy-card overflow-hidden">
-            <div class="overflow-x-auto">
-                <table class="oy-table">
-                    <thead>
-                        <tr>
-                            <th>Quotation</th>
-                            <th>Organization</th>
-                            <th>Date</th>
-                            <th>Status</th>
-                            <th>Total</th>
-                            <th class="text-right">Action</th>
-                        </tr>
-                    </thead>
-
-                    <tbody>
-                        @foreach($quotations as $quotation)
-                            <tr>
-                                <td>
-                                    <div class="font-medium text-slate-900">
-                                        {{ $quotation->quotation_number }}
-                                    </div>
-                                </td>
-
-                                <td>
-                                    <div class="font-medium text-slate-900">
-                                        {{ $quotation->organization->name }}
-                                    </div>
-
-                                    <div class="oy-code mt-1">
-                                        {{ $quotation->organization->organization_code }}
-                                    </div>
-                                </td>
-
-                                <td>
-                                    {{ $quotation->quotation_date->format('d M Y') }}
-                                </td>
-
-                                <td>
-                                    @if($quotation->status === 'accepted')
-                                        <span class="oy-badge oy-badge-success">Accepted</span>
-                                    @elseif($quotation->status === 'rejected' || $quotation->status === 'cancelled')
-                                        <span class="oy-badge oy-badge-danger">
-                                            {{ ucfirst($quotation->status) }}
-                                        </span>
-                                    @elseif($quotation->status === 'sent')
-                                        <span class="oy-badge oy-badge-neutral">Sent</span>
-                                    @elseif($quotation->status === 'expired')
-                                        <span class="oy-badge oy-badge-warning">Expired</span>
-                                    @else
-                                        <span class="oy-badge oy-badge-warning">Draft</span>
-                                    @endif
-                                </td>
-
-                                <td class="font-medium text-slate-900">
-                                    ₦{{ number_format((float) $quotation->total, 2) }}
-                                </td>
-
-                                <td class="text-right">
-                                    <a
-                                        href="{{ route('quotations.show', $quotation) }}"
-                                        class="oy-btn oy-btn-secondary oy-btn-sm"
-                                    >
-                                        View
-                                    </a>
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
-
-            @if($quotations->hasPages())
-                <div class="oy-card-footer">
-                    {{ $quotations->links() }}
-                </div>
-            @endif
-        </div>
-
-    @endif
+    {{-- Results (refreshed in place by resources/js/quotations-index.js) --}}
+    <div id="quotations-results" data-ajax-list-results>
+        @include('quotations.partials.table')
+    </div>
 
 </div>
 @endsection

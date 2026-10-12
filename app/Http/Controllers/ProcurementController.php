@@ -31,7 +31,15 @@ class ProcurementController extends Controller
                 'createdBy:id,name',
                 'attachments:id,procurement_id,product_specification_artifact_id,original_name,mime_type,file_path',
             ])
-            ->withCount('offers')
+            ->withCount([
+                'offers',
+                'offers as accepted_offers_count' => function ($query) {
+                    $query->where(
+                        'status',
+                        ProcurementOffer::STATUS_ACCEPTED
+                    );
+                },
+            ])
             ->withExists([
                 'offers as has_accepted_offer' => function ($query) {
                     $query->where(
@@ -58,7 +66,7 @@ class ProcurementController extends Controller
                 fn ($query) => $query->where('status', $status)
             )
             ->latest()
-            ->paginate(15)
+            ->paginate(12)
             ->withQueryString();
 
         return view('procurements.index', [

@@ -105,6 +105,37 @@
                         @enderror
                     </div>
 
+                    {{-- Phone / WhatsApp --}}
+                    <div>
+                        <label
+                            for="phone"
+                            class="mb-2 block text-sm font-medium text-slate-700"
+                        >
+                            Phone number (WhatsApp)
+                        </label>
+
+                        <input
+                            id="phone"
+                            type="tel"
+                            name="phone"
+                            value="{{ old('phone') }}"
+                            autocomplete="tel"
+                            inputmode="tel"
+                            class="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+                            placeholder="+2348012345678"
+                        >
+
+                        <p class="mt-2 text-xs text-slate-500">
+                            International format with country code. Used for WhatsApp notifications.
+                        </p>
+
+                        @error('phone')
+                            <p class="mt-2 text-sm text-red-600">
+                                {{ $message }}
+                            </p>
+                        @enderror
+                    </div>
+
                 </div>
 
             </section>

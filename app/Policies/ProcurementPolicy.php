@@ -4,7 +4,6 @@ namespace App\Policies;
 
 use App\Models\Order;
 use App\Models\Procurement;
-use App\Models\ProcurementOffer;
 use App\Models\User;
 
 class ProcurementPolicy
@@ -23,14 +22,6 @@ class ProcurementPolicy
         User $user,
         Procurement $procurement
     ): bool {
-        if (
-            $procurement->offers()
-                ->where('status', ProcurementOffer::STATUS_ACCEPTED)
-                ->exists()
-        ) {
-            return false;
-        }
-
         return $user->hasPermission('procurement.view')
             || $user->roles()
                 ->whereIn('slug', ['admin', 'super-admin'])

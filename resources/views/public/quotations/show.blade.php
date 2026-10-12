@@ -1,29 +1,51 @@
-@extends('layouts.public.app')
+@extends('layouts.public')
 
-@section('content') <div class="oy-page mx-auto w-full max-w-4xl space-y-6">
+@php($title = 'Quotation ' . $quotation->quotation_number . ' | Oneyard Outfitters')
+@php($description = 'Review quotation ' . $quotation->quotation_number . ' prepared by Oneyard Outfitters.')
+
+@section('content')
+<section class="bg-gradient-to-b from-white via-slate-50 to-slate-100">
+    <div class="mx-auto w-full max-w-7xl space-y-6 px-4 py-8 sm:space-y-8 sm:px-6 sm:py-12 lg:px-8">
 
 
     {{-- Quotation Header --}}
-    <div class="px-2 text-center sm:px-0">
-        <p class="text-sm font-semibold tracking-wide text-slate-500">
-            Oneyard Outfitters
-        </p>
+    <header class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div class="border-b border-slate-200 bg-slate-950 px-5 py-6 text-white sm:px-8 sm:py-8">
+            <p class="text-xs font-bold uppercase tracking-[0.2em] text-amber-400">
+                Oneyard Outfitters · Customer Quotation
+            </p>
 
-        <h1 class="mt-2 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-            Quotation {{ $quotation->quotation_number }}
-        </h1>
+            <div class="mt-3 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                    <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">
+                        Quotation {{ $quotation->quotation_number }}
+                    </h1>
 
-        <p class="mt-2 text-sm text-slate-600">
-            Prepared for
-            <span class="font-medium text-slate-900">
-                {{ $quotation->organization->name }}
-            </span>
-        </p>
-    </div>
+                    <p class="mt-2 text-sm leading-6 text-slate-300">
+                        Prepared for
+                        <span class="font-semibold text-white">
+                            {{ $quotation->organization->name }}
+                        </span>
+                    </p>
+                </div>
+
+                <div class="inline-flex w-fit items-center rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-semibold text-slate-100">
+                    Official quotation
+                </div>
+            </div>
+        </div>
+
+        <div class="px-5 py-4 sm:px-8">
+            <p class="text-sm leading-6 text-slate-600">
+                Review the quotation details, itemized costs and expected delivery timeline below.
+                Please submit your response using the options at the end of this page.
+            </p>
+        </div>
+    </header>
 
     {{-- Quotation Information --}}
-    <div class="oy-card">
-        <div class="grid gap-5 sm:grid-cols-3">
+    <div class="oy-card border border-slate-200 bg-white shadow-sm">
+        <div class="grid gap-6 p-5 sm:grid-cols-2 sm:p-6 lg:grid-cols-4">
             <div class="text-center sm:text-left">
                 <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">
                     Quotation Date
@@ -68,8 +90,8 @@
     </div>
 
     {{-- Quotation Items --}}
-    <div class="oy-card overflow-hidden">
-        <div class="oy-card-header px-6 py-4">
+    <div class="oy-card overflow-hidden border border-slate-200 bg-white shadow-sm">
+        <div class="oy-card-header border-b border-slate-200 bg-white px-5 py-5 sm:px-6">
             <h2 class="text-lg font-semibold text-slate-900">
                 Quotation Items
             </h2>
@@ -80,26 +102,26 @@
         </div>
 
         <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-slate-200">
+            <table class="min-w-[56rem] w-full divide-y divide-slate-200">
                 <thead class="bg-slate-50">
                     <tr>
                         <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
                             Item
                         </th>
 
-                        <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        <th class="whitespace-nowrap px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
                             Quantity
                         </th>
 
-                        <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        <th class="whitespace-nowrap px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
                             Unit
                         </th>
 
-                        <th class="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        <th class="whitespace-nowrap px-6 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">
                             Unit Price
                         </th>
 
-                        <th class="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        <th class="whitespace-nowrap px-6 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">
                             Amount
                         </th>
                     </tr>
@@ -120,19 +142,19 @@
                                 @endif
                             </td>
 
-                            <td class="px-6 py-4 text-sm text-slate-700">
+                            <td class="whitespace-nowrap px-6 py-4 text-sm tabular-nums text-slate-700">
                                 {{ number_format((float) $item->quantity, 2) }}
                             </td>
 
-                            <td class="px-6 py-4 text-sm text-slate-700">
+                            <td class="whitespace-nowrap px-6 py-4 text-sm text-slate-700">
                                 {{ $item->unit }}
                             </td>
 
-                            <td class="px-6 py-4 text-right text-sm text-slate-700">
+                            <td class="whitespace-nowrap px-6 py-4 text-right text-sm tabular-nums text-slate-700">
                                 ₦{{ number_format((float) $item->unit_price, 2) }}
                             </td>
 
-                            <td class="px-6 py-4 text-right text-sm font-semibold text-slate-900">
+                            <td class="whitespace-nowrap px-6 py-4 text-right text-sm font-semibold tabular-nums text-slate-900">
                                 ₦{{ number_format((float) $item->line_total, 2) }}
                             </td>
                         </tr>
@@ -179,7 +201,7 @@
                             Total
                         </td>
 
-                        <td class="px-6 py-4 text-right text-base font-bold text-slate-900">
+                        <td class="whitespace-nowrap px-6 py-4 text-right text-lg font-bold tabular-nums text-slate-950">
                             ₦{{ number_format((float) $quotation->total, 2) }}
                         </td>
                     </tr>
@@ -189,8 +211,8 @@
     </div>
 
     {{-- Response --}}
-    <div class="oy-card">
-        <div>
+    <div class="oy-card border border-slate-200 bg-white shadow-sm">
+        <div class="oy-card-body p-5 sm:p-7">
             <h2 class="text-lg font-semibold text-slate-900">
                 Your Response
             </h2>
@@ -222,13 +244,16 @@
                 {{-- Accept Modal --}}
                 <div
                     id="acceptQuotationModal"
-                    class="fixed inset-0 z-50 hidden overflow-y-auto bg-slate-950/75 p-4 backdrop-blur-sm"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="acceptQuotationModalTitle"
+                    class="fixed inset-0 z-[100] hidden overflow-y-auto bg-slate-950/75 p-3 backdrop-blur-sm sm:p-5"
                 >
-                    <div class="mx-auto mt-10 w-full max-w-lg sm:mt-20">
-                        <div class="oy-card border-0 p-6 shadow-2xl sm:p-8">
+                    <div class="mx-auto flex min-h-full w-full max-w-lg items-center justify-center py-4">
+                        <div class="oy-card max-h-[calc(100dvh-2rem)] w-full overflow-y-auto border-0 p-5 shadow-2xl sm:p-8">
                             <div class="flex items-start justify-between gap-4">
                                 <div>
-                                    <h3 class="text-lg font-semibold text-slate-900">
+                                    <h3 id="acceptQuotationModalTitle" class="text-lg font-semibold text-slate-900">
                                         Accept Quotation
                                     </h3>
 
@@ -272,7 +297,7 @@
                                     </legend>
 
                                     <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-                                        @foreach ([30, 60, 80] as $percentage)
+                                        @foreach ([60, 80, 100] as $percentage)
                                             <label class="cursor-pointer">
                                                 <input
                                                     type="radio"
@@ -334,13 +359,16 @@
                 {{-- Reject Modal --}}
                 <div
                     id="rejectQuotationModal"
-                    class="fixed inset-0 z-50 hidden overflow-y-auto bg-slate-950/75 p-4 backdrop-blur-sm"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="rejectQuotationModalTitle"
+                    class="fixed inset-0 z-[100] hidden overflow-y-auto bg-slate-950/75 p-3 backdrop-blur-sm sm:p-5"
                 >
-                    <div class="mx-auto mt-10 w-full max-w-lg sm:mt-20">
-                        <div class="oy-card border-0 p-6 shadow-2xl sm:p-8">
+                    <div class="mx-auto flex min-h-full w-full max-w-lg items-center justify-center py-4">
+                        <div class="oy-card max-h-[calc(100dvh-2rem)] w-full overflow-y-auto border-0 p-5 shadow-2xl sm:p-8">
                             <div class="flex items-start justify-between gap-4">
                                 <div>
-                                    <h3 class="text-lg font-semibold text-slate-900">
+                                    <h3 id="rejectQuotationModalTitle" class="text-lg font-semibold text-slate-900">
                                         Reject Quotation
                                     </h3>
 
@@ -501,6 +529,5 @@
     </div>
 
 </div>
-
-
+</section>
 @endsection

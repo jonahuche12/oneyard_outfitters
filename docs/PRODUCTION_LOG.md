@@ -4946,3 +4946,54 @@ BLOCKERS: Meta WhatsApp template approval (procurement live send and any new Wha
 
 **Boundary**
 - Live WhatsApp delivery activation notifications are not claimed as implemented or verified. WhatsApp integration remains a separate task requiring approved configuration and template details.
+
+### 2026-10-11 — Test Run: 418 passed / 1442 assertions / 0 failed
+- Total = 406 + DeliveryRejectionResendTest (2) + QuotationIndexTest (10), inferred from arithmetic (per-file output not seen). Delivery: fresh rejection returns the activation form (confirmed by passing tests); delivery #8 remains stale legacy data — repair command not yet reported as run.
+- Quotation index (Stage 1): green at test level. Browser verification pending (in-place search/filter/pagination, URL sync, Back/Forward, Clear, Ctrl-click, empty states, mobile layout).
+- Next: Stage 2 — quotation show restructure, sidebar Quotations link, @section('title'), shared badge on organization quotations partial. Pricing decision (A keep copy-from-specification / B restore zero-price creation) still open; create page and store() on hold.
+
+### 2026-10-11 — Orders Pages Added to Redesign — ANALYSIS / DESIGN (no code changed)
+- Scope extended: orders index/show/edit restyled and in-place pagination added; to be done together with quotation Stage 2 (show, nav link, page title) before the git commit. Quotation pricing decision (A copy-from-specification / B zero-price) still open; create page on hold.
+- Findings (orders/show): flash and first-error rendered twice (layout already prints session('status') and errors->first(); procurement index and delivery show do the same); contacts queried in the view (approve + resend); paid/balance computed 3 times with inconsistent rounding; delivery badge prints expected_delivery_days (original estimate), not remaining days as logged on 2026-09-27, and shows for delivered/cancelled orders; payment card label omits paid_offline ("Not Selected") and lists payments without status while totals count only completed; inline <script> for delivery modal; approve/resend contact forms duplicated and allow contacts without email; status badge hand-built with logic differing from index; ~1,100-line single file.
+- Findings (orders/index): full-page reload, no count, no coordinator/delivery columns, non-nullsafe relations, Clear always visible; known issue (status filter omits ready_for_quality_control) to be checked in OrderController.
+- Findings (orders/edit): heading "Update Order" vs button "Edit Delivery Estimate"; days and date inputs can contradict; duplicate Cancel; no flash.
+- Proposed: generic data-attribute list module (ajax-list.js) replacing quotations-index.js, used by quotations and orders indexes; orders table partial + controller partial responses; orders/show split into partials preserving all ids/data hooks; single source for paid/balance; remaining-days badge; paid_offline label; payment status column; delivery modal JS externalised; edit page rename + days/date sync; shared order status badge; de-duplicated flash/errors on these pages; commits split into (1) procurement/WhatsApp/staff phone, (2) delivery test, (3) quotation + order views.
+- Awaiting: git status, OrderController, OrderPolicy, Order model, update-order request, order-coordinator.js, production-plan.js, route list, existing assertSee tests; answers to 6 questions.
+- Paused: delivery stale-row repair (not reported run), delivery WhatsApp channel design approval, procurement WhatsApp live setup (Meta template).
+
+
+### 2026-10-12 — Order Approval WhatsApp Notifications (IMPLEMENTED / TESTED)
+
+**Completed**
+- Integrated queued WhatsApp notifications into initial order approval and resend approval.
+- Uses the selected organization's contacts; prefers the contact's WhatsApp number and falls back to the phone number.
+- Reuses the existing WhatsApp template sender with retry/backoff and terminal failure logging.
+- WhatsApp remains disabled by default. Email notifications and order approval are preserved when WhatsApp is disabled.
+- Added automated tests for selected-contact dispatch, disabled configuration, template payload, and skipping orders that are not approved.
+- Isolated order feature tests from live WhatsApp HTTP requests.
+
+**Verification**
+- `php -l app/Jobs/SendOrderApprovedWhatsApp.php`: passed.
+- `php artisan test tests/Feature/OrderTest.php tests/Feature/ProcurementOfferWhatsAppTest.php`: 29 passed, 125 assertions, 0 failures.
+- Focused `git diff --check`: no whitespace errors reported.
+
+**Release boundary**
+- Code and focused automated tests verified; Meta template approval, production credentials, public tracking URL configuration, and live recipient delivery remain unverified.
+- Do not enable live WhatsApp delivery until the template and production configuration are verified.
+
+## 2026-10-12 — Public Order Tracking and Notification Workflows
+
+### Completed
+- Redesigned the public order tracking page with responsive order details, status progress, delivery estimates, organization information, primary contact details, and order items.
+- Corrected the public order view to use the shared public layout.
+- Verified notification-token access restrictions and public order tracking behavior.
+- Continued order approval and quotation notification workflow improvements.
+
+### Verification
+- `php artisan test tests/Feature/OrderTest.php tests/Feature/QuotationTest.php tests/Feature/QuotationIndexTest.php`
+- Result: 58 tests passed, 310 assertions.
+- `git diff --check` passed for the reviewed order view, public layout, order tests, and routes.
+- Full working-tree whitespace checks still report issues in `resources/js/app.js` and `resources/js/quotations.js`.
+
+### Outstanding
+- Live WhatsApp delivery and Meta template approval have not been verified.

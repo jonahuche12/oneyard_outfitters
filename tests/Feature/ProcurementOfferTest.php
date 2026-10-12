@@ -1227,54 +1227,31 @@ class ProcurementOfferTest extends TestCase
         ]);
     }
 
-    public function test_accepting_one_offer_rejects_other_submitted_offers(): void
+    public function test_accepting_an_offer_does_not_reject_other_submitted_offers(): void
     {
-        $admin = $this->userWithRole(
-            'admin',
-            ['procurement.manage']
-        );
+        $admin = $this->userWithRole('admin', ['procurement.manage']);
 
         $procurement = $this->procurement();
 
-        $firstOffer = ProcurementOffer::create([
+        $makeOffer = fn (int $quantity, string $status) => ProcurementOffer::create([
             'procurement_id' => $procurement->id,
             'user_id' => User::factory()->create()->id,
-            'quantity' => 80,
+            'quantity' => $quantity,
             'unit_price' => 3200,
-            'total_price' => 256000,
-            'status' => ProcurementOffer::STATUS_SUBMITTED,
+            'total_price' => $quantity * 3200,
+            'status' => $status,
             'submitted_at' => now(),
         ]);
 
-        $secondOffer = ProcurementOffer::create([
-            'procurement_id' => $procurement->id,
-            'user_id' => User::factory()->create()->id,
-            'quantity' => 80,
-            'unit_price' => 3000,
-            'total_price' => 240000,
-            'status' => ProcurementOffer::STATUS_SUBMITTED,
-            'submitted_at' => now(),
-        ]);
-
-        $withdrawnOffer = ProcurementOffer::create([
-            'procurement_id' => $procurement->id,
-            'user_id' => User::factory()->create()->id,
-            'quantity' => 80,
-            'unit_price' => 3100,
-            'total_price' => 248000,
-            'status' => ProcurementOffer::STATUS_WITHDRAWN,
-            'submitted_at' => now(),
-        ]);
+        $firstOffer = $makeOffer(40, ProcurementOffer::STATUS_SUBMITTED);
+        $secondOffer = $makeOffer(50, ProcurementOffer::STATUS_SUBMITTED);
+        $withdrawnOffer = $makeOffer(30, ProcurementOffer::STATUS_WITHDRAWN);
 
         $response = $this
             ->actingAs($admin)
-            ->post(
-                route('procurements.offers.accept', $firstOffer)
-            );
+            ->post(route('procurements.offers.accept', $firstOffer));
 
-        $response->assertRedirect(
-            route('procurements.show', $procurement)
-        );
+        $response->assertRedirect(route('procurements.show', $procurement));
 
         $this->assertDatabaseHas('procurement_offers', [
             'id' => $firstOffer->id,
@@ -1283,12 +1260,50 @@ class ProcurementOfferTest extends TestCase
 
         $this->assertDatabaseHas('procurement_offers', [
             'id' => $secondOffer->id,
-            'status' => ProcurementOffer::STATUS_REJECTED,
+            'status' => ProcurementOffer::STATUS_SUBMITTED,
         ]);
 
         $this->assertDatabaseHas('procurement_offers', [
             'id' => $withdrawnOffer->id,
             'status' => ProcurementOffer::STATUS_WITHDRAWN,
+        ]);
+    }
+
+    public function test_multiple_offers_can_be_accepted_even_beyond_the_required_quantity(): void
+    {
+        $admin = $this->userWithRole('admin', ['procurement.manage']);
+
+        $procurement = $this->procurement(['quantity' => 100]);
+
+        $makeOffer = fn (int $quantity) => ProcurementOffer::create([
+            'procurement_id' => $procurement->id,
+            'user_id' => User::factory()->create()->id,
+            'quantity' => $quantity,
+            'unit_price' => 3200,
+            'total_price' => $quantity * 3200,
+            'status' => ProcurementOffer::STATUS_SUBMITTED,
+            'submitted_at' => now(),
+        ]);
+
+        $firstOffer = $makeOffer(80);
+        $secondOffer = $makeOffer(60);
+
+        $this->actingAs($admin)
+            ->post(route('procurements.offers.accept', $firstOffer))
+            ->assertRedirect(route('procurements.show', $procurement));
+
+        $this->actingAs($admin)
+            ->post(route('procurements.offers.accept', $secondOffer))
+            ->assertRedirect(route('procurements.show', $procurement));
+
+        $this->assertDatabaseHas('procurement_offers', [
+            'id' => $firstOffer->id,
+            'status' => ProcurementOffer::STATUS_ACCEPTED,
+        ]);
+
+        $this->assertDatabaseHas('procurement_offers', [
+            'id' => $secondOffer->id,
+            'status' => ProcurementOffer::STATUS_ACCEPTED,
         ]);
     }
 
@@ -1582,12 +1597,9 @@ class ProcurementOfferTest extends TestCase
     }
 
 
-    public function test_offer_submission_is_blocked_after_an_offer_is_accepted(): void
+    public function test_offer_submission_remains_open_after_an_offer_is_accepted(): void
     {
-        $staff = $this->userWithRole(
-            'staff',
-            ['procurement.view']
-        );
+        $staff = $this->userWithRole('staff', ['procurement.view']);
 
         $procurement = $this->procurement();
 
@@ -1601,23 +1613,19 @@ class ProcurementOfferTest extends TestCase
             'submitted_at' => now(),
         ]);
 
-        $this->assertFalse(
+        $this->assertTrue(
             Gate::forUser($staff)->allows('submitOffer', $procurement)
         );
 
-        $response = $this
-            ->actingAs($staff)
-            ->get(route('procurements.offers.create', $procurement));
-
-        $response->assertForbidden();
+        $this->actingAs($staff)
+            ->get(route('procurements.offers.create', $procurement))
+            ->assertOk()
+            ->assertViewIs('procurements.offers.create');
     }
 
-    public function test_offer_store_is_blocked_after_an_offer_is_accepted(): void
+    public function test_offer_store_remains_open_after_an_offer_is_accepted(): void
     {
-        $staff = $this->userWithRole(
-            'staff',
-            ['procurement.view']
-        );
+        $staff = $this->userWithRole('staff', ['procurement.view']);
 
         $procurement = $this->procurement();
 
@@ -1631,20 +1639,24 @@ class ProcurementOfferTest extends TestCase
             'submitted_at' => now(),
         ]);
 
-        $response = $this
-            ->actingAs($staff)
+        $this->actingAs($staff)
             ->post(
                 route('procurements.offers.store', $procurement),
                 [
                     'quantity' => 50,
                     'unit_price' => 3000,
-                    'notes' => 'Attempt after acceptance.',
+                    'notes' => 'Offer after another offer was accepted.',
                 ]
-            );
+            )
+            ->assertRedirect(route('procurements.show', $procurement));
 
-        $response->assertForbidden();
+        $this->assertDatabaseCount('procurement_offers', 2);
 
-        $this->assertDatabaseCount('procurement_offers', 1);
+        $this->assertDatabaseHas('procurement_offers', [
+            'procurement_id' => $procurement->id,
+            'user_id' => $staff->id,
+            'status' => ProcurementOffer::STATUS_SUBMITTED,
+        ]);
     }
 
 }

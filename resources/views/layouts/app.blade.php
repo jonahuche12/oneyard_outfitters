@@ -1,6 +1,11 @@
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
+    <link
+        rel="icon"
+        type="image/png"
+        href="{{ asset('images/oneyard/oneyard_favicon.png') }}"
+    >
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
@@ -59,6 +64,21 @@
                     <span>Organizations</span>
 
                     @if(request()->routeIs('organizations.*'))
+                        <span class="text-xs opacity-70">Active</span>
+                    @endif
+                </a>
+            @endcan
+
+            {{-- Leads --}}
+            @can('viewAny', App\Models\Lead::class)
+                <a
+                    href="{{ route('leads.index') }}"
+                    class="oy-nav-link
+                        {{ request()->routeIs('leads.*') ? 'is-active' : '' }}"
+                >
+                    <span>Leads</span>
+
+                    @if(request()->routeIs('leads.*'))
                         <span class="text-xs opacity-70">Active</span>
                     @endif
                 </a>
@@ -245,6 +265,21 @@
                             <span>Organizations</span>
 
                             @if(request()->routeIs('organizations.*'))
+                                <span class="text-xs opacity-70">Active</span>
+                            @endif
+                        </a>
+                    @endcan
+
+                    {{-- Leads --}}
+                    @can('viewAny', App\Models\Lead::class)
+                        <a
+                            href="{{ route('leads.index') }}"
+                            class="oy-nav-link {{ request()->routeIs('leads.*') ? 'is-active' : '' }}"
+                            data-app-mobile-menu-link
+                        >
+                            <span>Leads</span>
+
+                            @if(request()->routeIs('leads.*'))
                                 <span class="text-xs opacity-70">Active</span>
                             @endif
                         </a>

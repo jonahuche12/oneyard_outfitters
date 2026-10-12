@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\SendOrderApprovedWhatsApp;
 use App\Models\Order;
 use App\Models\QualityControlInspection;
 use App\Models\OrderNotificationRecipient;
@@ -16,6 +17,7 @@ use App\Mail\OrderApprovedInternal;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Mail;
@@ -26,17 +28,35 @@ use Throwable;
 
 class OrderController extends Controller
 {
-    public function index(Request $request): View
+    public function index(Request $request): Response
     {
         Gate::authorize('viewAny', Order::class);
 
-        $search = trim((string) $request->input('search'));
+        $statuses = Order::statusLabels();
+
+        $search = is_string($request->input('search'))
+            ? trim($request->input('search'))
+            : '';
+
         $status = $request->input('status');
+        $status = is_string($status) && array_key_exists($status, $statuses)
+            ? $status
+            : null;
 
         $orders = Order::query()
+            ->visibleTo($request->user())
+            ->when(
+                $status !== Order::STATUS_DELIVERED,
+                fn ($query) => $query->where(
+                    'status',
+                    '!=',
+                    Order::STATUS_DELIVERED
+                )
+            )
             ->with([
                 'organization',
                 'quotation',
+                'currentAssignment.user',
             ])
             ->when($search !== '', function ($query) use ($search): void {
                 $query->where(function ($query) use ($search): void {
@@ -63,22 +83,34 @@ class OrderController extends Controller
                 });
             })
             ->when(
-                in_array($status, [
-                    Order::STATUS_PENDING,
-                    Order::STATUS_APPROVED,
-                    Order::STATUS_IN_PRODUCTION,
-                    Order::STATUS_READY,
-                    Order::STATUS_DELIVERED,
-                    Order::STATUS_CANCELLED,
-                ], true),
+                $status !== null,
                 fn ($query) => $query->where('status', $status)
             )
-            ->latest('order_date')
+            ->latest('updated_at')
             ->latest('id')
             ->paginate(20)
             ->withQueryString();
 
-        return view('orders.index', compact('orders', 'search', 'status'));
+        // The same URL serves the full page and the in-place results refresh,
+        // so caches must treat the two responses as different.
+        if ($request->ajax()) {
+            return response()
+                ->view('orders.partials.table', [
+                    'orders' => $orders,
+                    'search' => $search,
+                    'status' => $status,
+                ])
+                ->header('Vary', 'X-Requested-With', false);
+        }
+
+        return response()
+            ->view('orders.index', [
+                'orders' => $orders,
+                'search' => $search,
+                'status' => $status,
+                'statuses' => $statuses,
+            ])
+            ->header('Vary', 'X-Requested-With', false);
     }
 
     public function show(Order $order): View
@@ -214,6 +246,14 @@ class OrderController extends Controller
                     $contact,
                     $recipient->access_token
                 ));
+
+            if (
+                config('services.whatsapp.enabled')
+                && (filled($contact->whatsapp) || filled($contact->phone))
+            ) {
+                SendOrderApprovedWhatsApp::dispatch($recipient->id)
+                    ->afterCommit();
+            }
         }
 
         return redirect()
@@ -825,6 +865,14 @@ class OrderController extends Controller
                         $contact,
                         $recipient->access_token
                     ));
+
+                if (
+                    config('services.whatsapp.enabled')
+                    && (filled($contact->whatsapp) || filled($contact->phone))
+                ) {
+                    SendOrderApprovedWhatsApp::dispatch($recipient->id)
+                        ->afterCommit();
+                }
             }
 
             $superAdmins = \App\Models\User::query()

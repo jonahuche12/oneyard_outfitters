@@ -79,6 +79,36 @@ class OrganizationController extends Controller
             ->with('success', 'Organization created successfully.');
     }
 
+    public function quotations(
+        Request $request,
+        Organization $organization
+    ): View|RedirectResponse {
+        Gate::authorize('view', $organization);
+
+        if (! $request->ajax()) {
+            $url = route('organizations.show', [
+                'organization' => $organization,
+                'quotations_page' => $request->integer('quotations_page', 1),
+            ]);
+
+            return redirect($url . '#organization-quotations');
+        }
+
+        $organizationQuotations = $organization->quotations()
+            ->latest('quotation_date')
+            ->latest('id')
+            ->paginate(5, ['*'], 'quotations_page')
+            ->withQueryString()
+            ->withPath(
+                route('organizations.quotations', $organization)
+            );
+
+        return view('organizations.partials.quotations', [
+            'organization' => $organization,
+            'organizationQuotations' => $organizationQuotations,
+        ]);
+    }
+
     public function show(Organization $organization): View
     {
         Gate::authorize('view', $organization);
@@ -91,20 +121,46 @@ class OrganizationController extends Controller
             'quotations',
         ]);
 
-        $organization->load([
-            'productSpecifications' => fn ($query) => $query
-                ->withCount('artifacts')
-                ->latest('specification_date')
-                ->latest('id')
-                ->limit(5),
+        $organizationAssessments = $organization->assessments()
+            ->with('assessedBy')
+            ->latest('assessment_date')
+            ->latest('id')
+            ->paginate(5, ['*'], 'assessments_page')
+            ->withQueryString();
 
-            'quotations' => fn ($query) => $query
-                ->latest('quotation_date')
-                ->latest('id'),
-        ]);
+        $organizationFollowUps = $organization->followUps()
+            ->with(['contact', 'recordedBy'])
+            ->latest('follow_up_date')
+            ->latest('id')
+            ->paginate(5, ['*'], 'follow_ups_page')
+            ->withQueryString();
+
+        $organizationQuotations = $organization->quotations()
+            ->latest('quotation_date')
+            ->latest('id')
+            ->paginate(5, ['*'], 'quotations_page')
+            ->withQueryString();
+
+        $organizationProductSpecifications = $organization->productSpecifications()
+            ->withCount('artifacts')
+            ->latest('specification_date')
+            ->latest('id')
+            ->paginate(5, ['*'], 'specifications_page')
+            ->withQueryString();
+
+        $organizationContacts = $organization->contacts()
+            ->orderByDesc('is_primary')
+            ->latest('id')
+            ->paginate(5, ['*'], 'contacts_page')
+            ->withQueryString();
 
         return view('organizations.show', [
             'organization' => $organization,
+            'organizationAssessments' => $organizationAssessments,
+            'organizationFollowUps' => $organizationFollowUps,
+            'organizationQuotations' => $organizationQuotations,
+            'organizationProductSpecifications' => $organizationProductSpecifications,
+            'organizationContacts' => $organizationContacts,
         ]);
     }
 

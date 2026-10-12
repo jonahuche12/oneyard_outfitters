@@ -26,7 +26,12 @@ class OrderPolicy
 
     public function view(User $user, Order $order): bool
     {
-        return $user->hasPermission('orders.view');
+        if (! $user->hasPermission('orders.view')) {
+            return false;
+        }
+
+        return $user->isAdministrator()
+            || $order->currentAssignment?->user_id === $user->id;
     }
 
     public function create(User $user): bool

@@ -181,9 +181,17 @@ class QualityControlTest extends TestCase
             'quality-control.view',
             'quality-control.inspect',
             'quality-control.approve',
+            'orders.view',
         ]);
 
         $order = $this->orderReadyForQualityControl();
+        \App\Models\OrderAssignment::create([
+            'order_id' => $order->id,
+            'user_id' => $user->id,
+            'assigned_by' => $user->id,
+            'assigned_at' => now(),
+        ]);
+
 
         $this->actingAs($user)
             ->post(route('quality-control.start', $order));
@@ -290,9 +298,17 @@ class QualityControlTest extends TestCase
             'quality-control.view',
             'quality-control.inspect',
             'quality-control.approve',
+            'orders.view',
         ]);
 
         $order = $this->orderReadyForQualityControl();
+        \App\Models\OrderAssignment::create([
+            'order_id' => $order->id,
+            'user_id' => $user->id,
+            'assigned_by' => $user->id,
+            'assigned_at' => now(),
+        ]);
+
 
         $this->actingAs($user)
             ->post(route('quality-control.start', $order));

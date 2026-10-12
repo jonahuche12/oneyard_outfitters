@@ -51,7 +51,7 @@ class QuotationController extends Controller
             'payment_percentage' => [
                 'required',
                 'integer',
-                'in:30,60,80',
+                'in:60,80,100',
             ],
         ]);
 

@@ -72,6 +72,7 @@ class AssessmentRbacSeeder extends Seeder
 
             'delivery' => [
                 'assessments.view',
+                'assessments.create',
             ],
         ];
 

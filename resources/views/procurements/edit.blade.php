@@ -8,8 +8,7 @@
             <h1 class="oy-page-title">Edit Procurement Requirement</h1>
 
             <p class="oy-page-description">
-                Record the material, product or service that needs to be sourced.
-                Procurement requirements can be created independently or against an assigned order.
+                Update the details of this procurement requirement.
             </p>
         </div>
 
@@ -118,11 +117,11 @@
                 <div class="oy-form-grid oy-form-grid-2">
 
                     <div class="oy-form-group">
-                        <label class="oy-form-label">
+                        <label for="procurement-item-name" class="oy-form-label">
                             Item Name <span class="oy-form-required">*</span>
                         </label>
 
-                        <input
+                        <input id="procurement-item-name"
                             type="text"
                             name="item_name"
                             value="{{ old('item_name', $procurement->item_name) }}"
@@ -137,11 +136,11 @@
                     </div>
 
                     <div class="oy-form-group">
-                        <label class="oy-form-label">
+                        <label for="procurement-unit" class="oy-form-label">
                             Unit <span class="oy-form-required">*</span>
                         </label>
 
-                        <input
+                        <input id="procurement-unit"
                             type="text"
                             name="unit"
                             value="{{ old('unit', $procurement->unit) }}"
@@ -157,11 +156,11 @@
                     </div>
 
                     <div class="oy-form-group">
-                        <label class="oy-form-label">
+                        <label for="procurement-quantity" class="oy-form-label">
                             Quantity <span class="oy-form-required">*</span>
                         </label>
 
-                        <input
+                        <input id="procurement-quantity"
                             type="number"
                             name="quantity"
                             value="{{ old('quantity', $procurement->quantity) }}"
@@ -178,11 +177,11 @@
                     </div>
 
                     <div class="oy-form-group">
-                        <label class="oy-form-label">
+                        <label for="procurement-maximum-unit-price" class="oy-form-label">
                             Maximum Unit Price <span class="oy-form-required">*</span>
                         </label>
 
-                        <input
+                        <input id="procurement-maximum-unit-price"
                             type="number"
                             name="maximum_unit_price"
                             value="{{ old('maximum_unit_price', $procurement->maximum_unit_price) }}"
@@ -203,11 +202,11 @@
                     </div>
 
                     <div class="oy-form-group">
-                        <label class="oy-form-label">
+                        <label for="procurement-commission-per-unit" class="oy-form-label">
                             Commission per Unit <span class="oy-form-required">*</span>
                         </label>
 
-                        <input
+                        <input id="procurement-commission-per-unit"
                             type="number"
                             name="commission_per_unit"
                             value="{{ old('commission_per_unit', $procurement->commission_per_unit) }}"
@@ -228,11 +227,11 @@
                     </div>
 
                     <div class="oy-form-group sm:col-span-2">
-                        <label class="oy-form-label">
+                        <label for="procurement-description" class="oy-form-label">
                             Description
                         </label>
 
-                        <textarea
+                        <textarea id="procurement-description"
                             name="description"
                             class="oy-textarea @error('description') is-invalid @enderror"
                             placeholder="Describe the required material, product or service..."
@@ -259,11 +258,11 @@
                 <div class="oy-form-grid oy-form-grid-2">
 
                     <div class="oy-form-group">
-                        <label class="oy-form-label">
+                        <label for="procurement-status" class="oy-form-label">
                             Status <span class="oy-form-required">*</span>
                         </label>
 
-                        <select
+                        <select id="procurement-status"
                             name="status"
                             class="oy-select @error('status') is-invalid @enderror"
                             required
@@ -290,11 +289,11 @@
                     </div>
 
                     <div class="oy-form-group">
-                        <label class="oy-form-label">
+                        <label for="procurement-priority" class="oy-form-label">
                             Priority <span class="oy-form-required">*</span>
                         </label>
 
-                        <select
+                        <select id="procurement-priority"
                             name="priority"
                             class="oy-select @error('priority') is-invalid @enderror"
                             required
@@ -320,11 +319,11 @@
                     </div>
 
                     <div class="oy-form-group">
-                        <label class="oy-form-label">
+                        <label for="procurement-required-by" class="oy-form-label">
                             Required By
                         </label>
 
-                        <input
+                        <input id="procurement-required-by"
                             type="date"
                             name="required_by"
                             value="{{ old('required_by', optional($procurement->required_by)->format('Y-m-d')) }}"
@@ -341,11 +340,11 @@
                     </div>
 
                     <div class="oy-form-group">
-                        <label class="oy-form-label">
+                        <label for="procurement-offer-deadline" class="oy-form-label">
                             Offer Deadline
                         </label>
 
-                        <input
+                        <input id="procurement-offer-deadline"
                             type="datetime-local"
                             name="offer_deadline"
                             value="{{ old('offer_deadline', optional($procurement->offer_deadline)->format('Y-m-d\TH:i')) }}"
@@ -375,11 +374,11 @@
 
             <div class="oy-card-body">
                 <div class="oy-form-group">
-                    <label class="oy-form-label">
+                    <label for="procurement-notes" class="oy-form-label">
                         Notes
                     </label>
 
-                    <textarea
+                    <textarea id="procurement-notes"
                         name="notes"
                         class="oy-textarea @error('notes') is-invalid @enderror"
                         placeholder="Add internal procurement notes..."
@@ -449,7 +448,7 @@
 
                 @if ($remainingPhotoSlots > 0)
                     <div class="oy-form-group">
-                        <label class="oy-form-label">
+                        <label for="procurement-photos" class="oy-form-label">
                             Add Photos
                         </label>
 

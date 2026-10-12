@@ -4,6 +4,9 @@ namespace Tests\Feature;
 
 use App\Mail\OrderApproved;
 use App\Mail\OrderApprovedInternal;
+use App\Actions\WhatsApp\SendWhatsAppTemplate;
+use App\Jobs\SendOrderApprovedWhatsApp;
+use App\Models\OrderNotificationRecipient;
 use App\Models\Contact;
 use App\Models\Order;
 use App\Models\Organization;
@@ -11,12 +14,26 @@ use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\Request;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
 class OrderTest extends TestCase
 {
     use RefreshDatabase;
+
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Never allow order feature tests to send real WhatsApp requests.
+        config(['services.whatsapp.enabled' => false]);
+        Http::fake();
+    }
+
 
     private function createApprovalUser(): User
     {
@@ -488,9 +505,12 @@ class OrderTest extends TestCase
             route('public.orders.show', $firstRecipient->access_token)
         );
 
-        $this->assertStringNotContainsString(
-            '/' . $first['order']->id,
-            route('public.orders.show', $firstRecipient->access_token)
+        $this->assertNotSame(
+            '/public/orders/' . $first['order']->id,
+            parse_url(
+                route('public.orders.show', $firstRecipient->access_token),
+                PHP_URL_PATH
+            )
         );
 
         $this
@@ -535,6 +555,187 @@ class OrderTest extends TestCase
             ->assertSee('Primary Contact');
     }
 
+
+
+    public function test_order_approval_queues_whatsapp_only_for_selected_contacts(): void
+    {
+        Mail::fake();
+        Queue::fake();
+
+        config(['services.whatsapp.enabled' => true]);
+
+        $user = $this->createApprovalUser();
+        $data = $this->createOrderWithContacts();
+
+        $data['primary']->update([
+            'whatsapp' => '+2348011111111',
+            'phone' => '+2348022222222',
+        ]);
+
+        $data['secondary']->update([
+            'whatsapp' => null,
+            'phone' => '+2348033333333',
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('orders.approve', $data['order']), [
+                'contact_ids' => [$data['primary']->id],
+            ])
+            ->assertRedirect(route('orders.show', $data['order']));
+
+        $recipient = OrderNotificationRecipient::query()
+            ->where('order_id', $data['order']->id)
+            ->where('contact_id', $data['primary']->id)
+            ->firstOrFail();
+
+        Queue::assertPushed(
+            SendOrderApprovedWhatsApp::class,
+            fn (SendOrderApprovedWhatsApp $job): bool =>
+                $job->recipientId === $recipient->id
+        );
+
+        Queue::assertPushed(SendOrderApprovedWhatsApp::class, 1);
+
+        Mail::assertQueued(
+            OrderApproved::class,
+            fn (OrderApproved $mail): bool =>
+                $mail->hasTo('primary@example.com')
+        );
+
+        $this->assertDatabaseMissing('order_notification_recipients', [
+            'order_id' => $data['order']->id,
+            'contact_id' => $data['secondary']->id,
+        ]);
+    }
+
+    public function test_disabling_whatsapp_does_not_prevent_order_approval_email(): void
+    {
+        Mail::fake();
+        Queue::fake();
+
+        config(['services.whatsapp.enabled' => false]);
+
+        $user = $this->createApprovalUser();
+        $data = $this->createOrderWithContacts();
+
+        $data['primary']->update([
+            'whatsapp' => '+2348011111111',
+            'phone' => '+2348022222222',
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('orders.approve', $data['order']), [
+                'contact_ids' => [$data['primary']->id],
+            ])
+            ->assertRedirect(route('orders.show', $data['order']));
+
+        $this->assertDatabaseHas('orders', [
+            'id' => $data['order']->id,
+            'status' => Order::STATUS_APPROVED,
+        ]);
+
+        Queue::assertNothingPushed();
+
+        Mail::assertQueued(
+            OrderApproved::class,
+            fn (OrderApproved $mail): bool =>
+                $mail->hasTo('primary@example.com')
+        );
+    }
+
+    public function test_order_approval_whatsapp_job_uses_whatsapp_number_and_template_details(): void
+    {
+        config([
+            'services.whatsapp' => [
+                'enabled' => true,
+                'token' => 'test-token',
+                'phone_number_id' => '1234567890',
+                'base_url' => 'https://graph.facebook.com',
+                'api_version' => 'v23.0',
+                'template_language' => 'en',
+                'templates' => [
+                    'order_approved' => 'order_approved_test',
+                ],
+            ],
+        ]);
+
+        Http::fake([
+            'graph.facebook.com/*' => Http::response([
+                'messages' => [['id' => 'wamid.order-test']],
+            ], 200),
+        ]);
+
+        $data = $this->createOrderWithContacts();
+
+        $data['order']->update([
+            'status' => Order::STATUS_APPROVED,
+        ]);
+
+        $data['primary']->update([
+            'whatsapp' => '+2348011111111',
+            'phone' => '+2348022222222',
+        ]);
+
+        $recipient = OrderNotificationRecipient::create([
+            'order_id' => $data['order']->id,
+            'contact_id' => $data['primary']->id,
+            'email' => $data['primary']->email,
+            'access_token' => str_repeat('a', 64),
+        ]);
+
+        (new SendOrderApprovedWhatsApp($recipient->id))
+            ->handle(app(SendWhatsAppTemplate::class));
+
+        Http::assertSent(function (Request $request) use ($data, $recipient): bool {
+            $parameters = $request['template']['components'][0]['parameters'];
+
+            return $request->url() ===
+                    'https://graph.facebook.com/v23.0/1234567890/messages'
+                && $request->hasHeader('Authorization', 'Bearer test-token')
+                && $request['messaging_product'] === 'whatsapp'
+                && $request['to'] === '2348011111111'
+                && $request['type'] === 'template'
+                && $request['template']['name'] === 'order_approved_test'
+                && $request['template']['language']['code'] === 'en'
+                && count($parameters) === 4
+                && $parameters[0]['text'] === 'Primary'
+                && $parameters[1]['text'] === $data['order']->order_number
+                && $parameters[2]['text'] === $data['organization']->name
+                && $parameters[3]['text'] === route(
+                    'public.orders.show',
+                    $recipient->access_token
+                );
+        });
+    }
+
+    public function test_order_approval_whatsapp_job_skips_orders_not_approved(): void
+    {
+        config([
+            'services.whatsapp.enabled' => true,
+            'services.whatsapp.token' => 'test-token',
+            'services.whatsapp.phone_number_id' => '1234567890',
+        ]);
+
+        Http::fake();
+
+        $data = $this->createOrderWithContacts();
+
+        $data['primary']->update([
+            'whatsapp' => '+2348011111111',
+        ]);
+
+        $recipient = OrderNotificationRecipient::create([
+            'order_id' => $data['order']->id,
+            'contact_id' => $data['primary']->id,
+            'email' => $data['primary']->email,
+            'access_token' => str_repeat('b', 64),
+        ]);
+
+        (new SendOrderApprovedWhatsApp($recipient->id))
+            ->handle(app(SendWhatsAppTemplate::class));
+
+        Http::assertNothingSent();
+    }
 
     private function createTestOrder(User $createdBy, array $overrides = []): Order
     {

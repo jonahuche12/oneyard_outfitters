@@ -51,6 +51,25 @@ class Order extends Model
         ];
     }
 
+    /**
+     * Human-readable labels for every order status.
+     *
+     * @return array<string, string>
+     */
+    public static function statusLabels(): array
+    {
+        return [
+            self::STATUS_PENDING => 'Pending',
+            self::STATUS_APPROVED => 'Approved',
+            self::STATUS_IN_PRODUCTION => 'In Production',
+            self::STATUS_READY_FOR_QUALITY_CONTROL => 'Ready for QC',
+            self::STATUS_CORRECTION_REQUIRED => 'Correction Required',
+            self::STATUS_READY => 'Ready',
+            self::STATUS_DELIVERED => 'Delivered',
+            self::STATUS_CANCELLED => 'Cancelled',
+        ];
+    }
+
     public function organization(): BelongsTo
     {
         return $this->belongsTo(Organization::class);
@@ -109,5 +128,19 @@ class Order extends Model
     public function delivery(): HasOne
     {
         return $this->hasOne(Delivery::class);
+    }
+
+    public function scopeVisibleTo(
+        \Illuminate\Database\Eloquent\Builder $query,
+        \App\Models\User $user
+    ): \Illuminate\Database\Eloquent\Builder {
+        if ($user->isAdministrator()) {
+            return $query;
+        }
+
+        return $query->whereHas(
+            'currentAssignment',
+            fn ($assignment) => $assignment->where('user_id', $user->id)
+        );
     }
 }

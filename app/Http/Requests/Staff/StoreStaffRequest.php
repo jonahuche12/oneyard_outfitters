@@ -31,6 +31,12 @@ class StoreStaffRequest extends FormRequest
                 'unique:users,email',
             ],
 
+            'phone' => [
+                'nullable',
+                'string',
+                'regex:/^\+[1-9]\d{7,14}$/',
+            ],
+
             'password' => [
                 'required',
                 'string',
@@ -53,11 +59,23 @@ class StoreStaffRequest extends FormRequest
         ];
     }
 
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('phone')) {
+            $phone = preg_replace('/[\s\-().]/', '', (string) $this->input('phone'));
+
+            $this->merge([
+                'phone' => $phone === '' ? null : $phone,
+            ]);
+        }
+    }
+
     public function messages(): array
     {
         return [
             'roles.required' => 'At least one staff role must be selected.',
             'roles.min' => 'At least one staff role must be selected.',
+            'phone.regex' => 'Enter the phone number in international format, for example +2348012345678.',
         ];
     }
 }

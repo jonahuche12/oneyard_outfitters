@@ -44,7 +44,7 @@
                 <div class="grid gap-6 sm:grid-cols-2">
 
                     <div>
-                        <label for="expected_delivery_days" class="oy-label">
+                        <label for="expected_delivery_days" class="oy-form-label">
                             Expected Delivery Days
                         </label>
 
@@ -65,7 +65,7 @@
                     </div>
 
                     <div>
-                        <label for="expected_delivery_date" class="oy-label">
+                        <label for="expected_delivery_date" class="oy-form-label">
                             Expected Delivery Date
                         </label>
 

@@ -63,6 +63,7 @@ class StaffController extends Controller
             $user = User::create([
                 'name' => $validated['name'],
                 'email' => $validated['email'],
+                'phone' => $validated['phone'] ?? null,
                 'password' => $validated['password'],
                 'is_active' => true,
             ]);
@@ -121,6 +122,9 @@ class StaffController extends Controller
             $user->update([
                 'name' => $validated['name'],
                 'email' => $validated['email'],
+                ...(array_key_exists('phone', $validated)
+                    ? ['phone' => $validated['phone']]
+                    : []),
             ]);
 
             if (! empty($validated['password'])) {
