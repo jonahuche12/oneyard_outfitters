@@ -19,6 +19,26 @@ return [
         'base_url' => env('PAYSTACK_BASE_URL', 'https://api.paystack.co'),
     ],
 
+    'whatsapp' => [
+        'enabled' => (bool) env('WHATSAPP_ENABLED', false),
+        'token' => env('WHATSAPP_ACCESS_TOKEN'),
+        'phone_number_id' => env('WHATSAPP_PHONE_NUMBER_ID'),
+        'base_url' => env('WHATSAPP_BASE_URL', 'https://graph.facebook.com'),
+        'api_version' => env('WHATSAPP_API_VERSION', 'v23.0'),
+        'template_language' => env('WHATSAPP_TEMPLATE_LANGUAGE', 'en'),
+        'admin_contact' => env('WHATSAPP_ADMIN_CONTACT'),
+        'templates' => [
+            'procurement_offer_accepted' => env(
+                'WHATSAPP_TEMPLATE_OFFER_ACCEPTED',
+                'procurement_offer_accepted_v2'
+            ),
+            'order_approved' => env(
+                'WHATSAPP_TEMPLATE_ORDER_APPROVED',
+                'order_approved_v1'
+            ),
+        ],
+    ],
+
     'postmark' => [
         'key' => env('POSTMARK_API_KEY'),
     ],
