@@ -5464,3 +5464,20 @@ Step 5 design (finance finalization) presented for approval.
 - `php artisan test`: 521 passed / 1835 assertions / 0 failed (user-run). 507 + 14 FinalizeOrderEarningsPoolTest.
 - Committing Step 5: FinalizeOrderEarningsPool, OrderEarningsAllocation, migration 2026_10_14_170000, pool model, permission earnings.pools.finalize, tests.
 - Next: Step 6 design (wallet ledger, adjustments/reversals) for approval.
+
+### 2026-10-14 — Earnings Step 6A: Wallet Ledger Credits — VERIFIED (focused)
+- Approved design: earnings available immediately; adjustments restricted to finance and super-admin; backend first, wallet UI as Step 6B-UI.
+- Added migration 2026_10_14_180000 (staff_wallet_entries; unique keys on order_earnings_allocation_id and reverses_entry_id) and append-only StaffWalletEntry (balanceFor derives the balance from entries).
+- FinalizeOrderEarningsPool now writes one `earning` entry per allocation inside the finalization transaction.
+- `php artisan test tests/Feature/Earnings/FinalizeOrderEarningsPoolTest.php`: 18 passed / 57 assertions (14 existing + 4 new: one entry per allocation, held credits nothing, repeat rejected credits once, entries immutable).
+- Step 5 commit c8ca49c pushed to origin. Step 6A uncommitted. Full suite not rerun since 6A.
+- Not covered: backfill for pools finalized before 6A (none expected in dev data; unconfirmed).
+- Next: 6B adjustments and reversals.
+
+### 2026-10-14 — Earnings Step 6B: Adjustments and Reversals — VERIFIED (focused)
+- Added AdjustStaffWallet (adjust, reverse) and permission earnings.adjustments.create (RbacSeeder; finance explicitly, super-admin automatically; RbacTest expectation 68).
+- `php artisan test tests/Feature/Earnings/AdjustStaffWalletTest.php`: 11 passed / 33 assertions (user-run).
+- Rules verified: active actor with permission; reason 10-1000 chars; adjustments signed, non-zero, max 2 decimals, may take the balance below zero (no forced repayment); only `earning` entries reversible, once only, equal and opposite entry linked to the original; original never modified.
+- Not covered: concurrent reversal (lock present, untested; DB unique key on reverses_entry_id is the backstop); no HTTP/UI entry point.
+- Step 6A and 6B uncommitted until full suite is green.
+- Next: full suite, commit, then Step 6B-UI (My Wallet page, finalization and adjustment entry points) design.

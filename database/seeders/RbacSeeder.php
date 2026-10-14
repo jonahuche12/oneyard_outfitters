@@ -390,6 +390,11 @@ class RbacSeeder extends Seeder
                 'slug' => 'earnings.pools.finalize',
                 'description' => 'Review and finalize order earnings pools into immutable staff allocations.',
             ],
+            [
+                'name' => 'Create Earnings Adjustments',
+                'slug' => 'earnings.adjustments.create',
+                'description' => 'Record audited adjustments and reversals on staff wallet entries with a reason.',
+            ],
 
             /*
              * Product Specifications
@@ -662,6 +667,7 @@ class RbacSeeder extends Seeder
                     'payments.update',
                     'payments.reverse',
                     'earnings.pools.finalize',
+                    'earnings.adjustments.create',
 
                     'specifications.view',
                 ],

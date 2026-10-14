@@ -5,6 +5,7 @@ namespace App\Actions\Earnings;
 use App\Models\Order;
 use App\Models\OrderEarningsAllocation;
 use App\Models\OrderEarningsPool;
+use App\Models\StaffWalletEntry;
 use App\Models\User;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
@@ -107,13 +108,22 @@ class FinalizeOrderEarningsPool
             }
 
             foreach ($result['allocations'] as $row) {
-                OrderEarningsAllocation::query()->create([
+                $allocation = OrderEarningsAllocation::query()->create([
                     'order_earnings_pool_id' => $locked->id,
                     'user_id' => $row['user_id'],
                     'amount' => $row['amount'],
                     'weight' => $row['weight'],
                     'weight_scale' => $row['weight_scale'],
                     'effective_points' => $row['effective_points'],
+                ]);
+
+                StaffWalletEntry::query()->create([
+                    'user_id' => $row['user_id'],
+                    'type' => StaffWalletEntry::TYPE_EARNING,
+                    'amount' => $row['amount'],
+                    'order_earnings_pool_id' => $locked->id,
+                    'order_earnings_allocation_id' => $allocation->id,
+                    'created_by' => $actor->id,
                 ]);
             }
 

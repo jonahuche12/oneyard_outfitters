@@ -13,6 +13,7 @@ use App\Models\Payment;
 use App\Models\Quotation;
 use App\Models\QuotationRecipient;
 use App\Models\Role;
+use App\Models\StaffWalletEntry;
 use App\Models\User;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -416,5 +417,80 @@ class FinalizeOrderEarningsPoolTest extends TestCase
         }
 
         $this->assertSame(2, OrderEarningsAllocation::query()->count());
+    }
+
+    public function test_finalization_credits_one_wallet_entry_per_allocation(): void
+    {
+        [$pool, $a, $b] = $this->readyPool();
+        $actor = $this->finalizer();
+
+        $this->finalize($pool, $actor);
+
+        $entries = StaffWalletEntry::query()
+            ->where('order_earnings_pool_id', $pool->id)
+            ->get();
+
+        $this->assertCount(2, $entries);
+
+        foreach ($entries as $entry) {
+            $allocation = OrderEarningsAllocation::query()->findOrFail($entry->order_earnings_allocation_id);
+
+            $this->assertSame(StaffWalletEntry::TYPE_EARNING, $entry->type);
+            $this->assertSame($allocation->user_id, $entry->user_id);
+            $this->assertSame($allocation->amount, $entry->amount);
+            $this->assertSame($actor->id, $entry->created_by);
+        }
+
+        $this->assertSame('3333.33', StaffWalletEntry::balanceFor($a));
+        $this->assertSame('1666.67', StaffWalletEntry::balanceFor($b));
+    }
+
+    public function test_held_pool_credits_nothing(): void
+    {
+        $pool = $this->pool();
+        $this->deliver($pool);
+        $this->pay($pool, '100000.00');
+
+        $this->finalize($pool);
+
+        $this->assertSame(0, StaffWalletEntry::query()->count());
+    }
+
+    public function test_rejected_repeat_finalization_does_not_credit_twice(): void
+    {
+        [$pool] = $this->readyPool();
+        $this->finalize($pool);
+
+        try {
+            $this->finalize($pool);
+        } catch (ValidationException) {
+            // expected
+        }
+
+        $this->assertSame(2, StaffWalletEntry::query()->count());
+    }
+
+    public function test_wallet_entries_cannot_be_modified_or_deleted(): void
+    {
+        [$pool] = $this->readyPool();
+        $this->finalize($pool);
+
+        $entry = StaffWalletEntry::query()->firstOrFail();
+
+        try {
+            $entry->update(['amount' => '1.00']);
+            $this->fail('Expected LogicException on update.');
+        } catch (LogicException) {
+            // expected
+        }
+
+        try {
+            $entry->delete();
+            $this->fail('Expected LogicException on delete.');
+        } catch (LogicException) {
+            // expected
+        }
+
+        $this->assertSame(2, StaffWalletEntry::query()->count());
     }
 }
