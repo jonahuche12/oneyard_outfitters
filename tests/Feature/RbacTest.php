@@ -225,6 +225,7 @@ class RbacTest extends TestCase
         $expectedPermissions = [
             'earnings.weights.manage',
             'earnings.contributions.assign',
+            'earnings.pools.finalize',
             'organizations.view',
             'organizations.create',
             'organizations.update',

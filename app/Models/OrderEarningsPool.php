@@ -22,6 +22,11 @@ class OrderEarningsPool extends Model
         'source_snapshot',
         'delivered_at',
         'status',
+        'finalized_by',
+        'finalized_at',
+        'finalization_snapshot',
+        'hold_reasons',
+        'held_at',
     ];
 
     protected function casts(): array
@@ -32,6 +37,10 @@ class OrderEarningsPool extends Model
             'pool_amount' => 'decimal:2',
             'source_snapshot' => 'array',
             'delivered_at' => 'datetime',
+            'finalized_at' => 'datetime',
+            'held_at' => 'datetime',
+            'finalization_snapshot' => 'array',
+            'hold_reasons' => 'array',
         ];
     }
 
@@ -43,6 +52,16 @@ class OrderEarningsPool extends Model
     public function contributions(): HasMany
     {
         return $this->hasMany(OrderEarningsContribution::class);
+    }
+
+    public function allocations(): HasMany
+    {
+        return $this->hasMany(OrderEarningsAllocation::class);
+    }
+
+    public function finalizedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'finalized_by');
     }
 
     public function quotation(): BelongsTo

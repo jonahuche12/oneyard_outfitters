@@ -4,15 +4,15 @@
 
 PROJECT: Oneyard Outfitters — Institutional Supply & Uniform Management System
 CURRENT PHASE: Staff Earnings Wallet (post-roadmap); all earlier phases built, public website and onboarding included
-CURRENT FEATURE: Earnings wallet — contribution recording done; pool source amount next
-CURRENT STAGE: Step 2 verified (19 tests). Steps 3-7 outstanding (source amount, allocation, finance finalization, ledger, commit)
-STATUS: Last full suite 454 passed / 1603 assertions (before the earnings work was added). Focused: RbacTest 15, Earnings weight 11, Earnings contribution 19, DeliveryTest 5, all green (2026-10-14). Branch wip/coordinator-check-offers; earnings work uncommitted.
-LAST COMPLETED: RecordOrderEarningsContribution action with focused tests (2026-10-14)
+CURRENT FEATURE: Earnings wallet — Steps 1-5 verified (pool, weights, contributions, allocation, finance finalization); ledger next
+CURRENT STAGE: Step 5 verified and committed. Step 6 (wallet ledger, adjustments/reversals) in design.
+STATUS: Last full suite 521 passed / 1835 assertions / 0 failed (2026-10-14). Branch wip/coordinator-check-offers, 2+ commits ahead of origin.
+LAST COMPLETED: Step 5 finance finalization (14 tests)
 CURRENT WORK: None in build
-NEXT STEP: Full suite -> checkpoint commit -> Step 3: resolve pool source amount (order total vs approved quotation version)
+NEXT STEP: Step 6 design approval: wallet ledger from finalized allocations; adjustments/reversals; contribution void; Step 2B workflow-derived contributions; HTTP/UI entry point for finalization
 BLOCKERS: None for the wallet. Meta WhatsApp template approval blocks live WhatsApp only.
-KNOWN ISSUES: Pool uses persisted order total as source; unverified against approved quotation revisions. ORD-000006 delivered with 33,280 outstanding (reconciliation pending); delivery #8 stale legacy data (repair not reported run). ~35 failed mail jobs in failed_jobs undiagnosed. Browser verification pending: procurement photo gallery, QC resubmission, public pages, email rendering. Coordinator Check hardening (tests, status filter, row lock) and merge to main not logged. Quotation pricing decision (copy-from-specification vs zero-price) open. Whitespace issues in resources/js/app.js and resources/js/quotations.js. Duplicate docs/production-log.md. Security follow-ups: reset Mailtrap credentials; move GIT_TOKEN out of .env.
-OPEN QUESTIONS: Wallet rules still open: same-activity splitting, multiple super-admins, deactivation between work and finalization, withdrawals/payouts, reversals. Commission rules; registration policy.
+KNOWN ISSUES: ORD-000006 delivered with 33,280 outstanding (reconciliation pending); delivery #8 stale legacy data (repair not reported run). ~35 failed mail jobs in failed_jobs undiagnosed. Browser verification pending: procurement photo gallery, QC resubmission, public pages, email rendering. Coordinator Check hardening (tests, status filter, row lock) and merge to main not logged. Quotation pricing decision (copy-from-specification vs zero-price) open. Whitespace issues in resources/js/app.js and resources/js/quotations.js. Duplicate docs/production-log.md. PaymentFactory unusable (QuotationFactory missing). Paid-total rule duplicated in DeliveryPolicy, orders/show and FinalizeOrderEarningsPool. Security follow-ups: reset Mailtrap credentials; move GIT_TOKEN out of .env.
+OPEN QUESTIONS: Withdrawals/payouts, reversals and adjustment triggers, pending vs available balance. Commission rules; registration policy.
 DEFERRED SCOPE: Quotation offline payment, delivery WhatsApp channel, product catalogue, supplier/customer portals, advanced reporting, complex inventory, broad automation, commission crediting
 ---
 
@@ -5437,3 +5437,30 @@ Run full suite, commit checkpoint; then Step 3 (pool source amount: order total 
 
 ### Next
 Full suite, checkpoint commit, then Step 5 design (finance finalization) for approval.
+
+### 2026-10-14 — Earnings Steps 1-4: Full Suite VERIFIED; Checkpoint Commit
+- `php artisan test`: 507 passed / 1792 assertions / 0 failed (user-run).
+- git status before commit showed only the Step 3/4 files pending, so the earlier earnings groundwork (pool, weights, contribution recording and their tests) had already been committed; that commit was not logged (inferred from git status).
+- Committed: integer pool rounding, CalculateOrderEarningsAllocation and its tests, CreateOrderEarningsPoolTest, log.
+
+### Next
+Step 5 design (finance finalization) presented for approval.
+
+### 2026-10-14 — Earnings Step 5: Finance Finalization — IMPLEMENTED (not yet verified)
+- User-approved design: payment gate = order delivered and completed quotation payments cover order.total within one cent (same rule as DeliveryPolicy::confirm, in integer cents); new permission earnings.pools.finalize for finance role and super-admin only; oversight stored in allocation rows and finalization snapshot, not in contributions; contribution correction (void with reason) deferred as a logged gap, to be built after the ledger; finance may finalize a pool they earn from (flagged in the snapshot); a held pool may be re-finalized once resolved.
+- Added: migration 2026_10_14_170000 (order_earnings_allocations; finalized_by, finalized_at, finalization_snapshot, hold_reasons, held_at on order_earnings_pools); OrderEarningsAllocation model (append-only: update/delete throw); FinalizeOrderEarningsPool action (locked, transactional; persists `held` with reasons or writes allocations, snapshot and `finalized`; rejects repeats); pool model fillable/casts/relations; permission seeded and given to finance; RbacTest expectation 67.
+- Pending: migrate, RbacTest run, FinalizeOrderEarningsPoolTest (fixtures need PaymentFactory / quotation_recipients structure). Follow-up: paid-total rule now duplicated (DeliveryPolicy, orders/show, this action); extract shared helper later. Unconfirmed: git log for the Step 3/4 checkpoint commit.
+
+### 2026-10-14 — Earnings Step 5: Finance Finalization — Focused Tests VERIFIED
+- `php artisan test tests/Feature/Earnings/FinalizeOrderEarningsPoolTest.php`: 14 passed / 43 assertions / 0 failed (user-run).
+- Covered: allocations created and summing to the pool (3333.33 / 1666.67); finalization snapshot (previous status, payment check, payment ids, beneficiary flag); finalizer who is a beneficiary flagged; denial without permission and for an inactive actor; repeat finalization rejected; order must be delivered; underpaid order rejected; non-completed payments ignored; payment within one cent accepted; held when no contributions or an inactive contributor, with reasons persisted; held pool re-finalizable once resolved; allocations immutable (update and delete throw).
+- Fix during review: snapshot `previous_status` now read from the locked row.
+- Test finding: `PaymentFactory` is unusable. It calls `Quotation::factory()` and `database/factories/QuotationFactory.php` does not exist. The test creates `QuotationRecipient` and `Payment` rows directly.
+- Not covered: concurrent finalization (row lock present, untested); no HTTP/UI entry point for finalization yet.
+- Full suite not yet rerun for Step 5. Step 5 is uncommitted.
+- Next: full suite, checkpoint commit, then Step 6 design (wallet ledger).
+
+### 2026-10-14 — Earnings Step 5: Full Suite VERIFIED; Checkpoint Commit
+- `php artisan test`: 521 passed / 1835 assertions / 0 failed (user-run). 507 + 14 FinalizeOrderEarningsPoolTest.
+- Committing Step 5: FinalizeOrderEarningsPool, OrderEarningsAllocation, migration 2026_10_14_170000, pool model, permission earnings.pools.finalize, tests.
+- Next: Step 6 design (wallet ledger, adjustments/reversals) for approval.

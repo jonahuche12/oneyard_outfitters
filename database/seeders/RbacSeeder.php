@@ -385,6 +385,11 @@ class RbacSeeder extends Seeder
                 'slug' => 'earnings.contributions.assign',
                 'description' => 'Manually assign missing staff contributions to a pending earnings pool with a reason.',
             ],
+            [
+                'name' => 'Finalize Earnings Pools',
+                'slug' => 'earnings.pools.finalize',
+                'description' => 'Review and finalize order earnings pools into immutable staff allocations.',
+            ],
 
             /*
              * Product Specifications
@@ -656,6 +661,7 @@ class RbacSeeder extends Seeder
                     'payments.create',
                     'payments.update',
                     'payments.reverse',
+                    'earnings.pools.finalize',
 
                     'specifications.view',
                 ],
