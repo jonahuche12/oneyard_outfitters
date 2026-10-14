@@ -223,6 +223,8 @@ class RbacTest extends TestCase
         $this->seed(RbacSeeder::class);
 
         $expectedPermissions = [
+            'earnings.weights.manage',
+            'earnings.contributions.assign',
             'organizations.view',
             'organizations.create',
             'organizations.update',

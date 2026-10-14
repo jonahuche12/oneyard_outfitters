@@ -3,17 +3,17 @@
 ## CURRENT STATE
 
 PROJECT: Oneyard Outfitters — Institutional Supply & Uniform Management System
-CURRENT PHASE: Phase 6 — Financial / Fulfillment (stable checkpoint); public website built; deployment readiness next
-CURRENT FEATURE: Close-out hardening before merge to main and deployment readiness
-CURRENT STAGE: Full suite green; open verification and coverage gaps listed in KNOWN ISSUES
-STATUS: Full suite 364 passed / 1253 assertions / 0 failed (2026-10-05). Branch wip/coordinator-check-offers, 5 commits ahead of main (acacf60), pushed.
-LAST COMPLETED: Stale ExampleTest and RbacTest fixed; suite green (2026-10-05)
+CURRENT PHASE: Staff Earnings Wallet (post-roadmap); all earlier phases built, public website and onboarding included
+CURRENT FEATURE: Earnings wallet — contribution recording done; pool source amount next
+CURRENT STAGE: Step 2 verified (19 tests). Steps 3-7 outstanding (source amount, allocation, finance finalization, ledger, commit)
+STATUS: Last full suite 454 passed / 1603 assertions (before the earnings work was added). Focused: RbacTest 15, Earnings weight 11, Earnings contribution 19, DeliveryTest 5, all green (2026-10-14). Branch wip/coordinator-check-offers; earnings work uncommitted.
+LAST COMPLETED: RecordOrderEarningsContribution action with focused tests (2026-10-14)
 CURRENT WORK: None in build
-NEXT STEP: Harden Coordinator Check (tests, status filter, row lock) -> browser-verify open items -> merge to main -> Deployment Readiness
-BLOCKERS: None
-KNOWN ISSUES: Browser verification pending: procurement photo gallery, QC resubmission, public pages, rewritten email templates. No tests for Coordinator Check or Delivery activation / Pay on Delivery / offline-claim flows (DeliveryTest has 4 tests). OrderController status filter omits ready_for_quality_control. confirmProductionComplete lacks row lock and in-transaction status re-check. ORD-000006 delivered with 33,280 outstanding (reconciliation pending). Delivery Pay Now via Paystack approved, not implemented. Order::currentAssignment() unverified. Paystack webhook and queue-worker notes not logged. Duplicate docs/production-log.md. Permission slug deliveries.review_offline_payment uses an underscore unlike other slugs (left as is).
-OPEN QUESTIONS: Commission rules; registration policy (log says disabled)
-DEFERRED SCOPE: Quotation offline payment, product catalogue, supplier/customer portals, advanced reporting, complex inventory, broad automation, WhatsApp notifications
+NEXT STEP: Full suite -> checkpoint commit -> Step 3: resolve pool source amount (order total vs approved quotation version)
+BLOCKERS: None for the wallet. Meta WhatsApp template approval blocks live WhatsApp only.
+KNOWN ISSUES: Pool uses persisted order total as source; unverified against approved quotation revisions. ORD-000006 delivered with 33,280 outstanding (reconciliation pending); delivery #8 stale legacy data (repair not reported run). ~35 failed mail jobs in failed_jobs undiagnosed. Browser verification pending: procurement photo gallery, QC resubmission, public pages, email rendering. Coordinator Check hardening (tests, status filter, row lock) and merge to main not logged. Quotation pricing decision (copy-from-specification vs zero-price) open. Whitespace issues in resources/js/app.js and resources/js/quotations.js. Duplicate docs/production-log.md. Security follow-ups: reset Mailtrap credentials; move GIT_TOKEN out of .env.
+OPEN QUESTIONS: Wallet rules still open: same-activity splitting, multiple super-admins, deactivation between work and finalization, withdrawals/payouts, reversals. Commission rules; registration policy.
+DEFERRED SCOPE: Quotation offline payment, delivery WhatsApp channel, product catalogue, supplier/customer portals, advanced reporting, complex inventory, broad automation, commission crediting
 ---
 
 # PRODUCT OVERVIEW
@@ -5000,10 +5000,12 @@ BLOCKERS: Meta WhatsApp template approval (procurement live send and any new Wha
 
 ---
 
-## 2026-10-14 — Staff Password Reset: INVESTIGATED → IMPLEMENTATION PLANNED
+## 2026-10-14 — Staff Password Reset: IMPLEMENTED
 
 ### Stage
-**INVESTIGATED — IMPLEMENTATION NOT YET STARTED**
+**IMPLEMENTED — INCLUDED IN COMMIT `8b39dcc`; AUTOMATED TEST SUITE PASSED**
+
+The password-reset implementation is committed. The latest full test suite passed, including the committed password-reset feature tests. This establishes automated test success; it does not independently establish live email delivery or browser verification.
 
 ### Objective
 
@@ -5076,9 +5078,28 @@ Implement a secure staff password-reset workflow using the existing Laravel Fort
 
 **No implementation or test results are claimed at this stage.**
 
-Next action: complete the targeted inspection of Fortify's response contracts, view bindings, user activation rules, and existing reset action. Then implement one logical unit at a time, test it, review the diff, and update this log with verified results.
+Implementation and automated tests are now committed. Any remaining work should be driven by a specific failing test, security review finding, or unverified operational requirement rather than repeating the completed implementation.
 
 ---
+
+
+## 2026-10-14 — Staff Onboarding: IMPLEMENTED
+
+### Committed Scope
+- Staff onboarding invitation flow and onboarding token persistence.
+- Staff onboarding email template and invitation mail class.
+- Onboarding controller and invitation view.
+- Password setup and `password_set_at` tracking.
+- Staff onboarding WhatsApp job integration.
+- Staff management updates and automated feature tests.
+
+### Verification
+- Included in commit `8b39dcc`, pushed to `origin/wip/coordinator-check-offers`.
+- Latest full test suite: 454 passed, 1,603 assertions, 0 failures.
+- Blade view cache completed successfully.
+
+### Verification Boundary
+The full automated suite and Blade cache passed. Live WhatsApp delivery, external messaging configuration, and any unreported browser checks are not claimed as verified.
 
 ## 2026-10-14 — Staff Wallet and Weighted Earnings Design — IN PROGRESS
 
@@ -5201,7 +5222,7 @@ Do not implement until the full design is approved.
 
 ### Status
 - **IMPLEMENTED:** Accepted procurement offers can be marked delivered once.
-- **AUTOMATED TESTS PASSED:** Full suite reported 454 passed, 1,604 assertions.
+- **AUTOMATED TESTS PASSED:** Latest full suite reported 454 passed, 1,603 assertions, 0 failures.
 - **BROWSER VERIFIED:** Delivery confirmation workflow reported working.
 - **LOCAL MIGRATION APPLIED:** Delivery audit columns confirmed in the local database.
 
@@ -5215,5 +5236,183 @@ Do not implement until the full design is approved.
 ### Scope Boundary
 Delivery confirmation does not credit commission or modify a staff wallet. Commission calculation and crediting remain deferred until the wallet design is completed and approved.
 
+### Repository Record
+- Committed with staff onboarding and password-reset changes in commit `8b39dcc`.
+- Pushed to `origin/wip/coordinator-check-offers`.
+- Latest full test suite: 454 passed, 1,603 assertions, 0 failures.
+- `php artisan view:cache` completed successfully.
+- The worktree was clean after the commit and push.
+
 ### Next Step
-Review and commit this feature independently, preserving the unrelated staff onboarding, password-reset, and wallet-design work.
+Continue with targeted verification of any remaining operational requirements. Wallet implementation remains blocked pending completion and explicit approval of its design.
+
+---
+
+## 2026-10-14 — Staff Earnings Wallet: Implementation Checkpoint
+
+### 1. Scope and business rules
+
+The staff earnings wallet is being implemented as an auditable, order-based earnings pool and ledger. The agreed starting rule is that each successfully delivered order creates one total staff earnings pool equal to **5% of the final approved quotation amount applicable to that order**. The pool is shared according to configured contribution weights; it is not 5% per employee.
+
+Key requirements to preserve:
+
+- Delivery creates a pending pool. Finance independently reviews and finalizes it; a second approver is not mandatory.
+- Finalization must be blocked until full payment and reconciliation have been verified.
+- Preserve the applicable quotation/version reference, exact source amount, calculation and reproducible snapshot.
+- Allocate one pool across eligible staff using configured contribution points.
+- Prefer qualifying workflow assignments and records as contribution evidence; authorized manual assignments must record the actor, time, activity, staff member and reason.
+- The super-admin receives management-oversight points for every qualifying delivered order.
+- Staff must have been active when the qualifying work occurred and remain active when the pool is finalized.
+- Finalized ledger entries must not be silently edited or deleted. Corrections require audited adjustments or reversals.
+- Refunds, disputes and post-finalization corrections must use audited adjustments recovered from future earnings. Do not create automatic negative balances or force personal repayment.
+- If no eligible staff remain, hold the pool pending an audited super-admin exception approval. Do not forfeit the pool or redistribute it to unrelated staff.
+- Contribution weights remain configurable. Previously discussed example numbers were not approved and must not be hardcoded as the business rules.
+
+### 2. Implemented
+
+**Order earnings pool**
+
+- Added `database/migrations/2026_10_14_145551_create_order_earnings_pools_table.php`.
+- Added `app/Models/OrderEarningsPool.php`.
+- Added `app/Actions/Earnings/CreateOrderEarningsPool.php`.
+- Updated `app/Models/Order.php` so a transition to delivered triggers pool creation.
+- The pool records the order, quotation reference and number, source amount, 5% rate, pool amount, source snapshot, delivery time and status.
+- Pool creation is designed to be idempotent per order through `firstOrCreate` and a unique order constraint.
+- Added delivery feature-test assertions for pending pool creation, the 5% calculation, quotation/snapshot data and repeated invocation.
+
+**Allocation and weight-audit schema**
+
+- Added `database/migrations/2026_10_14_151008_create_earnings_allocation_tables.php`.
+- Added `app/Models/EarningsActivityWeight.php`.
+- Added `app/Models/EarningsWeightAudit.php`.
+- Added `app/Models/OrderEarningsContribution.php`.
+- Added the contributions relationship to `OrderEarningsPool`.
+- The schema supports configurable activity weights, an audit history for weight changes and per-pool contribution records with activity/source references, timestamps, actor/reason fields and active-at-activity status.
+- The allocation migration was made tolerant of tables that already exist after the initial migration attempt encountered existing tables.
+
+**Weight management action and permission**
+
+- Added `app/Actions/Earnings/UpdateEarningsActivityWeight.php`.
+- Added the `earnings.weights.manage` permission definition to `database/seeders/RbacSeeder.php`.
+- The action requires an active actor with the management permission, validates the submitted weight details and audit reason, and writes a separate audit record when a weight is created or updated.
+- This action has **not yet received its own focused test run**. Its behavior must not be described as verified until those tests pass.
+
+### 3. Verification completed
+
+- PHP syntax checks passed for the earnings-weight action and the RBAC seeder.
+- The allocation migration was adjusted after the existing-table conflict. Confirm migration status before relying on it for subsequent migration work.
+- The recorded full-suite result for the pool/schema checkpoint was **454 tests passed, 1,611 assertions, zero failures**, in 32.24 seconds.
+- That full-suite result predates the latest earnings-weight management action. It does not verify the new action.
+- Delivery confirmation and its browser workflow had also been reported working in the preceding delivery milestone. Preserve that work.
+- Do not rerun the full suite by default. Use targeted tests for the next implementation slice and run the full suite only when the scope or risk justifies it.
+
+### 4. Source-of-truth caution
+
+The pool action currently uses the persisted order total as its source basis and also records the quotation total in the snapshot. The business rule refers to the final approved quotation amount applicable to the order. Before treating the calculation as definitively correct, inspect the order/quotation acceptance and revision flow and verify whether the persisted order total is guaranteed to match the applicable approved quotation amount. Resolve any mismatch explicitly; do not silently assume they are interchangeable.
+
+The allocation schema and weight action are groundwork, not a complete wallet. No contribution-weight values should be seeded from the unapproved example weights. No final allocation, Finance finalization, staff wallet ledger, adjustment/reversal flow or exception approval flow should be considered complete merely because the supporting schema exists.
+
+### 5. Outstanding work — next steps in order
+
+1. **Test weight management.**
+   - Inspect `app/Models/User.php`, `app/Models/Permission.php`, `database/factories/PermissionFactory.php`, the earnings weight/audit models and existing RBAC feature-test conventions.
+   - Add a focused test file for `UpdateEarningsActivityWeight`.
+   - Cover authorized creation, update with preserved audit history, denied/inactive actors, and invalid points or missing/too-short reasons.
+   - Run only that test file; fix any failures before proceeding.
+
+2. **Record contributions safely.**
+   - Implement a dedicated earnings action for adding a contribution to a pending pool.
+   - Enforce permissions and eligibility; verify activity weights are configured and enabled.
+   - Support traceable workflow-derived and authorized manual contributions.
+   - Record activity time, staff active status, source reference and manual-assignment actor/reason.
+   - Prevent duplicate contributions where the same source activity is submitted twice.
+   - Add focused tests before continuing.
+
+3. **Resolve the pool source amount.**
+   - Inspect quotation approval/revision and order creation/acceptance logic.
+   - Establish the exact quotation version and amount applicable to an order.
+   - Ensure the snapshot can reproduce the calculation and that later quotation changes do not silently alter an existing pool.
+
+4. **Implement deterministic allocation.**
+   - Allocate the single pool using the configured contribution points, with explicit rounding and remainder handling.
+   - Apply the super-admin oversight rule without double-counting unrelated work.
+   - Enforce the active-at-activity and active-at-finalization rules.
+   - Hold the pool for audited exception handling when there are no eligible recipients.
+   - Add focused tests for zero/missing weights, rounding, ineligible staff, duplicate sources and the no-eligible-staff case.
+
+5. **Implement Finance review and finalization.**
+   - Inspect the existing payment, reconciliation and authorization flows first.
+   - Require verified full payment and reconciliation before finalization.
+   - Ensure only an authorized active Finance user can perform the operation.
+   - Make finalization transactional and safe against concurrent attempts or repeated requests.
+   - Persist immutable allocation/ledger records and the applicable source snapshot.
+
+6. **Implement staff wallet ledger and corrections.**
+   - Expose traceable earnings entries and totals derived from ledger records.
+   - Prevent direct balance editing and silent changes to finalized records.
+   - Add audited adjustment/reversal handling for refunds, disputes and corrections; do not create automatic negative balances or forced repayment.
+
+7. **Verify, log and commit deliberately.**
+   - Run focused tests for each slice, plus the full suite at an appropriate integration checkpoint.
+   - Perform browser verification for any UI or workflow added.
+   - Record actual results in this log, separating implemented work from verified behavior.
+   - Inspect `git status` and the diff before staging. Preserve unrelated work and do not commit or reset changes without reviewing their scope.
+
+### 6. How to resume in the next session
+
+Start in `~/Desktop/oneyard-outfitters-github`. Read this checkpoint and the latest surrounding entries in `docs/PRODUCTION_LOG.md`; inspect `git status --short` before editing. Continue with **Step 1: focused tests for `UpdateEarningsActivityWeight`**. Use the existing RBAC patterns, make only the necessary targeted edits, and run only the new test file. Do not restart the wallet design, recreate existing migrations/models, assume the full-suite result covers the latest action, or move on to contribution allocation until the weight-action tests pass.
+
+
+---
+
+## 2026-10-14 — Earnings Weight Management: Focused Tests VERIFIED
+
+**Type:** TEST
+**Status:** COMPLETED (RbacTest expectation still open)
+
+### Verified (user-run output)
+- `php artisan test tests/Feature/Earnings/UpdateEarningsActivityWeightTest.php`: 11 passed / 56 assertions / 0 failed.
+- Covered: authorized create with audit record; update preserving audit history; disabling a weight; denial without `earnings.weights.manage`; denial of an inactive actor with the permission; invalid points (negative, non-numeric, more than 4 decimals, above maximum, empty); zero points accepted; missing, too-short and whitespace-only reason; invalid activity key. Nothing is written on a rejected call.
+- Two test-harness defects were fixed along the way (unsupported `@dataProvider` annotation; duplicate permission rows from creating the manager repeatedly). No application code changed.
+
+### Open
+- `tests/Feature/RbacTest.php` "rbac seeder creates expected permissions" fails (65 found, 64 expected) because `earnings.weights.manage` was added to RbacSeeder. Stale test expectation, not an application bug. Not yet fixed.
+- Full suite not rerun since the earnings groundwork was added.
+- Pool source amount (order total vs approved quotation version) remains unresolved.
+
+### Next
+Fix the RbacTest expectation, then Step 2: contribution-recording action with focused tests.
+
+---
+
+## 2026-10-14 — Earnings Foundation: RbacTest Fixed; Combined Regression VERIFIED
+
+**Type:** TEST / FIX
+**Status:** COMPLETED / VERIFIED
+
+### Verified (user-run output)
+- `php artisan test tests/Feature/RbacTest.php tests/Feature/Earnings tests/Feature/DeliveryTest.php`: 31 passed / 206 assertions / 0 failed.
+- RbacTest expectation now includes `earnings.weights.manage` (65 permissions). Stale test fixed; seeder unchanged.
+- DeliveryTest (5 tests) green with pool-creation assertions.
+
+### Git state (user-run output)
+- Earnings work is UNCOMMITTED: Order.php, RbacSeeder.php, DeliveryTest.php, RbacTest.php modified; app/Actions/Earnings, 4 earnings models, 2 earnings migrations and tests/Feature/Earnings untracked.
+- Full suite not rerun since the earnings groundwork. No commit until the full suite is green.
+
+### Next
+Step 2: contribution-recording action (design presented for approval).
+
+### 2026-10-14 — Earnings Step 2: Contribution Recording — IMPLEMENTED (not yet verified)
+- Approved design: one contribution per (pool, staff, activity); points snapshot from an enabled weight; manual needs earnings.contributions.assign + reason (>= 10 chars) + active actor; workflow is system-recorded and idempotent; pending pools only; active staff only; activity_at not future and not after delivery; pool row locked.
+- Added: migration 2026_10_14_160000 (unique key), RecordOrderEarningsContribution action, permission earnings.contributions.assign (RbacSeeder, RbacTest expectation now 66).
+- Pending: migrate, RbacTest run, focused tests for the action (fixtures to follow DeliveryTest order setup).
+
+### 2026-10-14 — Earnings Step 2: Contribution Recording — Focused Tests VERIFIED
+- `php artisan test tests/Feature/Earnings/RecordOrderEarningsContributionTest.php`: 19 passed / 50 assertions / 0 failed.
+- `php artisan test tests/Feature/RbacTest.php`: 15 passed / 126 assertions (66 permissions incl. earnings.contributions.assign). RbacSeeder re-run locally.
+- Covered: manual and workflow recording; points snapshot unaffected by later weight changes; workflow idempotent; manual duplicate and manual-over-workflow rejected; denial without permission, without actor, inactive actor; inactive staff; missing/disabled weight; non-pending pool; future and post-delivery activity time; short/blank reason; missing source reference; unsupported source type (oversight reserved for Step 4). Nothing written on any rejection.
+- Dev DB migration state for 2026_10_14_160000 (unique key) not confirmed in output; check `php artisan migrate:status`.
+- Not done: derivation of workflow contributions from existing order records (Step 2B), oversight points, allocation, finalization, ledger. Full suite not rerun since the earnings groundwork; earnings work still uncommitted.
+
+### Next
+Run full suite, commit checkpoint; then Step 3 (pool source amount: order total vs approved quotation).

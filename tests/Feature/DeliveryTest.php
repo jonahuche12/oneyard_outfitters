@@ -220,6 +220,42 @@ class DeliveryTest extends TestCase
             'status' => Order::STATUS_DELIVERED,
         ]);
 
+// A completed delivery must create exactly one pending earnings pool.
+$earningsPool = \App\Models\OrderEarningsPool::query()
+    ->where('order_id', $order->id)
+    ->firstOrFail();
+
+$this->assertSame('pending', $earningsPool->status);
+$this->assertSame('5.00', $earningsPool->rate_percent);
+$expectedPoolAmount = number_format(
+    round((float) $order->fresh()->total * 0.05, 2),
+    2,
+    '.',
+    ''
+);
+$this->assertSame($expectedPoolAmount, $earningsPool->pool_amount);
+$this->assertSame(
+    $order->quotation_id,
+    $earningsPool->quotation_id
+);
+$this->assertSame(
+    $order->order_number,
+    $earningsPool->source_snapshot['order_number']
+);
+
+// Retrying pool creation must return the existing pool, not duplicate it.
+$retriedPool = app(\App\Actions\Earnings\CreateOrderEarningsPool::class)
+    ->execute($order->fresh());
+
+$this->assertSame($earningsPool->id, $retriedPool->id);
+$this->assertSame(
+    1,
+    \App\Models\OrderEarningsPool::query()
+        ->where('order_id', $order->id)
+        ->count()
+);
+
+
         $totalPaid = (float) $order->quotation
             ->payments()
             ->where('status', 'completed')

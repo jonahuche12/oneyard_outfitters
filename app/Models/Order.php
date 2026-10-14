@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+
+use App\Actions\Earnings\CreateOrderEarningsPool;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -142,5 +144,18 @@ class Order extends Model
             'currentAssignment',
             fn ($assignment) => $assignment->where('user_id', $user->id)
         );
+    }
+
+    protected static function booted(): void
+    {
+
+        static::updated(static function (Order $order): void {
+            if (
+                $order->wasChanged('status')
+                && $order->status === self::STATUS_DELIVERED
+            ) {
+                app(CreateOrderEarningsPool::class)->execute($order);
+            }
+        });
     }
 }

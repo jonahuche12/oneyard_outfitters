@@ -375,6 +375,17 @@ class RbacSeeder extends Seeder
                 'description' => 'Convert qualified leads into organization records.',
             ],
 
+            [
+                'name' => 'Manage Earnings Weights',
+                'slug' => 'earnings.weights.manage',
+                'description' => 'Create and update staff earnings activity weights with an audit reason.',
+            ],
+            [
+                'name' => 'Assign Earnings Contributions',
+                'slug' => 'earnings.contributions.assign',
+                'description' => 'Manually assign missing staff contributions to a pending earnings pool with a reason.',
+            ],
+
             /*
              * Product Specifications
              */
