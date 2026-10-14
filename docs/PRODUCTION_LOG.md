@@ -5416,3 +5416,24 @@ Step 2: contribution-recording action (design presented for approval).
 
 ### Next
 Run full suite, commit checkpoint; then Step 3 (pool source amount: order total vs approved quotation).
+
+### 2026-10-14 — Earnings Step 3: Pool Source Amount RESOLVED; Integer Rounding (pending test run)
+- Decision (user-confirmed): order.total cannot change after fulfilment. Basis for the pool is order.total, a snapshot of the accepted quotation copied at fulfilment (FulfillVerifiedQuotationPayment). QuotationPolicy allows quotation edits only in draft; a revision is a new quotation with its own order and pool. No quotation version field needed; quotation_id and quotation_number identify the version.
+- Change: CreateOrderEarningsPool computes the 5% pool in integer cents (intdiv($sourceCents * 5 + 50, 100)) instead of a float multiply. New tests/Feature/Earnings/CreateOrderEarningsPoolTest.php (5 tests).
+- Mismatch flag between order.total and quotation.total considered and dropped as unnecessary; the pool snapshot already stores both totals.
+- Pending: test results; full suite; checkpoint commit.
+
+### 2026-10-14 — Earnings Step 4: Allocation Calculation — IMPLEMENTED (not yet verified)
+- User-approved rules: staff sharing one activity split its points equally; super-admin oversight via one configured `management_oversight` weight, split equally among active super-admins (no oversight if weight missing/disabled or no active super-admin); largest-remainder cent rounding by staff member, ties to lowest user id; pool held if any contributor is inactive; pool held if no contributions (oversight alone does not qualify).
+- Added CalculateOrderEarningsAllocation: read-only, integer arithmetic (points x 10000, group sizes via LCM), returns verdict allocatable|held with reasons (no_contributions, inactive_contributors, zero_points) and per-staff amounts, weights and breakdown. Rejects finalized pools; throws instead of overflowing integers. Writes nothing.
+- Persisting `held` status, oversight contribution rows and ledger entries is deferred to Step 5 (finance finalization).
+- New tests/Feature/Earnings/CalculateOrderEarningsAllocationTest.php (18 tests). Pending run.
+- Still open from earlier: full suite and checkpoint commit (earnings work uncommitted).
+
+### 2026-10-14 — Earnings Step 4: Allocation Calculation — Focused Tests VERIFIED
+- `php artisan test tests/Feature/Earnings/CalculateOrderEarningsAllocationTest.php`: 18 passed / 54 assertions / 0 failed.
+- Covered: single contributor; proportional split with exact sum (3333.33 / 1666.67); equal split within a shared activity; accumulation across activities; oversight for super-admin; oversight split among active super-admins; inactive super-admin excluded; missing/disabled oversight weight; super-admin who also contributed aggregated once; held verdicts (no contributions, inactive contributor, zero points); lowest-user-id tie-break (4.77 then six at 4.76); sums equal pool across several amounts; zero-value pool; determinism and no writes; finalized pool rejected; held pool recalculable.
+- Full suite not rerun since the earnings groundwork; earnings work still uncommitted.
+
+### Next
+Full suite, checkpoint commit, then Step 5 design (finance finalization) for approval.

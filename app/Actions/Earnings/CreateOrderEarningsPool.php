@@ -42,11 +42,8 @@ class CreateOrderEarningsPool
                 );
             }
 
-            $poolCents = (int) round(
-                $sourceCents * 0.05,
-                0,
-                PHP_ROUND_HALF_UP
-            );
+            // 5% in integer arithmetic, rounded half up (no binary-float drift).
+            $poolCents = intdiv($sourceCents * 5 + 50, 100);
 
             $sourceAmount = number_format($sourceCents / 100, 2, '.', '');
             $poolAmount = number_format($poolCents / 100, 2, '.', '');
