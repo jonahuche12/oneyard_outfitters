@@ -167,6 +167,131 @@
         </div>
     @endif
 
+    {{-- Delivery confirmation and audit details --}}
+    @if ($offer->status === \App\Models\ProcurementOffer::STATUS_DELIVERED)
+        <div class="oy-card mt-6">
+            <div class="oy-card-header">
+                <h2 class="oy-card-title">Delivery Confirmation</h2>
+                <p class="oy-card-description">
+                    Recorded delivery details for this accepted offer.
+                </p>
+            </div>
+
+            <div class="oy-card-body">
+                <dl class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                    <div>
+                        <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                            Delivered Quantity
+                        </dt>
+                        <dd class="mt-1 text-sm font-medium text-slate-900">
+                            {{ number_format((float) $offer->delivered_quantity, 2) }}
+                            {{ $offer->procurement->unit }}
+                        </dd>
+                    </div>
+
+                    <div>
+                        <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                            Confirmed By
+                        </dt>
+                        <dd class="mt-1 text-sm font-medium text-slate-900">
+                            {{ $offer->deliveredBy?->name ?? 'Unknown user' }}
+                        </dd>
+                    </div>
+
+                    <div>
+                        <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                            Confirmed At
+                        </dt>
+                        <dd class="mt-1 text-sm font-medium text-slate-900">
+                            {{ $offer->delivered_at?->format('d M Y, g:i A') ?? 'Not recorded' }}
+                        </dd>
+                    </div>
+
+                    @if ($offer->delivery_notes)
+                        <div class="sm:col-span-2">
+                            <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                Delivery Notes
+                            </dt>
+                            <dd class="mt-1 whitespace-pre-line text-sm leading-6 text-slate-700">
+                                {{ $offer->delivery_notes }}
+                            </dd>
+                        </div>
+                    @endif
+                </dl>
+            </div>
+        </div>
+    @elseif ($offer->status === \App\Models\ProcurementOffer::STATUS_ACCEPTED)
+        @can('deliver', $offer)
+            <div class="oy-card mt-6">
+                <div class="oy-card-header">
+                    <h2 class="oy-card-title">Confirm Delivery</h2>
+                    <p class="oy-card-description">
+                        Record the quantity actually delivered. This action can only be completed once.
+                    </p>
+                </div>
+
+                <div class="oy-card-body">
+                    <form
+                        method="POST"
+                        action="{{ route('procurements.offers.deliver', $offer) }}"
+                        class="space-y-5"
+                    >
+                        @csrf
+
+                        <div>
+                            <label for="delivered_quantity" class="oy-form-label">
+                                Delivered Quantity <span class="oy-form-required">*</span>
+                            </label>
+                            <input
+                                id="delivered_quantity"
+                                name="delivered_quantity"
+                                type="number"
+                                min="0.01"
+                                max="{{ (float) $offer->quantity }}"
+                                step="0.01"
+                                required
+                                value="{{ old('delivered_quantity') }}"
+                                class="oy-input @error('delivered_quantity') is-invalid @enderror"
+                            >
+                            <p class="oy-form-help">
+                                Maximum accepted quantity:
+                                {{ number_format((float) $offer->quantity, 2) }}
+                                {{ $offer->procurement->unit }}.
+                            </p>
+                            @error('delivered_quantity')
+                                <p class="oy-error">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        <div>
+                            <label for="delivery_notes" class="oy-form-label">
+                                Delivery Notes
+                            </label>
+                            <textarea
+                                id="delivery_notes"
+                                name="delivery_notes"
+                                rows="3"
+                                maxlength="1000"
+                                class="oy-textarea @error('delivery_notes') is-invalid @enderror"
+                            >{{ old('delivery_notes') }}</textarea>
+                            @error('delivery_notes')
+                                <p class="oy-error">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        <p class="text-sm text-slate-600">
+                            Confirmation records delivery only. Commission is handled separately.
+                        </p>
+
+                        <button type="submit" class="oy-btn oy-btn-primary">
+                            Confirm Delivery
+                        </button>
+                    </form>
+                </div>
+            </div>
+        @endcan
+    @endif
+
     {{-- Procurement requirement --}}
     <div class="oy-card mt-6">
         <div class="oy-card-header">

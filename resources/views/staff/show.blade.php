@@ -41,6 +41,27 @@
         </div>
 
 
+        @if (! $staff->is_active && $staff->password_set_at === null)
+            @if (auth()->user()->roles()->where('slug', 'super-admin')->exists())
+                <form
+                    method="POST"
+                    action="{{ route('staff.resend-onboarding', $staff) }}"
+                    class="rounded-xl border border-amber-200 bg-amber-50 p-4"
+                >
+                    @csrf
+                    <p class="text-sm text-amber-900">
+                        This staff member has not set a password yet.
+                    </p>
+                    <button
+                        type="submit"
+                        class="mt-3 inline-flex items-center justify-center rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800"
+                    >
+                        Resend Password Setup
+                    </button>
+                </form>
+            @endif
+        @endif
+
         {{-- Feedback --}}
         @if (session('success'))
             <div class="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">

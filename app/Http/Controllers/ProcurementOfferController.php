@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Http\Request;
+
 use App\Http\Requests\Procurement\StoreProcurementOfferRequest;
 use App\Http\Requests\Procurement\UpdateProcurementOfferRequest;
 use App\Http\Requests\WithdrawProcurementOfferRequest;
@@ -212,6 +214,62 @@ class ProcurementOfferController extends Controller
         return redirect()
             ->route('procurements.show', $offer->procurement_id)
             ->with('success', $message);
+    }
+
+    public function deliver(
+        Request $request,
+        ProcurementOffer $offer
+    ): RedirectResponse {
+        Gate::authorize('deliver', $offer);
+
+        $validated = $request->validate([
+            'delivered_quantity' => [
+                'required',
+                'numeric',
+                'min:0.01',
+                'max:' . (float) $offer->quantity,
+            ],
+            'delivery_notes' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        DB::transaction(function () use (
+            $request,
+            $offer,
+            $validated
+        ): void {
+            $selectedOffer = ProcurementOffer::query()
+                ->whereKey($offer->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            abort_unless(
+                $selectedOffer->status === ProcurementOffer::STATUS_ACCEPTED,
+                422,
+                'Only an accepted offer can be marked delivered.'
+            );
+
+            abort_unless(
+                (float) $validated['delivered_quantity']
+                    <= (float) $selectedOffer->quantity,
+                422,
+                'Delivered quantity cannot exceed the accepted offer quantity.'
+            );
+
+            $selectedOffer->update([
+                'status' => ProcurementOffer::STATUS_DELIVERED,
+                'delivered_quantity' => $validated['delivered_quantity'],
+                'delivered_by' => $request->user()->id,
+                'delivered_at' => now(),
+                'delivery_notes' => $validated['delivery_notes'] ?? null,
+            ]);
+        });
+
+        return redirect()
+            ->route('procurements.show', $offer->procurement_id)
+            ->with(
+                'success',
+                'Delivery was recorded successfully. Commission has not been credited.'
+            );
     }
 
     public function reject(ProcurementOffer $offer): RedirectResponse

@@ -1,9 +1,14 @@
 <?php
 
+use App\Jobs\SendStaffOnboardingWhatsApp;
+use App\Mail\StaffOnboardingInvitation;
 use App\Models\Permission;
 use App\Models\Role;
+use App\Models\StaffOnboardingToken;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\Mail;
 
 uses(RefreshDatabase::class);
 
@@ -58,7 +63,10 @@ it('denies staff access without users.view', function () {
     $response->assertForbidden();
 });
 
-it('allows authorized staff to create another staff account', function () {
+it('creates an inactive staff account and queues onboarding notifications', function () {
+    Mail::fake();
+    Bus::fake();
+
     $role = staffRoleWithPermissions([
         'users.create',
         'users.assign-roles',
@@ -81,8 +89,7 @@ it('allows authorized staff to create another staff account', function () {
         ->post(route('staff.store'), [
             'name' => 'Jane Staff',
             'email' => 'jane@oneyard.test',
-            'password' => 'password123',
-            'password_confirmation' => 'password123',
+            'phone' => '+2348012345678',
             'roles' => [$staffRole->id],
         ]);
 
@@ -91,10 +98,19 @@ it('allows authorized staff to create another staff account', function () {
     $created = User::where('email', 'jane@oneyard.test')->first();
 
     expect($created)->not->toBeNull()
-        ->and($created->is_active)->toBeTrue();
+        ->and($created->is_active)->toBeFalse()
+        ->and($created->password_set_at)->toBeNull()
+        ->and($created->email_verified_at)->toBeNull()
+        ->and($created->phone)->toBe('+2348012345678');
 
     expect($created->roles->pluck('id')->all())
         ->toContain($staffRole->id);
+
+    expect(StaffOnboardingToken::where('user_id', $created->id)->exists())
+        ->toBeTrue();
+
+    Mail::assertQueued(StaffOnboardingInvitation::class);
+    Bus::assertDispatched(SendStaffOnboardingWhatsApp::class);
 });
 
 it('prevents unauthorized users from creating staff', function () {
@@ -109,8 +125,7 @@ it('prevents unauthorized users from creating staff', function () {
         ->post(route('staff.store'), [
             'name' => 'Unauthorized Staff',
             'email' => 'unauthorized@oneyard.test',
-            'password' => 'password123',
-            'password_confirmation' => 'password123',
+            'phone' => '+2348012345678',
             'roles' => [$staffRole->id],
         ]);
 
@@ -380,7 +395,7 @@ it('validates required staff creation fields', function () {
     $response->assertSessionHasErrors([
         'name',
         'email',
-        'password',
+        'phone',
     ]);
 });
 

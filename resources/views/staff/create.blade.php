@@ -143,81 +143,23 @@
 
             {{-- Account Security --}}
             <section class="border-t border-slate-200 p-6 sm:p-8">
-
-                <div class="mb-6">
+                <div class="mb-4">
                     <h2 class="text-base font-semibold text-slate-900">
-                        Account Security
+                        Account Setup
                     </h2>
-
-                    <p class="mt-1 text-sm text-slate-500">
-                        Set the initial password for this staff account.
+                    <p class="mt-1 text-sm text-slate-600">
+                        The staff member will create their own password using a secure,
+                        one-use link sent to their email and WhatsApp number.
                     </p>
                 </div>
 
-                <div class="grid gap-6 sm:grid-cols-2">
-
-                    {{-- Password --}}
-                    <div>
-                        <label
-                            for="password"
-                            class="mb-2 block text-sm font-medium text-slate-700"
-                        >
-                            Password
-                        </label>
-
-                        <input
-                            id="password"
-                            type="password"
-                            name="password"
-                            autocomplete="new-password"
-                            required
-                            class="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
-                            placeholder="Enter a secure password"
-                        >
-
-                        @error('password')
-                            <p class="mt-2 text-sm text-red-600">
-                                {{ $message }}
-                            </p>
-                        @enderror
-                    </div>
-
-
-                    {{-- Confirm Password --}}
-                    <div>
-                        <label
-                            for="password_confirmation"
-                            class="mb-2 block text-sm font-medium text-slate-700"
-                        >
-                            Confirm password
-                        </label>
-
-                        <input
-                            id="password_confirmation"
-                            type="password"
-                            name="password_confirmation"
-                            autocomplete="new-password"
-                            required
-                            class="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
-                            placeholder="Confirm the password"
-                        >
-
-                        @error('password_confirmation')
-                            <p class="mt-2 text-sm text-red-600">
-                                {{ $message }}
-                            </p>
-                        @enderror
-                    </div>
-
+                <div class="rounded-lg bg-slate-50 p-4">
+                    <ul class="list-disc space-y-2 pl-5 text-sm text-slate-600">
+                        <li>The setup link expires after 24 hours.</li>
+                        <li>A separate email verification link is sent by email.</li>
+                        <li>The account remains inactive until password setup and email verification are complete.</li>
+                    </ul>
                 </div>
-
-                <div class="mt-4 rounded-lg bg-slate-50 p-4">
-                    <p class="text-xs leading-5 text-slate-600">
-                        Use a strong password that is difficult to guess.
-                        The staff member will use this account to sign in to Oneyard.
-                    </p>
-                </div>
-
             </section>
 
 

@@ -6,11 +6,21 @@ use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
 class StaffPhoneTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        Mail::fake();
+        Bus::fake();
+    }
 
     private function manager(): User
     {
@@ -40,8 +50,7 @@ class StaffPhoneTest extends TestCase
         return array_merge([
             'name' => 'New Staff',
             'email' => 'new.staff@example.com',
-            'password' => 'password123',
-            'password_confirmation' => 'password123',
+            'phone' => '+2348012345678',
         ], $overrides);
     }
 
@@ -57,15 +66,17 @@ class StaffPhoneTest extends TestCase
         ]);
     }
 
-    public function test_staff_can_be_created_without_a_phone_number(): void
+    public function test_staff_creation_requires_a_phone_number(): void
     {
-        $this->actingAs($this->manager())
-            ->post(route('staff.store'), $this->payload())
-            ->assertSessionHasNoErrors();
+        $payload = $this->payload();
+        unset($payload['phone']);
 
-        $this->assertDatabaseHas('users', [
+        $this->actingAs($this->manager())
+            ->post(route('staff.store'), $payload)
+            ->assertSessionHasErrors('phone');
+
+        $this->assertDatabaseMissing('users', [
             'email' => 'new.staff@example.com',
-            'phone' => null,
         ]);
     }
 

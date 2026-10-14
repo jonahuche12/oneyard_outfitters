@@ -14,6 +14,7 @@ class ProcurementOffer extends Model
     public const STATUS_ACCEPTED = 'accepted';
     public const STATUS_REJECTED = 'rejected';
     public const STATUS_WITHDRAWN = 'withdrawn';
+    public const STATUS_DELIVERED = 'delivered';
 
     protected $fillable = [
         'procurement_id',
@@ -25,6 +26,10 @@ class ProcurementOffer extends Model
         'status',
         'withdrawal_reason',
         'submitted_at',
+        'delivered_quantity',
+        'delivered_by',
+        'delivered_at',
+        'delivery_notes',
     ];
 
     protected function casts(): array
@@ -34,6 +39,8 @@ class ProcurementOffer extends Model
             'unit_price' => 'decimal:2',
             'total_price' => 'decimal:2',
             'submitted_at' => 'datetime',
+            'delivered_quantity' => 'decimal:2',
+            'delivered_at' => 'datetime',
         ];
     }
 
@@ -45,5 +52,10 @@ class ProcurementOffer extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function deliveredBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'delivered_by');
     }
 }

@@ -9,13 +9,14 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <title>{{ $title ?? 'Dashboard' }} — Oneyard Outfitters</title>
+    <title>@yield('title', $title ?? 'Dashboard') — Oneyard Outfitters</title>
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 
 <body class="min-h-screen bg-slate-100 text-slate-900">
 
+@auth
 <div class="flex min-h-screen">
 
     {{-- Desktop Sidebar --}}
@@ -477,6 +478,36 @@
     </div>
 
 </div>
+
+
+@else
+    {{-- Guest Authentication Shell --}}
+    <div class="flex min-h-screen flex-col bg-slate-100">
+        <header class="border-b border-slate-200 bg-white">
+            <div class="mx-auto flex min-h-[88px] max-w-6xl items-center px-5 py-4 sm:px-8">
+                <a href="{{ route('login') }}"
+                   class="inline-flex items-center rounded-xl px-2 py-1 transition hover:bg-slate-50"
+                   aria-label="Oneyard Outfitters sign in">
+                    <img
+                        src="{{ asset('images/oneyard/oneyard_logo.png') }}"
+                        alt="Oneyard Outfitters"
+                        class="h-12 w-auto max-w-[190px] object-contain"
+                    >
+                </a>
+            </div>
+        </header>
+
+        <main class="flex flex-1 items-start justify-center px-4 py-10 sm:items-center sm:px-6 sm:py-14">
+            <div class="w-full max-w-md">
+                @yield('content')
+            </div>
+        </main>
+
+        <footer class="px-4 pb-6 text-center text-xs text-slate-500">
+            Oneyard Outfitters · Staff account access
+        </footer>
+    </div>
+@endauth
 
 </body>
 </html>

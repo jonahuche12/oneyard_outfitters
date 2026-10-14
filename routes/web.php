@@ -15,6 +15,7 @@ use App\Http\Controllers\ProductSpecificationArtifactController;
 use App\Http\Controllers\ProcurementController;
 use App\Http\Controllers\ProcurementOfferController;
 use App\Http\Controllers\StaffController;
+use App\Http\Controllers\StaffOnboardingController;
 use App\Http\Controllers\QualityControlController;
 use App\Http\Controllers\PublicContactController;
 use App\Http\Controllers\LeadController;
@@ -32,6 +33,13 @@ Route::post(
 )->name('contact.store');
 
 
+Route::get('/staff/onboarding/{token}', [StaffOnboardingController::class, 'show'])
+    ->name('staff.onboarding.show');
+
+Route::post('/staff/onboarding/{token}', [StaffOnboardingController::class, 'store'])
+    ->middleware('throttle:6,1')
+    ->name('staff.onboarding.store');
+
 Route::middleware(['auth', 'active'])->group(function () {
     Route::view('/dashboard', 'dashboard')->name('dashboard');
 
@@ -41,6 +49,9 @@ Route::middleware(['auth', 'active'])->group(function () {
         ->parameters([
             'staff' => 'user',
         ]);
+
+    Route::post('/staff/{user}/resend-onboarding', [StaffController::class, 'resendOnboarding'])
+        ->name('staff.resend-onboarding');
 
     Route::patch('/staff/{user}/activate', [StaffController::class, 'activate'])
         ->name('staff.activate');
@@ -235,6 +246,11 @@ Route::middleware(['auth', 'active'])->group(function () {
         '/procurement-offers/{offer}/reject',
         [ProcurementOfferController::class, 'reject']
     )->name('procurements.offers.reject');
+
+    Route::post(
+        '/procurement-offers/{offer}/deliver',
+        [ProcurementOfferController::class, 'deliver']
+    )->name('procurements.offers.deliver');
 
 Route::resource('procurements', ProcurementController::class)
         ->except(['destroy']);

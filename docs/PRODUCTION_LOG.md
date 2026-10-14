@@ -4997,3 +4997,223 @@ BLOCKERS: Meta WhatsApp template approval (procurement live send and any new Wha
 
 ### Outstanding
 - Live WhatsApp delivery and Meta template approval have not been verified.
+
+---
+
+## 2026-10-14 — Staff Password Reset: INVESTIGATED → IMPLEMENTATION PLANNED
+
+### Stage
+**INVESTIGATED — IMPLEMENTATION NOT YET STARTED**
+
+### Objective
+
+Implement a secure staff password-reset workflow using the existing Laravel Fortify authentication infrastructure. Staff members who forget their passwords must be able to request a reset link by email, set a new password, and subsequently log in with the new credentials.
+
+### Confirmed Findings
+
+- Laravel Fortify is already configured to use the `users` password broker.
+- Fortify's password-reset feature is enabled.
+- The login view already contains a conditional `Forgot password?` link.
+- The following password-reset routes already exist:
+  - `GET forgot-password` — `password.request`
+  - `POST forgot-password` — `password.email`
+  - `GET reset-password/{token}` — `password.reset`
+  - `POST reset-password` — `password.update`
+- `config/auth.php` currently sets the password-reset token expiry to **60 minutes**; the required expiry is **10 minutes**.
+- Fortify's installed `PasswordResetLinkController` delegates reset-link requests to Laravel's password broker and chooses different success and failure response contracts according to the broker result.
+- `PasswordValidationRules` already requires a password, applies Laravel's default password rule, and requires confirmation.
+- The initial search did not identify password-reset view files under `resources/views` matching `password` or `reset`. The actual view resolution and available Fortify response implementations still need to be checked.
+- No application code has been changed as part of this investigation.
+
+### Required Behaviour
+
+1. Staff can open the password-reset request page from the login screen.
+2. The request form accepts an email address.
+3. A reset email is sent only when the email belongs to an eligible, registered staff account in the `users` table.
+4. An unregistered email must not receive a reset email or generate a usable reset token.
+5. The public response should not disclose whether an email address is registered.
+6. Reset tokens must expire after **10 minutes** and must not be reusable after a successful reset.
+7. The reset page must require a new password and matching confirmation.
+8. Inactive staff accounts must not be able to use password reset to bypass the application's account-activation restrictions.
+9. Existing Fortify authentication and password-reset mechanisms should be reused instead of introducing a separate token implementation.
+
+### Implementation Plan
+
+1. **Inspect the existing implementation**
+   - Review Fortify's success/failure response classes and view-response bindings.
+   - Check `FortifyServiceProvider`, `User`, `ResetUserPassword`, existing authentication views, and current test conventions.
+   - Determine how inactive users are handled by the password broker and reset flow.
+
+2. **Implement the request and response behaviour**
+   - Preserve the existing Fortify routes and secure password-broker mechanism.
+   - Configure a 10-minute token lifetime.
+   - Provide the necessary request and reset views if they are missing.
+   - Return a consistent public-facing response for registered and unregistered email addresses while sending mail only to eligible registered accounts.
+   - Ensure inactive accounts cannot reset their passwords.
+
+3. **Verify password replacement**
+   - Require a valid reset token, a new password, and matching password confirmation.
+   - Confirm that a successful reset updates the stored password and permits normal login.
+   - Confirm that expired, invalid, and previously used tokens cannot reset a password.
+
+4. **Add focused automated tests**
+   - Registered email: reset notification is sent.
+   - Unregistered email: no reset notification is sent.
+   - Registered and unregistered requests: equivalent public-facing response.
+   - Inactive account: reset is denied and no reset notification is sent.
+   - Token expiry is configured for 10 minutes.
+   - Valid token and matching password confirmation: password changes successfully.
+   - Missing or mismatched confirmation, invalid token, expired token, and reused token: reset is rejected.
+   - Existing authentication tests continue to pass.
+
+5. **Review and verify**
+   - Run the focused password-reset tests.
+   - Run the relevant authentication tests, then the full test suite.
+   - Inspect the final diff and verify the request and reset flows in the browser.
+   - Record actual test results and any remaining limitations before claiming the feature is verified.
+
+### Current Status and Next Action
+
+**No implementation or test results are claimed at this stage.**
+
+Next action: complete the targeted inspection of Fortify's response contracts, view bindings, user activation rules, and existing reset action. Then implement one logical unit at a time, test it, review the diff, and update this log with verified results.
+
+---
+
+## 2026-10-14 — Staff Wallet and Weighted Earnings Design — IN PROGRESS
+
+### Status
+DESIGN IN PROGRESS — NOT APPROVED FOR IMPLEMENTATION.
+
+No wallet or earnings code, migrations, models, controllers, routes, or UI should be implemented until the complete design has been reviewed and explicitly approved.
+
+### 1. Objective
+Design an auditable staff wallet and earnings system. Each staff member will have a wallet where earnings from eligible business activities are recorded.
+
+Only active staff may earn. Eligibility requires the staff member to have been active when performing the qualifying work and to remain active when the earnings pool is finalized.
+
+### 2. Earnings Pool
+- Trigger: successful delivery of an order.
+- Pool rate: 5% of the final approved quotation amount applicable to the delivered order.
+- Approved quotation revisions must be accounted for.
+- The quotation version and exact amount used must be retained with the finalized calculation.
+- The 5% is the total staff pool for the order, not 5% per staff member.
+- The pool is allocated using weighted contribution points, not profit.
+- Example: a final approved quotation of ₦500,000 produces a pool of ₦25,000.
+
+### 3. Order Participation
+- Use existing order workflow assignments and records automatically wherever possible.
+- Authorized users may manually assign missing contributions.
+- Manual assignments must record who made the assignment, when it was made, the affected activity and staff member, and the reason.
+- Eligible activities may include order coordination, procurement, production, quality control, delivery, finance/payment reconciliation, and management oversight.
+- A staff member who performs multiple qualifying activities may accumulate points across those activities.
+- The rules for multiple staff performing the same activity still need final approval.
+
+### 4. Super-Admin Oversight
+- The super-admin receives management-oversight points automatically on every qualifying delivered order, as explicitly requested.
+- This automatic oversight allocation is an exception to the ordinary requirement for an operational activity assignment.
+- The number of oversight points and treatment of multiple super-admin users remain to be finalized.
+
+### 5. Draft Point Schedule — NOT APPROVED
+The following values are proposals only:
+- Order coordination and follow-up: 3 points.
+- Procurement and supplier coordination: 2 points.
+- Production execution: 2 points.
+- Quality inspection and approval: 1 point.
+- Delivery and confirmation: 2 points.
+- Finance/payment reconciliation, when applicable: 1 point.
+- Super-admin management oversight: 1 point per qualifying delivered order.
+
+Proposed calculation:
+- Pool = final approved quotation amount × 5%.
+- Staff share = pool × (staff member's eligible points ÷ total eligible points).
+- If several staff members perform the same activity, the current recommendation is to divide that activity's baseline points among them rather than multiply the activity's total weight.
+- Rounding must be deterministic, and the sum of allocations must equal the pool exactly.
+
+The complete activity list, weights, point-splitting rules and eligibility conditions remain subject to review and approval.
+
+### 6. Finance Review and Finalization
+- Delivery triggers preparation of the earnings pool.
+- The system prepares a draft from the quotation and workflow records.
+- Participant eligibility and active-status requirements are validated.
+- An authorized finance user independently reviews and finalizes the pool.
+- A second approver is NOT mandatory under the current design decision.
+- Finance may correct draft participants or allocations before finalization, subject to permissions and audit logging.
+- Finalization must preserve the quotation version, pool amount, participants, points, calculated shares, reviewer identity and timestamp.
+- Finalized entries must not be silently edited or deleted. Corrections must use auditable adjustments or reversals.
+
+### 7. Proposed Wallet and Ledger
+The wallet should be backed by an auditable transaction ledger rather than a freely editable balance.
+
+Proposed transaction categories:
+- Pending earnings.
+- Finalized/available earnings.
+- Adjustments and reversals linked to original entries.
+- Payouts recorded separately from earnings.
+
+Withdrawal rules, payout approval, outstanding-payment treatment, reversal triggers and reconciliation procedures remain undecided.
+
+### 8. Proposed Permissions and Safeguards
+- Staff can view their own wallet and earnings history.
+- Organization-wide earnings visibility is restricted to authorized roles.
+- Only authorized users can manually assign missing contributions.
+- Only authorized finance users can review and finalize pools.
+- Financial changes must preserve an audit trail.
+- Duplicate pool generation for the same qualifying order must be prevented.
+- Finalized calculations must be reproducible from retained source records and the applicable policy version.
+- The final permissions must use Oneyard's existing authorization and policy conventions.
+
+### 9. Decisions Confirmed by the User
+1. Use weighted points to allocate the staff pool.
+2. The total pool is 5% of the final approved quotation amount applicable to the delivered order.
+3. Use existing workflow records automatically; permit authorized manual assignments for missing contributions.
+4. Super-admin receives automatic management-oversight points on every qualifying delivered order.
+5. Staff must be active when performing the work and when the pool is finalized.
+6. Delivery triggers the process; an authorized finance user reviews and finalizes the pool.
+7. An authorized finance user may finalize independently; no mandatory second approver.
+8. Use the final approved quotation amount, including approved revisions, and retain the quotation version used.
+9. The complete design must be approved before implementation.
+
+### 10. Outstanding Design Decisions
+- Approve the activity list and baseline point weights.
+- Decide whether weights are fixed by a versioned policy or editable during individual finance reviews. Current recommendation: versioned policy; no ad hoc changes to weights during review.
+- Finalize allocation when multiple staff perform the same activity.
+- Clarify super-admin oversight points when more than one super-admin exists.
+- Define whether and how finance/payment reconciliation qualifies for points.
+- Define handling of staff deactivation between work completion and pool finalization.
+- Define treatment of unpaid balances, partial payments, refunds, cancellations, disputes and post-delivery changes.
+- Define pending versus available balances and when finalized earnings can be withdrawn or paid.
+- Define reversal, adjustment, payout, rounding and reconciliation rules.
+- Define authorization boundaries, audit requirements, acceptance criteria and test cases.
+- Decide whether any finance review changes require additional review in exceptional cases.
+
+### 11. Exact Resume Point
+Continue the DESIGN phase. The next decision is whether contribution weights should be fixed in a versioned policy or editable during finance review. Recommendation: fixed, versioned policy, with authorized policy changes taking effect prospectively and historical calculations retaining their original version.
+
+After that, resolve the remaining allocation, eligibility, payment, reversal and payout rules. Produce a complete design specification and acceptance criteria for explicit user approval.
+
+Do not implement until the full design is approved.
+
+
+---
+
+## 2026-10-14 — Procurement Offer Delivery Confirmation
+
+### Status
+- **IMPLEMENTED:** Accepted procurement offers can be marked delivered once.
+- **AUTOMATED TESTS PASSED:** Full suite reported 454 passed, 1,604 assertions.
+- **BROWSER VERIFIED:** Delivery confirmation workflow reported working.
+- **LOCAL MIGRATION APPLIED:** Delivery audit columns confirmed in the local database.
+
+### Delivered Functionality
+- Records actual delivered quantity, confirming staff member, timestamp, and optional delivery notes.
+- Requires `procurement.manage` and the appropriate administrator or assigned coordinator authorization.
+- Rejects quantities above the accepted offer quantity.
+- Prevents an offer from being confirmed delivered more than once.
+- Retains delivery confirmation details for audit and display.
+
+### Scope Boundary
+Delivery confirmation does not credit commission or modify a staff wallet. Commission calculation and crediting remain deferred until the wallet design is completed and approved.
+
+### Next Step
+Review and commit this feature independently, preserving the unrelated staff onboarding, password-reset, and wallet-design work.

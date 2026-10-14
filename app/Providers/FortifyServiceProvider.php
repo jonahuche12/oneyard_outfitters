@@ -15,6 +15,11 @@ use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 use Laravel\Fortify\Actions\RedirectIfTwoFactorAuthenticatable;
 use Laravel\Fortify\Contracts\LoginViewResponse;
+use App\Http\Responses\GenericPasswordResetLinkResponse;
+use Laravel\Fortify\Contracts\FailedPasswordResetLinkRequestResponse;
+use Laravel\Fortify\Contracts\RequestPasswordResetLinkViewResponse;
+use Laravel\Fortify\Contracts\ResetPasswordViewResponse;
+use Laravel\Fortify\Contracts\SuccessfulPasswordResetLinkRequestResponse;
 use Laravel\Fortify\Http\Responses\SimpleViewResponse;
 use Laravel\Fortify\Fortify;
 
@@ -27,6 +32,30 @@ class FortifyServiceProvider extends ServiceProvider
                 return view('auth.login');
             });
         });
+
+        $this->app->singleton(
+            RequestPasswordResetLinkViewResponse::class,
+            fn () => new SimpleViewResponse(fn () => view('auth.forgot-password'))
+        );
+
+        $this->app->singleton(
+            ResetPasswordViewResponse::class,
+            fn () => new SimpleViewResponse(fn () => view('auth.reset-password'))
+        );
+
+        $this->app->singleton(
+            GenericPasswordResetLinkResponse::class
+        );
+
+        $this->app->singleton(
+            SuccessfulPasswordResetLinkRequestResponse::class,
+            fn ($app) => $app->make(GenericPasswordResetLinkResponse::class)
+        );
+
+        $this->app->singleton(
+            FailedPasswordResetLinkRequestResponse::class,
+            fn ($app) => $app->make(GenericPasswordResetLinkResponse::class)
+        );
     }
 
     public function boot(): void

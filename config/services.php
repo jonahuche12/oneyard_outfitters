@@ -40,6 +40,10 @@ return [
                 'WHATSAPP_TEMPLATE_QUOTATION_SENT',
                 'quotation_sent_v1'
             ),
+            'staff_onboarding' => env(
+                'WHATSAPP_TEMPLATE_STAFF_ONBOARDING',
+                'staff_onboarding_v2'
+            ),
         ],
     ],
 

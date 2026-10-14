@@ -1659,4 +1659,139 @@ class ProcurementOfferTest extends TestCase
         ]);
     }
 
+
+
+    public function test_admin_can_confirm_delivery_for_an_accepted_offer(): void
+    {
+        $admin = $this->userWithRole('admin', ['procurement.manage']);
+        $staff = User::factory()->create();
+        $procurement = $this->procurement();
+
+        $offer = ProcurementOffer::create([
+            'procurement_id' => $procurement->id,
+            'user_id' => $staff->id,
+            'quantity' => 80,
+            'unit_price' => 3200,
+            'total_price' => 256000,
+            'status' => ProcurementOffer::STATUS_ACCEPTED,
+            'submitted_at' => now(),
+        ]);
+
+        $response = $this->actingAs($admin)->post(
+            route('procurements.offers.deliver', $offer),
+            [
+                'delivered_quantity' => 75,
+                'delivery_notes' => 'Delivery checked and received.',
+            ]
+        );
+
+        $response->assertRedirect(route('procurements.show', $procurement));
+
+        $this->assertDatabaseHas('procurement_offers', [
+            'id' => $offer->id,
+            'user_id' => $staff->id,
+            'status' => ProcurementOffer::STATUS_DELIVERED,
+            'delivered_quantity' => '75.00',
+            'delivered_by' => $admin->id,
+            'delivery_notes' => 'Delivery checked and received.',
+        ]);
+
+        $this->assertNotNull(
+            $offer->fresh()->delivered_at,
+            'Delivery confirmation must record its timestamp.'
+        );
+    }
+
+    public function test_user_without_procurement_manage_cannot_confirm_delivery(): void
+    {
+        $user = $this->userWithRole('staff', ['procurement.view']);
+        $procurement = $this->procurement();
+
+        $offer = ProcurementOffer::create([
+            'procurement_id' => $procurement->id,
+            'user_id' => User::factory()->create()->id,
+            'quantity' => 80,
+            'unit_price' => 3200,
+            'total_price' => 256000,
+            'status' => ProcurementOffer::STATUS_ACCEPTED,
+            'submitted_at' => now(),
+        ]);
+
+        $this->actingAs($user)
+            ->post(route('procurements.offers.deliver', $offer), [
+                'delivered_quantity' => 75,
+            ])
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('procurement_offers', [
+            'id' => $offer->id,
+            'status' => ProcurementOffer::STATUS_ACCEPTED,
+            'delivered_by' => null,
+            'delivered_at' => null,
+        ]);
+    }
+
+    public function test_delivery_quantity_cannot_exceed_offer_quantity(): void
+    {
+        $admin = $this->userWithRole('admin', ['procurement.manage']);
+        $procurement = $this->procurement();
+
+        $offer = ProcurementOffer::create([
+            'procurement_id' => $procurement->id,
+            'user_id' => User::factory()->create()->id,
+            'quantity' => 80,
+            'unit_price' => 3200,
+            'total_price' => 256000,
+            'status' => ProcurementOffer::STATUS_ACCEPTED,
+            'submitted_at' => now(),
+        ]);
+
+        $this->actingAs($admin)
+            ->from(route('procurements.offers.show', $offer))
+            ->post(route('procurements.offers.deliver', $offer), [
+                'delivered_quantity' => 81,
+            ])
+            ->assertSessionHasErrors('delivered_quantity');
+
+        $this->assertDatabaseHas('procurement_offers', [
+            'id' => $offer->id,
+            'status' => ProcurementOffer::STATUS_ACCEPTED,
+            'delivered_by' => null,
+            'delivered_at' => null,
+        ]);
+    }
+
+    public function test_an_offer_cannot_be_marked_delivered_twice(): void
+    {
+        $admin = $this->userWithRole('admin', ['procurement.manage']);
+        $procurement = $this->procurement();
+
+        $offer = ProcurementOffer::create([
+            'procurement_id' => $procurement->id,
+            'user_id' => User::factory()->create()->id,
+            'quantity' => 80,
+            'unit_price' => 3200,
+            'total_price' => 256000,
+            'status' => ProcurementOffer::STATUS_ACCEPTED,
+            'submitted_at' => now(),
+        ]);
+
+        $this->actingAs($admin)->post(
+            route('procurements.offers.deliver', $offer),
+            ['delivered_quantity' => 75]
+        )->assertRedirect(route('procurements.show', $procurement));
+
+        $this->actingAs($admin)
+            ->post(route('procurements.offers.deliver', $offer), [
+                'delivered_quantity' => 75,
+            ])
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('procurement_offers', [
+            'id' => $offer->id,
+            'status' => ProcurementOffer::STATUS_DELIVERED,
+            'delivered_quantity' => '75.00',
+        ]);
+    }
+
 }

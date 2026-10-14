@@ -21,6 +21,12 @@ class ResetUserPassword implements ResetsUserPasswords
      */
     public function reset(User $user, array $input): void
     {
+        if (! $user->is_active) {
+            throw ValidationException::withMessages([
+                'email' => 'This password reset request is invalid or expired.',
+            ]);
+        }
+
         Validator::make($input, [
             'password' => $this->passwordRules(),
         ])->validate();

@@ -3,6 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\Staff\StoreStaffRequest;
+use App\Jobs\SendStaffOnboardingWhatsApp;
+use App\Mail\StaffOnboardingInvitation;
+use App\Models\StaffOnboardingToken;
 use App\Http\Requests\Staff\UpdateStaffRequest;
 use App\Models\Role;
 use App\Models\User;
@@ -11,6 +14,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class StaffController extends Controller
@@ -56,31 +62,79 @@ class StaffController extends Controller
     public function store(StoreStaffRequest $request): RedirectResponse
     {
         $validated = $request->validated();
-    
+
         Gate::authorize('create', User::class);
-    
-        $staff = DB::transaction(function () use ($validated) {
-            $user = User::create([
-                'name' => $validated['name'],
-                'email' => $validated['email'],
-                'phone' => $validated['phone'] ?? null,
-                'password' => $validated['password'],
-                'is_active' => true,
-            ]);
-    
-            if (
-                auth()->user()->hasPermission('users.assign-roles')
-                && ! empty($validated['roles'])
-            ) {
-                $user->roles()->sync($validated['roles']);
+
+        $rawToken = Str::random(64);
+
+        [$staff, $setupUrl] = DB::transaction(
+            function () use ($validated, $rawToken) {
+                $user = User::create([
+                    'name' => $validated['name'],
+                    'email' => $validated['email'],
+                    'phone' => $validated['phone'],
+                    'password' => Str::random(64),
+                    'password_set_at' => null,
+                    'email_verified_at' => null,
+                    'is_active' => false,
+                ]);
+
+                if (
+                    auth()->user()->hasPermission('users.assign-roles')
+                    && ! empty($validated['roles'])
+                ) {
+                    $user->roles()->sync($validated['roles']);
+                }
+
+                StaffOnboardingToken::create([
+                    'user_id' => $user->id,
+                    'email' => $user->email,
+                    'token_hash' => hash('sha256', $rawToken),
+                    'expires_at' => now()->addHours(24),
+                ]);
+
+                $setupUrl = route('staff.onboarding.show', [
+                    'token' => $rawToken,
+                ]);
+
+                return [$user, $setupUrl];
             }
-    
-            return $user;
-        });
-    
+        );
+
+        try {
+            Mail::to($staff->email)->queue(
+                new StaffOnboardingInvitation(
+                    $staff,
+                    $setupUrl,
+                )
+            );
+        } catch (\Throwable $exception) {
+            Log::error('Could not queue staff onboarding email.', [
+                'staff_id' => $staff->id,
+                'exception' => $exception->getMessage(),
+            ]);
+        }
+
+        try {
+            SendStaffOnboardingWhatsApp::dispatch(
+                $staff->phone,
+                $staff->name,
+                $setupUrl,
+                $staff->id,
+            )->afterCommit();
+        } catch (\Throwable $exception) {
+            Log::error('Could not queue staff onboarding WhatsApp.', [
+                'staff_id' => $staff->id,
+                'exception' => $exception->getMessage(),
+            ]);
+        }
+
         return redirect()
             ->route('staff.show', $staff)
-            ->with('success', 'Staff account created successfully.');
+            ->with(
+                'success',
+                'Staff account created inactive. A password setup link has been sent; the account activates when the password is set.'
+            );
     }
 
     public function show(User $user): View
@@ -141,6 +195,91 @@ class StaffController extends Controller
         return redirect()
             ->route('staff.show', $user)
             ->with('success', 'Staff account updated successfully.');
+    }
+
+    public function resendOnboarding(User $user): RedirectResponse
+    {
+        $actor = auth()->user();
+
+        abort_unless(
+            $actor && $actor->roles()
+                ->where('slug', 'super-admin')
+                ->exists(),
+            403
+        );
+
+        if ($user->is_active || $user->password_set_at !== null) {
+            return back()->withErrors([
+                'staff' => 'Password setup is already complete for this account.',
+            ]);
+        }
+
+        $rawToken = Str::random(64);
+
+        $setupUrl = DB::transaction(function () use ($user, $rawToken) {
+            $lockedUser = User::query()
+                ->whereKey($user->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if ($lockedUser->is_active || $lockedUser->password_set_at !== null) {
+                return null;
+            }
+
+            StaffOnboardingToken::query()
+                ->where('user_id', $lockedUser->id)
+                ->whereNull('consumed_at')
+                ->update(['consumed_at' => now()]);
+
+            StaffOnboardingToken::create([
+                'user_id' => $lockedUser->id,
+                'email' => $lockedUser->email,
+                'token_hash' => hash('sha256', $rawToken),
+                'expires_at' => now()->addHours(24),
+            ]);
+
+            return route('staff.onboarding.show', [
+                'token' => $rawToken,
+            ]);
+        });
+
+        if ($setupUrl === null) {
+            return back()->withErrors([
+                'staff' => 'Password setup is already complete for this account.',
+            ]);
+        }
+
+        try {
+            Mail::to($user->email)->queue(
+                new StaffOnboardingInvitation($user, $setupUrl)
+            );
+        } catch (\Throwable $exception) {
+            Log::error('Could not queue staff onboarding email.', [
+                'staff_id' => $user->id,
+                'exception' => $exception->getMessage(),
+            ]);
+        }
+
+        try {
+            SendStaffOnboardingWhatsApp::dispatch(
+                $user->phone,
+                $user->name,
+                $setupUrl,
+                $user->id,
+            )->afterCommit();
+        } catch (\Throwable $exception) {
+            Log::error('Could not queue staff onboarding WhatsApp.', [
+                'staff_id' => $user->id,
+                'exception' => $exception->getMessage(),
+            ]);
+        }
+
+        return redirect()
+            ->route('staff.show', $user)
+            ->with(
+                'success',
+                'A fresh password setup invitation has been queued. Check the queue status if delivery does not arrive.'
+            );
     }
 
     public function activate(User $user): RedirectResponse

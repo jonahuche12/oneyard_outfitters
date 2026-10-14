@@ -67,6 +67,11 @@ return [
             'model' => env('AUTH_MODEL', User::class),
         ],
 
+        'active_password_reset_users' => [
+            'driver' => 'active-eloquent',
+            'model' => env('AUTH_MODEL', User::class),
+        ],
+
         // 'users' => [
         //     'driver' => 'database',
         //     'table' => 'users',
@@ -94,9 +99,9 @@ return [
 
     'passwords' => [
         'users' => [
-            'provider' => 'users',
+            'provider' => 'active_password_reset_users',
             'table' => env('AUTH_PASSWORD_RESET_TOKEN_TABLE', 'password_reset_tokens'),
-            'expire' => 60,
+            'expire' => 10,
             'throttle' => 60,
         ],
     ],
