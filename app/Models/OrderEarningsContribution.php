@@ -23,6 +23,10 @@ class OrderEarningsContribution extends Model
         'assigned_by',
         'reason',
         'metadata',
+        'voided_at',
+        'voided_by',
+        'void_reason',
+        'is_active_slot',
     ];
 
     protected function casts(): array
@@ -32,7 +36,13 @@ class OrderEarningsContribution extends Model
             'activity_at' => 'datetime',
             'user_active_at_activity' => 'boolean',
             'metadata' => 'array',
+            'voided_at' => 'datetime',
         ];
+    }
+
+    public function scopeActive($query)
+    {
+        return $query->whereNull('voided_at');
     }
 
     public function pool(): BelongsTo

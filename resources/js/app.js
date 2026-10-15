@@ -9,6 +9,7 @@ import './ajax-list';
 import './order-coordinator';
 import './procurements/photos';
 import './procurements/offers';
+import './earnings/pool';
 
 $(function () {
     /*

@@ -47,6 +47,18 @@ class DeriveOrderEarningsContributions
                 'source_reference' => $candidate['source_reference'],
             ];
 
+            $scope = fn () => OrderEarningsContribution::query()
+                ->where('order_earnings_pool_id', $pool->id)
+                ->where('user_id', $candidate['user_id'])
+                ->where('activity_key', $candidate['activity_key']);
+
+            if ($scope()->whereNotNull('voided_at')->where('source_type', OrderEarningsContribution::SOURCE_WORKFLOW)->exists()
+                && ! $scope()->active()->exists()) {
+                $skipped[] = $base + ['reason' => 'voided by finance'];
+
+                continue;
+            }
+
             try {
                 $row = $this->recorder->execute($pool, [
                     'user_id' => $candidate['user_id'],

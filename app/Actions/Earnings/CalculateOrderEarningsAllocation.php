@@ -31,7 +31,7 @@ class CalculateOrderEarningsAllocation
             );
         }
 
-        $contributions = $pool->contributions()->with('user')->get();
+        $contributions = $pool->contributions()->active()->with('user')->get();
         $poolCents = $this->toCents((string) $pool->pool_amount);
 
         if ($contributions->isEmpty()) {

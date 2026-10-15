@@ -449,3 +449,15 @@ Route::middleware(['auth', 'active'])->prefix('earnings')->name('earnings.')->gr
     Route::post('pools/{pool}/refresh-contributions', [\App\Http\Controllers\EarningsPoolController::class, 'refreshContributions'])
         ->name('pools.refresh-contributions');
 });
+
+Route::middleware(['auth', 'active'])->prefix('earnings')->name('earnings.')->group(function () {
+    Route::post('pools/{pool}/contributions', [\App\Http\Controllers\EarningsPoolController::class, 'storeContribution'])
+        ->name('pools.contributions.store');
+    Route::post('pools/{pool}/finalize', [\App\Http\Controllers\EarningsPoolController::class, 'finalize'])
+        ->name('pools.finalize');
+});
+
+Route::middleware(['auth', 'active'])->prefix('earnings')->name('earnings.')->group(function () {
+    Route::post('pools/{pool}/contributions/{contribution}/void', [\App\Http\Controllers\EarningsPoolController::class, 'voidContribution'])
+        ->name('pools.contributions.void');
+});

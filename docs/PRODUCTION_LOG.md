@@ -5557,3 +5557,28 @@ Step 5 design (finance finalization) presented for approval.
 - Test fixture fix: finance user cached, since permission slugs are unique.
 - Full suite: <paste totals>.
 - Next: pass 2 (add contribution, finalize with plain error messages), then void design for approval.
+
+### 2026-10-15 — Pool Detail Pass 1 VERIFIED; Pool 1 Refreshed
+- `php artisan test`: 577 passed / 2010 assertions / 0 failed (user-run).
+- Commits: 2e997d0 (My Wallet controller and view), c006ff8 (refresh contributions from workflow). Both unpushed; origin is at b1763b5. Push blocked by missing stored credential.
+- Pool 1 (order 5) was empty because it predates the derivation hook. Refresh from workflow filled it: 5 contributions (user 2: coordination 3, QC 1, delivery 2, procurement 2; user 1 super-admin: delivery 2). Preview 6084.17 / 1738.33 = 7822.50 pool, consistent with equal delivery split plus oversight. Users 1 and 2 may be one person with two accounts (data matter for the owner).
+- Pass 2 (add contribution, finalize) in progress. Void design to follow.
+
+### 2026-10-15 — Pool Detail Pass 2 (Add contribution, Finalize): IMPLEMENTED; focused tests pending confirmation
+- Added: assignContribution and finalize policy rules; storeContribution and finalize controller actions; routes earnings.pools.contributions.store and earnings.pools.finalize; modals with reopen-on-error; resources/js/earnings/pool.js; PoolActionsTest (10 tests).
+- Earnings folder run (user-run): 133 passed / 456 assertions. The PoolActionsTest lines were cut off by the output tail, so its 10 tests are not individually confirmed. Vite build result not confirmed.
+- Pending: browser verification (modals, validation reopen, finalize refusal on unpaid order); commit; push (credential unresolved; 2e997d0 and c006ff8 unpushed).
+
+### 2026-10-15 — Contribution Void: DESIGN APPROVED
+- User reports full suite green after pass 2 (totals not pasted, so not recorded). Pass 2 commit status: user to confirm.
+- Approved: voiding reuses earnings.contributions.assign; void is final (Refresh from workflow does not recreate voided rows; skip report says voided); closed on finalized pools (corrections use reversals).
+- Design: add voided_at, voided_by, void_reason and is_active_slot (1 while active, NULL when voided) to order_earnings_contributions; unique key becomes (pool, user, activity, is_active_slot); backfill is_active_slot = 1. Calculator, recorder duplicate check, derivation and preview ignore voided rows. Void button with reason modal (min 10 chars) on pending and held pools; voided rows shown struck through.
+- Not implemented yet.
+
+### 2026-10-15 — Contribution Void: IMPLEMENTED; VERIFIED (focused)
+- Added migration 2026_10_15_100000 (voided_at, voided_by, void_reason, is_active_slot; new unique key on pool/user/activity/is_active_slot added before the old one is dropped), OrderEarningsContribution::active() scope, VoidOrderEarningsContribution, voidContribution policy rule and controller action, route earnings.pools.contributions.void, void modal and struck-through rows, VoidContributionTest (7 tests).
+- Calculator, recorder duplicate check and pool list count now ignore voided rows. Derivation skips a voided workflow contribution and reports "voided by finance" (a void is final).
+- Earnings folder run: 139 passed / 484 assertions, 1 failure caused by a test fixture reusing a unique permission slug; fixed in the test only.
+- `php artisan migrate` ran on dev without error (output showed none). Vite build passed.
+- Full suite: <paste totals>.
+- Pending: browser verification of Add contribution, Void and Finalize modals on /earnings/pools/1 (Finalize is irreversible; do it deliberately); push blocked by credentials; unpushed commits 2e997d0, c006ff8, and pass 2 and void commits.

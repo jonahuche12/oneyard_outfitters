@@ -5,6 +5,11 @@ namespace App\Http\Controllers;
 use App\Actions\Earnings\CalculateOrderEarningsAllocation;
 use App\Actions\Earnings\DeriveOrderEarningsContributions;
 use Illuminate\Http\RedirectResponse;
+use App\Actions\Earnings\FinalizeOrderEarningsPool;
+use App\Actions\Earnings\VoidOrderEarningsContribution;
+use App\Actions\Earnings\RecordOrderEarningsContribution;
+use App\Models\EarningsActivityWeight;
+use App\Models\OrderEarningsContribution;
 use App\Models\OrderEarningsPool;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -22,7 +27,7 @@ class EarningsPoolController extends Controller
 
         $pools = OrderEarningsPool::query()
             ->with(['order.organization', 'order.quotation.payments'])
-            ->withCount('contributions')
+            ->withCount(['contributions' => fn ($q) => $q->whereNull('voided_at')])
             ->when(
                 in_array($status, [
                     OrderEarningsPool::STATUS_PENDING,
@@ -72,7 +77,81 @@ class EarningsPoolController extends Controller
 
         $names = User::query()->whereIn('id', $userIds)->pluck('name', 'id');
 
-        return view('earnings.pools.show', compact('pool', 'payment', 'preview', 'names'));
+        $staff = collect();
+        $weights = collect();
+
+        if (Gate::allows('assignContribution', $pool)) {
+            $staff = User::query()->where('is_active', true)->orderBy('name')->get(['id', 'name']);
+            $weights = EarningsActivityWeight::query()
+                ->where('is_enabled', true)
+                ->where('activity_key', '!=', 'management_oversight')
+                ->orderBy('label')
+                ->get(['activity_key', 'label']);
+        }
+
+        return view('earnings.pools.show', compact('pool', 'payment', 'preview', 'names', 'staff', 'weights'));
+    }
+
+    public function storeContribution(Request $request, OrderEarningsPool $pool): RedirectResponse
+    {
+        Gate::authorize('assignContribution', $pool);
+
+        $data = $request->validate([
+            'user_id' => ['required', 'integer'],
+            'activity_key' => ['required', 'string', 'not_in:management_oversight'],
+            'activity_at' => ['required', 'date'],
+            'reason' => ['required', 'string', 'min:10', 'max:2000'],
+        ]);
+
+        app(RecordOrderEarningsContribution::class)->execute($pool, [
+            'user_id' => $data['user_id'],
+            'activity_key' => $data['activity_key'],
+            'source_type' => OrderEarningsContribution::SOURCE_MANUAL,
+            'activity_at' => $data['activity_at'],
+            'reason' => $data['reason'],
+        ], $request->user());
+
+        return redirect()
+            ->route('earnings.pools.show', $pool)
+            ->with('success', 'The contribution has been recorded.');
+    }
+
+    public function voidContribution(Request $request, OrderEarningsPool $pool, OrderEarningsContribution $contribution): RedirectResponse
+    {
+        Gate::authorize('voidContribution', $pool);
+        abort_unless($contribution->order_earnings_pool_id === $pool->id, 404);
+
+        $data = $request->validate([
+            'void_reason' => ['required', 'string', 'min:10', 'max:2000'],
+            'void_target' => ['nullable', 'integer'],
+        ]);
+
+        app(VoidOrderEarningsContribution::class)->execute($contribution, $data['void_reason'], $request->user());
+
+        return redirect()
+            ->route('earnings.pools.show', $pool)
+            ->with('success', 'The contribution has been voided and removed from the allocation.');
+    }
+
+    public function finalize(Request $request, OrderEarningsPool $pool): RedirectResponse
+    {
+        Gate::authorize('finalize', $pool);
+
+        $result = app(FinalizeOrderEarningsPool::class)->execute($pool, $request->user());
+
+        if ($result->status === OrderEarningsPool::STATUS_HELD) {
+            $reasons = collect($result->hold_reasons['reasons'] ?? [])
+                ->map(fn ($r) => str_replace('_', ' ', $r))
+                ->implode(', ');
+
+            return redirect()
+                ->route('earnings.pools.show', $pool)
+                ->with('pool_held', 'The pool was held, not finalized: ' . $reasons . '. Resolve this and finalize again.');
+        }
+
+        return redirect()
+            ->route('earnings.pools.show', $pool)
+            ->with('success', 'The pool has been finalized and staff wallets credited.');
     }
 
     public function refreshContributions(OrderEarningsPool $pool): RedirectResponse

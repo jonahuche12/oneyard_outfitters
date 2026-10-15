@@ -128,6 +128,7 @@ class RecordOrderEarningsContribution
                 ->where('order_earnings_pool_id', $lockedPool->id)
                 ->where('user_id', $staff->id)
                 ->where('activity_key', $data['activity_key'])
+                ->active()
                 ->first();
 
             if ($existing) {
