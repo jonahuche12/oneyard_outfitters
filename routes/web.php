@@ -468,3 +468,19 @@ Route::middleware(['auth', 'active'])->prefix('earnings')->name('earnings.')->gr
     Route::post('wallets/{user}/adjust', [\App\Http\Controllers\StaffWalletAdminController::class, 'adjust'])->name('wallets.adjust');
     Route::post('wallets/{user}/entries/{entry}/reverse', [\App\Http\Controllers\StaffWalletAdminController::class, 'reverse'])->name('wallets.reverse');
 });
+
+Route::middleware(['auth', 'active'])->group(function () {
+    Route::get('wallet/payout-account', [\App\Http\Controllers\PayoutAccountController::class, 'show'])
+        ->name('wallet.payout-account');
+    Route::post('wallet/payout-account', [\App\Http\Controllers\PayoutAccountController::class, 'store'])
+        ->name('wallet.payout-account.store');
+});
+
+Route::middleware(['auth', 'active'])->group(function () {
+    Route::get('wallet/withdrawals', [\App\Http\Controllers\WithdrawalController::class, 'index'])
+        ->name('wallet.withdrawals');
+    Route::post('wallet/withdrawals', [\App\Http\Controllers\WithdrawalController::class, 'store'])
+        ->name('wallet.withdrawals.store');
+    Route::post('wallet/withdrawals/{withdrawal}/cancel', [\App\Http\Controllers\WithdrawalController::class, 'cancel'])
+        ->name('wallet.withdrawals.cancel');
+});

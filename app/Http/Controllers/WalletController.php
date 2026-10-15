@@ -24,6 +24,8 @@ class WalletController extends Controller
 
         $balance = StaffWalletEntry::balanceFor($user);
 
-        return view('wallet.index', compact('entries', 'balance'));
+        $available = \App\Models\StaffWithdrawal::available($user->id);
+
+        return view('wallet.index', compact('entries', 'balance', 'available'));
     }
 }

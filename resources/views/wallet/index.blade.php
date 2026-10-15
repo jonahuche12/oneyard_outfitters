@@ -10,6 +10,10 @@
                 Your earnings from delivered orders, with any adjustments.
             </p>
         </div>
+        <div class="oy-page-actions">
+            <a href="{{ route('wallet.withdrawals') }}" class="oy-btn oy-btn-primary">Withdrawals</a>
+            <a href="{{ route('wallet.payout-account') }}" class="oy-btn oy-btn-secondary">Payout account</a>
+        </div>
     </div>
 
     <div class="oy-card mb-5">
@@ -23,6 +27,8 @@
                     A negative balance will be recovered from your future earnings.
                 </p>
             @endif
+            <div class="text-sm opacity-70 mt-4">Available to withdraw</div>
+            <div class="text-xl font-semibold" data-available-balance>₦{{ number_format(max(0, (float) $available), 2) }}</div>
         </div>
     </div>
 

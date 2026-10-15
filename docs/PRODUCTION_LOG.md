@@ -5630,3 +5630,24 @@ Step 5 design (finance finalization) presented for approval.
 - `php artisan test`: 617 passed / 2194 assertions / 0 failed (user-run). Unit 3 edits confirmed applied (grep counts).
 - git status (user-run) showed the commission commit had never been made: commission and Unit 3 files were both uncommitted; HEAD c902272. Committing in two parts: commission, then Unit 3 (shared files AdjustStaffWallet.php and StaffWalletEntry.php go in the commission commit).
 - Pending: browser verification of Unit 3; push (credentials unresolved; c902272, c006ff8, 2e997d0 and the two new commits unpushed).
+
+### 2026-10-15 — Commits confirmed; 4A Payout Account: implementing
+- Git (user-run): 3443f38 (commission) and c88aa4a (Unit 3 wallets screen) committed, tree clean. Unpushed: c006ff8, c902272, 3443f38, c88aa4a, 2e997d0 (origin at b1763b5). APP_KEY present in .env.
+- 4A: staff_payout_accounts (account_number encrypted cast, last_four, is_active, usable_from = created + 24h), history kept on change, fixed bank list in config/banks.php (codes to be verified against Paystack), NUBAN 10 digits, page at /wallet/payout-account scoped to logged-in user.
+- Deployment note: encrypted account numbers depend on APP_KEY never changing.
+
+### 2026-10-15 — 4B Withdrawal Requests: DESIGN APPROVED, implementing
+- Approved: one open request (requested or approved) per staff member at a time; no maximum beyond available balance; minimum NGN 1,000; payout account must be active and past usable_from; available = ledger balance minus open requests, checked with the user row locked; staff may cancel only while status is requested.
+- 4A full-suite, commit and My Wallet link check not confirmed by user output at this point.
+- Ledger `withdrawal` entry is written only at payment (4C).
+
+### 2026-10-15 — CHANGE: Withdrawal requests require a 6-digit OTP; one request per day
+- Requested: before a withdrawal can be registered, a 6-digit OTP is sent to the staff member's email and WhatsApp, expires in 10 minutes, and the request is registered only after the correct code is entered. Limit: one withdrawal request per day.
+- Amends the approved 4B design (4B code is implemented and uncommitted; OTP step is added before registration).
+- 4A/4B state: full suite 636 passed / 2287 assertions (user-run); uncommitted; browser checks not done.
+- Status: DESIGN PRESENTED, awaiting approval. No code changed.
+
+### 2026-10-15 — WhatsApp: user reports the Meta template has been created
+- User states the template used is created on Meta. Name, category (utility vs authentication), language and approval status not provided; a live send has not been verified.
+- Finding: no app/Jobs/SendWhatsAppTemplate.php exists; sender location still to be found. App timezone is UTC, so "one withdrawal per day" must be computed in Africa/Lagos explicitly.
+- OTP design decisions (channels, day definition, failed-mail diagnosis) still unanswered.
