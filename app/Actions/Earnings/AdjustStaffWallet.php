@@ -24,6 +24,12 @@ class AdjustStaffWallet
     ): StaffWalletEntry {
         $this->authorize($actor);
 
+        if ($target->id === $actor->id) {
+            throw ValidationException::withMessages([
+                'wallet' => 'You cannot adjust your own wallet.',
+            ]);
+        }
+
         $amount = trim($amount);
         $reason = $this->validReason($reason);
 
@@ -56,14 +62,20 @@ class AdjustStaffWallet
 
         $reason = $this->validReason($reason);
 
+        if ($entry->user_id === $actor->id) {
+            throw ValidationException::withMessages([
+                'wallet' => 'You cannot reverse an entry in your own wallet.',
+            ]);
+        }
+
         return DB::transaction(function () use ($entry, $reason, $actor) {
             $locked = StaffWalletEntry::query()
                 ->lockForUpdate()
                 ->findOrFail($entry->id);
 
-            if ($locked->type !== StaffWalletEntry::TYPE_EARNING) {
+            if (! in_array($locked->type, [StaffWalletEntry::TYPE_EARNING, StaffWalletEntry::TYPE_COMMISSION], true)) {
                 throw ValidationException::withMessages([
-                    'entry' => 'Only earning entries can be reversed.',
+                    'entry' => 'Only earning and commission entries can be reversed.',
                 ]);
             }
 

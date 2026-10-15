@@ -232,11 +232,11 @@ class ProcurementOfferController extends Controller
             'delivery_notes' => ['nullable', 'string', 'max:1000'],
         ]);
 
-        DB::transaction(function () use (
+        $commission = DB::transaction(function () use (
             $request,
             $offer,
             $validated
-        ): void {
+        ): ?\App\Models\StaffWalletEntry {
             $selectedOffer = ProcurementOffer::query()
                 ->whereKey($offer->id)
                 ->lockForUpdate()
@@ -262,14 +262,20 @@ class ProcurementOfferController extends Controller
                 'delivered_at' => now(),
                 'delivery_notes' => $validated['delivery_notes'] ?? null,
             ]);
+
+            return app(\App\Actions\Earnings\CreateProcurementCommission::class)
+                ->execute($selectedOffer->fresh());
         });
+
+        $message = $commission
+            ? 'Delivery was recorded successfully. Commission of NGN '
+                . number_format((float) $commission->amount, 2)
+                . ' was credited to the staff member\'s wallet.'
+            : 'Delivery was recorded successfully. No commission was due.';
 
         return redirect()
             ->route('procurements.show', $offer->procurement_id)
-            ->with(
-                'success',
-                'Delivery was recorded successfully. Commission has not been credited.'
-            );
+            ->with('success', $message);
     }
 
     public function reject(ProcurementOffer $offer): RedirectResponse

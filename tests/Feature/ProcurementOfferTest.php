@@ -1794,4 +1794,91 @@ class ProcurementOfferTest extends TestCase
         ]);
     }
 
+    private function acceptedOffer(User $staff, array $procurementOverrides = []): ProcurementOffer
+    {
+        $procurement = $this->procurement($procurementOverrides);
+
+        return ProcurementOffer::create([
+            'procurement_id' => $procurement->id,
+            'user_id' => $staff->id,
+            'quantity' => 80,
+            'unit_price' => 3200,
+            'total_price' => 256000,
+            'status' => ProcurementOffer::STATUS_ACCEPTED,
+            'submitted_at' => now(),
+        ]);
+    }
+
+    public function test_delivery_confirmation_credits_commission_to_the_offering_staff_wallet(): void
+    {
+        $admin = $this->userWithRole('admin', ['procurement.manage']);
+        $staff = User::factory()->create();
+        $offer = $this->acceptedOffer($staff);
+
+        $this->actingAs($admin)
+            ->post(route('procurements.offers.deliver', $offer), ['delivered_quantity' => 75])
+            ->assertRedirect()
+            ->assertSessionHas('success', fn ($m) => str_contains($m, '7,500.00'));
+
+        $this->assertSame('7500.00', \App\Models\StaffWalletEntry::balanceFor($staff));
+        $this->assertDatabaseHas('staff_wallet_entries', [
+            'user_id' => $staff->id,
+            'type' => 'commission',
+            'procurement_offer_id' => $offer->id,
+            'amount' => '7500.00',
+        ]);
+    }
+
+    public function test_repeated_delivery_confirmation_is_refused_and_credits_once(): void
+    {
+        $admin = $this->userWithRole('admin', ['procurement.manage']);
+        $staff = User::factory()->create();
+        $offer = $this->acceptedOffer($staff);
+        $url = route('procurements.offers.deliver', $offer);
+
+        $this->actingAs($admin)->post($url, ['delivered_quantity' => 75]);
+        $this->actingAs($admin)->post($url, ['delivered_quantity' => 75])->assertForbidden();
+
+        $this->assertSame(1, \App\Models\StaffWalletEntry::query()->where('procurement_offer_id', $offer->id)->count());
+        $this->assertSame('7500.00', \App\Models\StaffWalletEntry::balanceFor($staff));
+    }
+
+    public function test_zero_commission_delivery_succeeds_and_credits_nothing(): void
+    {
+        $admin = $this->userWithRole('admin', ['procurement.manage']);
+        $staff = User::factory()->create();
+        $offer = $this->acceptedOffer($staff, ['commission_per_unit' => 0]);
+
+        $this->actingAs($admin)
+            ->post(route('procurements.offers.deliver', $offer), ['delivered_quantity' => 75])
+            ->assertSessionHas('success', fn ($m) => str_contains($m, 'No commission was due'));
+
+        $this->assertSame(ProcurementOffer::STATUS_DELIVERED, $offer->fresh()->status);
+        $this->assertSame(0, \App\Models\StaffWalletEntry::query()->count());
+    }
+
+    public function test_invalid_quantity_confirms_nothing_and_credits_nothing(): void
+    {
+        $admin = $this->userWithRole('admin', ['procurement.manage']);
+        $staff = User::factory()->create();
+        $offer = $this->acceptedOffer($staff);
+
+        $this->actingAs($admin)
+            ->post(route('procurements.offers.deliver', $offer), ['delivered_quantity' => 500])
+            ->assertSessionHasErrors('delivered_quantity');
+
+        $this->assertSame(ProcurementOffer::STATUS_ACCEPTED, $offer->fresh()->status);
+        $this->assertSame(0, \App\Models\StaffWalletEntry::query()->count());
+    }
+
+    public function test_inactive_offering_staff_are_still_credited(): void
+    {
+        $admin = $this->userWithRole('admin', ['procurement.manage']);
+        $staff = User::factory()->create(['is_active' => false]);
+        $offer = $this->acceptedOffer($staff);
+
+        $this->actingAs($admin)->post(route('procurements.offers.deliver', $offer), ['delivered_quantity' => 20]);
+
+        $this->assertSame('2000.00', \App\Models\StaffWalletEntry::balanceFor($staff));
+    }
 }

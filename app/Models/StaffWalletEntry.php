@@ -17,6 +17,7 @@ class StaffWalletEntry extends Model
     public const TYPE_EARNING = 'earning';
     public const TYPE_ADJUSTMENT = 'adjustment';
     public const TYPE_REVERSAL = 'reversal';
+    public const TYPE_COMMISSION = 'commission';
 
     protected $fillable = [
         'user_id',
@@ -25,6 +26,7 @@ class StaffWalletEntry extends Model
         'order_earnings_pool_id',
         'order_earnings_allocation_id',
         'reverses_entry_id',
+        'procurement_offer_id',
         'reason',
         'created_by',
     ];
