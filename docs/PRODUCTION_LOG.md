@@ -5481,3 +5481,59 @@ Step 5 design (finance finalization) presented for approval.
 - Not covered: concurrent reversal (lock present, untested; DB unique key on reverses_entry_id is the backstop); no HTTP/UI entry point.
 - Step 6A and 6B uncommitted until full suite is green.
 - Next: full suite, commit, then Step 6B-UI (My Wallet page, finalization and adjustment entry points) design.
+
+### 2026-10-15 — Earnings Step 6B-UI: Design APPROVED
+- Units, each tested before the next: (1) My Wallet, read-only; (2) finance pools screen with finalize from the pool detail page; (3) finance adjustments and reversals with a per-staff view.
+- Rules: My Wallet is scoped to the logged-in user and takes no user id from the request. Staff see order number and their own amount only. Pools screen and finalize need earnings.pools.finalize. Adjustments and reversals need earnings.adjustments.create. No all-wallets report.
+- Out of scope: payouts, contribution assignment UI, contribution void, Step 2B, commission.
+- Nothing implemented yet.
+- Steps 6A/6B committed and pushed: 136fff9 (user-run git log). Working tree clean apart from this log.
+- Dev DB check (user-run): 0 finalized pools, 0 wallet entries. No backfill needed.
+
+### 2026-10-15 — Earnings Step 6B-UI Unit 1: My Wallet — IMPLEMENTED; focused tests VERIFIED
+- Added route wallet.index (auth + active), WalletController (scoped to the logged-in user; no user id accepted), resources/views/wallet/index.blade.php, My Wallet link in desktop and mobile nav (all active staff).
+- `php artisan test tests/Feature/Earnings/MyWalletTest.php`: 7 passed / 21 assertions (user-run, before the nav test). 8th test (nav link) added; result pending.
+- Covered: guest and inactive redirect; own balance and entries; other staff entries never shown; request user_id ignored; empty state; negative balance recovery note and sign formatting.
+- Not covered: order-number column (needs an order fixture); browser verification pending.
+- Incident: pasting terminal output back into the shell created a stray zero-byte file `user,` in the project root, removed with rm. No code impact.
+- Full suite: pending.
+- Next: browser-verify My Wallet, then Unit 2 (finance pools screen).
+
+### 2026-10-15 — Earnings Unit 2 DESIGN APPROVED (2A read-only, 2B actions)
+- Approved: new permission earnings.pools.view (finance, super-admin; not admin); contribution void pulled into 2B (pending/held pools, reason, kept in history); Step 2B workflow suggestions after the screen.
+- Finding: earnings.contributions.assign and earnings.weights.manage are held by no role except super-admin. Finance to receive contributions.assign in 2B.
+- 2A: policy, list, pool detail (read-only with allocation preview), nav link.
+
+### 2026-10-15 — Earnings Unit 2A: Results Reported; PRIORITY CHANGE — Workflow-Derived Contributors
+- Unit 2A (permission earnings.pools.view, policy, list, read-only pool detail, nav link): user reports the tests are all green. Per-file counts and the full-suite total were not pasted, so they are not recorded here. Not yet committed.
+- Gap found by user: the earnings system allocates only to staff with recorded contributions, so people who actually worked on the order can be missed.
+- Required contributors, derived from authoritative order workflow records wherever possible:
+  - Order coordinator: the staff member(s) assigned to coordinate the order.
+  - Quality control: the staff member(s) who handled the order's QC inspections.
+  - Delivery: the staff member(s) who marked the delivery.
+  - Procurement: every eligible staff member who contributed to procuring that order's items.
+  - Other contributors: only where a defined, auditable activity qualifies them.
+- Principle: manual assignment is an audited exception, not the main source of truth.
+- Two separate problems: (1) identify the correct staff and the records that prove participation; (2) apply the approved activity weights and allocation rules. Only (1) is in scope now. Weights and allocation are unchanged.
+- Supersedes the earlier ordering: Step 2B (derive contributions from workflow records) now comes before the detail-page actions (add contribution, void, finalize). Those remain planned.
+- Open design points, to resolve against the real schema before any code:
+  - Which records count as proof for each activity (coordinator assignment history vs current assignment only; QC inspections by inspector; delivery confirmed_by; accepted and delivery-confirmed procurement offers vs accepted only).
+  - Whether a reassigned (ended) coordinator still qualifies.
+  - When derivation runs (at delivery, on demand by finance, or both) and how it stays idempotent via source_reference.
+  - How staff who are inactive now are treated (current rule: an inactive contributor holds the pool).
+  - Which activity_keys exist in earnings_activity_weights today.
+- Status: PLAN LOGGED. No code changed.
+
+### 2026-10-15 — Step 2B: Derivation Rules APPROVED
+- Approved: coordinators from full assignment history (ended included); QC inspected_by and approved_by on completed inspections of any result; delivery created_by AND confirmed_by; procurement offers accepted/delivered with delivered_at set and delivered_quantity > 0, credited to offer user_id. Inactive staff are skipped and reported.
+- Weights adopted by user delegation ("use appropriate values"), taken from the draft schedule: order_coordination 3, procurement 2, delivery 2, production_execution 2, quality_control 1, management_oversight 1. Changeable only through the audited weight action, prospectively.
+- Finding: RecordOrderEarningsContribution rejected non-pending pools, so a held pool (e.g. no contributions) could never receive contributions. Changed to reject finalized pools only.
+- Known gap: production floor staff cannot be derived (no executor recorded); manual exception.
+- Implementing: DeriveOrderEarningsContributions, fail-safe call from the delivered hook, tests. Procurement derivation tests and weight seeding pending schema.
+
+### 2026-10-15 — Earnings Unit 2A + Step 2B Derivation: IMPLEMENTED; suite result below
+- Added: earnings.pools.view permission, OrderEarningsPoolPolicy, EarningsPoolController, list and read-only detail views, Earnings nav link (desktop and mobile), EarningsPoolScreenTest.
+- Added: DeriveOrderEarningsContributions (coordinators from full assignment history; QC inspected_by/approved_by on completed inspections; delivery created_by/confirmed_by; procurement offers accepted/delivered with delivered_at and delivered_quantity > 0), fail-safe call from the Order delivered hook, DeriveOrderEarningsContributionsTest (13 tests).
+- Rule change: RecordOrderEarningsContribution now rejects finalized pools only, so held pools can receive contributions. test_non_pending_pools_are_rejected replaced by test_finalized_pools_are_rejected and test_held_pools_accept_contributions.
+- Earnings folder plus DeliveryTest before the test fix: 115 passed, 1 failed (the superseded test). Full suite result: record from the next run.
+- Pending: seed the six weights (production_execution 2, order_coordination 3, procurement 2, delivery 2, quality_control 1, management_oversight 1) via the audited action; procurement derivation tests; pool detail actions (refresh from workflow, add contribution, void, finalize); cosmetic source_reference naming (deliveries becomes "deliverie").

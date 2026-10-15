@@ -84,9 +84,9 @@ class RecordOrderEarningsContribution
                 ->lockForUpdate()
                 ->findOrFail($pool->id);
 
-            if ($lockedPool->status !== OrderEarningsPool::STATUS_PENDING) {
+            if ($lockedPool->status === OrderEarningsPool::STATUS_FINALIZED) {
                 throw ValidationException::withMessages([
-                    'pool' => 'Contributions can only be recorded on a pending earnings pool.',
+                    'pool' => 'Contributions cannot be recorded on a finalized earnings pool.',
                 ]);
             }
 

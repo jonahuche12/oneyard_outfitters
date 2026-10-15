@@ -382,21 +382,29 @@ class RecordOrderEarningsContributionTest extends TestCase
         $this->assertSame(0, OrderEarningsContribution::count());
     }
 
-    public function test_non_pending_pools_are_rejected(): void
+    public function test_finalized_pools_are_rejected(): void
     {
         $this->weight();
         $staff = $this->staff();
+        $pool = $this->pool(OrderEarningsPool::STATUS_FINALIZED);
 
-        foreach ([OrderEarningsPool::STATUS_HELD, OrderEarningsPool::STATUS_FINALIZED] as $status) {
-            $pool = $this->pool($status);
-
-            $this->assertRejected(ValidationException::class, fn () => $this->action()->execute(
-                $pool,
-                $this->workflowPayload($staff)
-            ));
-        }
+        $this->assertRejected(ValidationException::class, fn () => $this->action()->execute(
+            $pool,
+            $this->workflowPayload($staff)
+        ));
 
         $this->assertSame(0, OrderEarningsContribution::count());
+    }
+
+    public function test_held_pools_accept_contributions(): void
+    {
+        $this->weight();
+        $staff = $this->staff();
+        $pool = $this->pool(OrderEarningsPool::STATUS_HELD);
+
+        $this->action()->execute($pool, $this->workflowPayload($staff));
+
+        $this->assertSame(1, OrderEarningsContribution::count());
     }
 
     public function test_future_activity_time_is_rejected(): void

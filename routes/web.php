@@ -432,3 +432,15 @@ Route::middleware('auth')->prefix('quality-control')->name('quality-control.')->
     Route::post('/inspections/{inspection}/complete', [QualityControlController::class, 'complete'])
         ->name('complete');
 });
+
+Route::middleware(['auth', 'active'])->group(function () {
+    Route::get('wallet', [\App\Http\Controllers\WalletController::class, 'index'])
+        ->name('wallet.index');
+});
+
+Route::middleware(['auth', 'active'])->prefix('earnings')->name('earnings.')->group(function () {
+    Route::get('pools', [\App\Http\Controllers\EarningsPoolController::class, 'index'])
+        ->name('pools.index');
+    Route::get('pools/{pool}', [\App\Http\Controllers\EarningsPoolController::class, 'show'])
+        ->name('pools.show');
+});

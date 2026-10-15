@@ -154,7 +154,15 @@ class Order extends Model
                 $order->wasChanged('status')
                 && $order->status === self::STATUS_DELIVERED
             ) {
-                app(CreateOrderEarningsPool::class)->execute($order);
+                $pool = app(CreateOrderEarningsPool::class)->execute($order);
+
+                // Contribution derivation must never block delivery.
+                try {
+                    app(\App\Actions\Earnings\DeriveOrderEarningsContributions::class)
+                        ->execute($pool);
+                } catch (\Throwable $e) {
+                    report($e);
+                }
             }
         });
     }
