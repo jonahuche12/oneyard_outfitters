@@ -672,6 +672,7 @@ class RbacSeeder extends Seeder
                     'payments.update',
                     'payments.reverse',
                     'earnings.pools.view',
+                    'earnings.contributions.assign',
                     'earnings.pools.finalize',
                     'earnings.adjustments.create',
 

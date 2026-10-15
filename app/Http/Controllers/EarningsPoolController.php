@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Actions\Earnings\CalculateOrderEarningsAllocation;
+use App\Actions\Earnings\DeriveOrderEarningsContributions;
+use Illuminate\Http\RedirectResponse;
 use App\Models\OrderEarningsPool;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -71,6 +73,34 @@ class EarningsPoolController extends Controller
         $names = User::query()->whereIn('id', $userIds)->pluck('name', 'id');
 
         return view('earnings.pools.show', compact('pool', 'payment', 'preview', 'names'));
+    }
+
+    public function refreshContributions(OrderEarningsPool $pool): RedirectResponse
+    {
+        Gate::authorize('deriveContributions', $pool);
+
+        $report = app(DeriveOrderEarningsContributions::class)->execute($pool);
+
+        $names = User::query()
+            ->whereIn('id', collect($report['skipped'])->pluck('user_id'))
+            ->pluck('name', 'id');
+
+        $skipped = collect($report['skipped'])
+            ->map(fn ($row) => ($names[$row['user_id']] ?? 'Unknown')
+                . ' (' . str_replace('_', ' ', $row['activity_key']) . '): '
+                . $row['reason'])
+            ->all();
+
+        $message = count($report['credited']) . ' contribution(s) confirmed from workflow records.';
+
+        if ($skipped !== []) {
+            $message .= ' ' . count($skipped) . ' skipped, see below.';
+        }
+
+        return redirect()
+            ->route('earnings.pools.show', $pool)
+            ->with('success', $message)
+            ->with('derivation_skipped', $skipped);
     }
 
     /**

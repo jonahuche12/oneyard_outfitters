@@ -15,6 +15,14 @@
             <span class="oy-badge {{ $pool->status === 'finalized' ? 'oy-badge-success' : 'oy-badge-warning' }}">
                 {{ ucfirst($pool->status) }}
             </span>
+            @can('deriveContributions', $pool)
+                <form method="POST" action="{{ route('earnings.pools.refresh-contributions', $pool) }}" class="inline">
+                    @csrf
+                    <button type="submit" class="oy-btn oy-btn-secondary" data-refresh-contributions>
+                        Refresh from workflow
+                    </button>
+                </form>
+            @endcan
         </div>
     </div>
 
@@ -23,6 +31,17 @@
             <div class="oy-alert oy-alert-success mb-5">{{ session($flashKey) }}</div>
         @endif
     @endforeach
+
+    @if (session('derivation_skipped'))
+        <div class="oy-alert oy-alert-warning mb-5" data-derivation-skipped>
+            <strong>Not credited from workflow:</strong>
+            <ul class="list-disc ml-5 mt-2">
+                @foreach (session('derivation_skipped') as $line)
+                    <li>{{ $line }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
 
     <div class="space-y-6">
 

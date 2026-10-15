@@ -444,3 +444,8 @@ Route::middleware(['auth', 'active'])->prefix('earnings')->name('earnings.')->gr
     Route::get('pools/{pool}', [\App\Http\Controllers\EarningsPoolController::class, 'show'])
         ->name('pools.show');
 });
+
+Route::middleware(['auth', 'active'])->prefix('earnings')->name('earnings.')->group(function () {
+    Route::post('pools/{pool}/refresh-contributions', [\App\Http\Controllers\EarningsPoolController::class, 'refreshContributions'])
+        ->name('pools.refresh-contributions');
+});

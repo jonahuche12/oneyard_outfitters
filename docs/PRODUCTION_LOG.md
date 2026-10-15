@@ -5546,3 +5546,14 @@ Step 5 design (finance finalization) presented for approval.
 - Full suite: <paste totals>.
 - Deployment checklist: run `php artisan earnings:seed-weights` on every other environment, or derivation skips everyone with "no enabled weight".
 - Next: pool detail actions (Refresh from workflow with skip report, add contribution, void, finalize), then reversal.
+
+### 2026-10-15 — Pool Detail Actions Pass 1 (Refresh from workflow): APPROVED, implementing
+- Approved: earnings.contributions.assign granted to finance (permission total unchanged); report is flash-only.
+- Git incident: `git commit` found nothing to add because earlier commits already held the screen/derivation files, but WalletController and resources/views/wallet were untracked while committed code references them. Push prompted for credentials (stored credential missing). Resolution pending user output.
+
+### 2026-10-15 — Pool Detail Pass 1: Refresh from workflow VERIFIED (focused)
+- Added: deriveContributions policy rule (active user, earnings.contributions.assign, non-finalized pool), POST earnings/pools/{pool}/refresh-contributions, Refresh button, flash skip report by name and reason; finance now holds earnings.contributions.assign.
+- `php artisan test tests/Feature/Earnings/RefreshPoolContributionsTest.php`: 6 passed / 25 assertions (user-run). RbacTest and EarningsPoolScreenTest green in the preceding run.
+- Test fixture fix: finance user cached, since permission slugs are unique.
+- Full suite: <paste totals>.
+- Next: pass 2 (add contribution, finalize with plain error messages), then void design for approval.

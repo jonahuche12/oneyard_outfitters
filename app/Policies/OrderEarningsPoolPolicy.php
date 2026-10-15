@@ -16,4 +16,11 @@ class OrderEarningsPoolPolicy
     {
         return $this->viewAny($user);
     }
+
+    public function deriveContributions(User $user, OrderEarningsPool $pool): bool
+    {
+        return $user->is_active
+            && $user->hasPermission('earnings.contributions.assign')
+            && $pool->status !== OrderEarningsPool::STATUS_FINALIZED;
+    }
 }
