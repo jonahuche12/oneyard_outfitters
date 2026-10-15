@@ -364,4 +364,124 @@ class DeriveOrderEarningsContributionsTest extends TestCase
         $pool = OrderEarningsPool::query()->where('order_id', $order->id)->firstOrFail();
         $this->assertSame([$coordinator->id], $this->rows($pool)->pluck('user_id')->all());
     }
+
+    private function procurement(?Order $order, bool $deleted = false): int
+    {
+        return DB::table('procurements')->insertGetId([
+            'order_id' => $order?->id,
+            'created_by' => $this->user()->id,
+            'item_name' => 'Fabric',
+            'quantity' => '10.00',
+            'unit' => 'yard',
+            'maximum_unit_price' => '1000.00',
+            'commission_per_unit' => '0',
+            'status' => 'ready',
+            'created_at' => now()->subDays(2),
+            'updated_at' => now()->subDays(2),
+            'deleted_at' => $deleted ? now()->subDay() : null,
+        ]);
+    }
+
+    private function offer(
+        int $procurementId,
+        User $user,
+        string $status = 'accepted',
+        ?string $deliveredQty = '10.00',
+        $deliveredAt = null
+    ): int {
+        return DB::table('procurement_offers')->insertGetId([
+            'procurement_id' => $procurementId,
+            'user_id' => $user->id,
+            'quantity' => '10.00',
+            'unit_price' => '900.00',
+            'total_price' => '9000.00',
+            'status' => $status,
+            'submitted_at' => now()->subDays(2),
+            'delivered_quantity' => $deliveredQty,
+            'delivered_by' => $deliveredQty ? $user->id : null,
+            'delivered_at' => $deliveredQty ? ($deliveredAt ?? now()->subHours(3)) : null,
+            'created_at' => now()->subDays(2),
+            'updated_at' => now()->subDays(2),
+        ]);
+    }
+
+    public function test_delivery_confirmed_accepted_offer_credits_the_sourcing_staff(): void
+    {
+        $this->weights();
+        $order = $this->order();
+        $sourcer = $this->user();
+        $offerId = $this->offer($this->procurement($order), $sourcer);
+        $pool = $this->pool($order);
+
+        $this->run_($pool);
+
+        $rows = $this->rows($pool)->where('activity_key', 'procurement');
+        $this->assertSame([$sourcer->id], $rows->pluck('user_id')->all());
+        $this->assertSame('procurement_offer:' . $offerId, $rows->first()->source_reference);
+    }
+
+    public function test_several_offers_from_one_person_collapse_to_one_contribution(): void
+    {
+        $this->weights();
+        $order = $this->order();
+        $sourcer = $this->user();
+        $this->offer($this->procurement($order), $sourcer);
+        $this->offer($this->procurement($order), $sourcer);
+        $pool = $this->pool($order);
+
+        $this->run_($pool);
+
+        $rows = $this->rows($pool)->where('activity_key', 'procurement');
+        $this->assertCount(1, $rows);
+        $this->assertCount(2, $rows->first()->metadata['records']);
+    }
+
+    public function test_offers_that_are_not_delivery_confirmed_or_not_accepted_do_not_count(): void
+    {
+        $this->weights();
+        $order = $this->order();
+        $procurementId = $this->procurement($order);
+        $this->offer($procurementId, $this->user(), 'accepted', null);
+        $this->offer($procurementId, $this->user(), 'withdrawn');
+        $this->offer($procurementId, $this->user(), 'rejected');
+        $this->offer($procurementId, $this->user(), 'submitted');
+        $this->offer($procurementId, $this->user(), 'accepted', '0.00');
+        $pool = $this->pool($order);
+
+        $report = $this->run_($pool);
+
+        $this->assertCount(0, $this->rows($pool));
+        $this->assertSame([], $report['credited']);
+    }
+
+    public function test_independent_and_deleted_procurements_do_not_count(): void
+    {
+        $this->weights();
+        $order = $this->order();
+        $this->offer($this->procurement(null), $this->user());
+        $this->offer($this->procurement($order, true), $this->user());
+        $other = $this->order();
+        $this->offer($this->procurement($other), $this->user());
+        $pool = $this->pool($order);
+
+        $this->run_($pool);
+
+        $this->assertCount(0, $this->rows($pool));
+    }
+
+    public function test_procurement_delivered_after_the_order_is_skipped_and_reported(): void
+    {
+        $this->weights();
+        $order = $this->order();
+        $late = $this->user();
+        $this->offer($this->procurement($order), $late, 'accepted', '10.00', now()->subMinutes(5));
+        $pool = $this->pool($order);
+
+        $report = $this->run_($pool);
+
+        $this->assertCount(0, $this->rows($pool));
+        $this->assertCount(1, $report['skipped']);
+        $this->assertSame($late->id, $report['skipped'][0]['user_id']);
+        $this->assertStringContainsString('delivered', $report['skipped'][0]['reason']);
+    }
 }

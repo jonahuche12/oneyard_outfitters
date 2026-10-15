@@ -99,7 +99,7 @@ class DeriveOrderEarningsContributions
             $userId = (int) $userId;
             $time = Carbon::parse($at);
             $key = $activity . '|' . $userId;
-            $reference = rtrim($table, 's') . ':' . $recordId;
+            $reference = \Illuminate\Support\Str::singular($table) . ':' . $recordId;
 
             if (! isset($found[$key])) {
                 $found[$key] = [

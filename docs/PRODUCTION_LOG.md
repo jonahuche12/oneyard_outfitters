@@ -5537,3 +5537,12 @@ Step 5 design (finance finalization) presented for approval.
 - Rule change: RecordOrderEarningsContribution now rejects finalized pools only, so held pools can receive contributions. test_non_pending_pools_are_rejected replaced by test_finalized_pools_are_rejected and test_held_pools_accept_contributions.
 - Earnings folder plus DeliveryTest before the test fix: 115 passed, 1 failed (the superseded test). Full suite result: record from the next run.
 - Pending: seed the six weights (production_execution 2, order_coordination 3, procurement 2, delivery 2, quality_control 1, management_oversight 1) via the audited action; procurement derivation tests; pool detail actions (refresh from workflow, add contribution, void, finalize); cosmetic source_reference naming (deliveries becomes "deliverie").
+
+### 2026-10-15 — Step 2B: Derivation VERIFIED; Weights Seeded
+- `php artisan test tests/Feature/Earnings/DeriveOrderEarningsContributionsTest.php`: 18 passed / 44 assertions (user-run). Includes 5 procurement tests and the delivered-hook test.
+- Added `earnings:seed-weights` (idempotent; audited action; existing weights untouched). The first run failed because app/Console/Commands did not exist, since the file creation step was not run; recreated.
+- source_reference uses singular table names (confirmed applied).
+- Weights seeded in the dev database: order_coordination 3, procurement 2, delivery 2, production_execution 2, quality_control 1, management_oversight 1 (confirm against the tinker output).
+- Full suite: <paste totals>.
+- Deployment checklist: run `php artisan earnings:seed-weights` on every other environment, or derivation skips everyone with "no enabled weight".
+- Next: pool detail actions (Refresh from workflow with skip report, add contribution, void, finalize), then reversal.
