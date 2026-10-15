@@ -5582,3 +5582,51 @@ Step 5 design (finance finalization) presented for approval.
 - `php artisan migrate` ran on dev without error (output showed none). Vite build passed.
 - Full suite: <paste totals>.
 - Pending: browser verification of Add contribution, Void and Finalize modals on /earnings/pools/1 (Finalize is irreversible; do it deliberately); push blocked by credentials; unpushed commits 2e997d0, c006ff8, and pass 2 and void commits.
+
+### 2026-10-15 — SCOPE CHANGE: Procurement Commission Credited to Staff Wallet
+- Requested: when an accepted procurement offer's delivery is confirmed by an admin, credit the offering staff member's wallet with delivered quantity x the procurement's commission_per_unit (set at procurement creation). Example: commission 100, 20 units supplied = 2,000 credited.
+- Trigger is offer delivery confirmation, NOT pool finalization. Independent of the earnings pool.
+- Supersedes the deferred item "commission crediting".
+- Open design points: quantity basis (delivered vs offered), who may confirm (admin only vs coordinator), snapshot of the rate, new ledger entry type and unique key per offer, reversal path, independent (no-order) procurements, backfill of offers already confirmed, relationship to the procurement earnings-pool points.
+- Status: DESIGN PRESENTED, awaiting approval. No code changed.
+
+### 2026-10-15 — Procurement Commission: DESIGN APPROVED
+- Approved: quantity = delivered_quantity recorded at confirmation; credit fires whenever confirmation happens (not only admin); staff earn both commission now and procurement pool points at finalization; backfill of already-confirmed offers through a deliberate one-off command with dry-run; inactive staff are credited anyway.
+- Design: ledger type `commission`; staff_wallet_entries.procurement_offer_id (nullable, unique) prevents double credit; amount = delivered_quantity x commission_per_unit in integer cents, rounded half up; zero commission writes nothing; reason stores the snapshot (quantity, rate, item, offer id); AdjustStaffWallet::reverse extended to commission entries; credit created inside the confirmation transaction.
+- Implementing: migration, CreateProcurementCommission, backfill command, tests. Controller hook pending sight of ProcurementOfferController lines ~215-290.
+
+### 2026-10-15 — Procurement Commission: VERIFIED (focused)
+- `php artisan test tests/Feature/ProcurementOfferTest.php tests/Feature/Earnings`: 203 passed / 712 assertions (user-run). Includes 9 ProcurementCommissionTest tests and 5 new route tests.
+- Migration 2026_10_15_120000 ran on dev (batch 39); 2026_10_15_100000 (void columns) batch 38.
+- Backfill dry-run (user-run): would credit offer #12 (user 2, delivered 21.00). Real run pending amount check; wallet entries cannot be edited or deleted.
+- Git (user-run): c902272 "Earnings: void contributions" is HEAD. Pass 2 (add contribution, finalize) appears to be inside it (inferred, no separate commit). Unpushed: 2e997d0, c006ff8, c902272; origin at b1763b5.
+- Commission work is uncommitted. Full suite not rerun since commission.
+
+### 2026-10-15 — QUEUE: Unit 3 now; Delivery Activation WhatsApp channel next
+- Order of work: (1) Unit 3 finance adjustments/reversals screen, (2) Delivery activation link via WhatsApp in addition to email.
+- Delivery WhatsApp: design from 2026-10-11 still awaiting approval (new job reusing SendWhatsAppTemplate, number normalizer, template delivery_activation_invitation, recipients migration, selection filter email OR whatsapp). Blocked live by Meta template approval and public APP_URL.
+
+### 2026-10-15 — Unit 3 APPROVED; SCOPE CHANGE: Staff Payout Account and Withdrawals
+- Unit 3 approved as recommended: earnings.wallets.view (finance, super-admin); adjusting one's own wallet blocked; inactive staff with balances listed and labelled.
+- Requested: staff set up a payout (withdrawal) account and apply for withdrawal; admin staff confirm and send it.
+- Supersedes the out-of-scope and open items "withdrawals/payouts". Unit 3 code is held until the withdrawal design fixes the meaning of balance.
+- Then queued: delivery activation link via WhatsApp.
+- Status: DESIGN PRESENTED, awaiting approval. No code changed.
+
+### 2026-10-15 — Withdrawals DESIGN APPROVED (as recommended)
+- Approved: manual transfer first (admin records payment reference; Paystack Transfers later); approve and pay are separate steps; minimum withdrawal NGN 1,000 and 24h wait after payout account change (user delegated; adjustable); approvers admin, finance, super-admin via earnings.withdrawals.manage; nobody approves or pays their own request; email notifications to staff; commission and pool earnings count equally; ledger entry type `withdrawal` (negative) written only when marked paid; available balance = ledger balance minus open requests.
+- Deployment note: encrypted account numbers depend on APP_KEY.
+- Build order: Unit 3 (finance wallets screen), 4A payout account, 4B staff requests, 4C admin approve/reject/pay. Then Delivery WhatsApp.
+- Unit 3 implementing now.
+
+### 2026-10-15 — Unit 3 Staff Wallets Screen: IMPLEMENTED; focused tests VERIFIED
+- Added earnings.wallets.view (finance, super-admin), StaffWalletEntryPolicy, StaffWalletAdminController, routes earnings.wallets.{index,show,adjust,reverse}, list and per-staff views (inactive holders labelled, reversed entries marked), adjust and reverse modals, nav link (Earnings now highlights on pools only), StaffWalletAdminTest (9 tests).
+- AdjustStaffWallet now refuses adjusting or reversing the actor's own wallet.
+- `php artisan test tests/Feature/RbacTest.php tests/Feature/Earnings tests/Feature/ProcurementOfferTest.php`: 227 passed / 890 assertions (user-run). Vite build passed; RbacSeeder re-run.
+- Pending: full suite, browser verification (list, modals, own wallet shows no buttons), commit, push (credentials unresolved), commission commit status unconfirmed.
+- Next: 4A payout account setup.
+
+### 2026-10-15 — Unit 3 + Commission: Full Suite VERIFIED; Commits
+- `php artisan test`: 617 passed / 2194 assertions / 0 failed (user-run). Unit 3 edits confirmed applied (grep counts).
+- git status (user-run) showed the commission commit had never been made: commission and Unit 3 files were both uncommitted; HEAD c902272. Committing in two parts: commission, then Unit 3 (shared files AdjustStaffWallet.php and StaffWalletEntry.php go in the commission commit).
+- Pending: browser verification of Unit 3; push (credentials unresolved; c902272, c006ff8, 2e997d0 and the two new commits unpushed).

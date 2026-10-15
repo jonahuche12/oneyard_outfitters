@@ -461,3 +461,10 @@ Route::middleware(['auth', 'active'])->prefix('earnings')->name('earnings.')->gr
     Route::post('pools/{pool}/contributions/{contribution}/void', [\App\Http\Controllers\EarningsPoolController::class, 'voidContribution'])
         ->name('pools.contributions.void');
 });
+
+Route::middleware(['auth', 'active'])->prefix('earnings')->name('earnings.')->group(function () {
+    Route::get('wallets', [\App\Http\Controllers\StaffWalletAdminController::class, 'index'])->name('wallets.index');
+    Route::get('wallets/{user}', [\App\Http\Controllers\StaffWalletAdminController::class, 'show'])->name('wallets.show');
+    Route::post('wallets/{user}/adjust', [\App\Http\Controllers\StaffWalletAdminController::class, 'adjust'])->name('wallets.adjust');
+    Route::post('wallets/{user}/entries/{entry}/reverse', [\App\Http\Controllers\StaffWalletAdminController::class, 'reverse'])->name('wallets.reverse');
+});

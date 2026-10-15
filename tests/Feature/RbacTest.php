@@ -228,6 +228,7 @@ class RbacTest extends TestCase
             'earnings.pools.finalize',
             'earnings.adjustments.create',
             'earnings.pools.view',
+            'earnings.wallets.view',
             'organizations.view',
             'organizations.create',
             'organizations.update',

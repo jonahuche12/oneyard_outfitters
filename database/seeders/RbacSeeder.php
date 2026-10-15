@@ -400,6 +400,11 @@ class RbacSeeder extends Seeder
                 'slug' => 'earnings.pools.view',
                 'description' => 'View order earnings pools, contributions, allocation previews and finalized allocations.',
             ],
+            [
+                'name' => 'View Staff Wallets',
+                'slug' => 'earnings.wallets.view',
+                'description' => 'View staff wallet balances and ledger entries.',
+            ],
 
             /*
              * Product Specifications
@@ -672,6 +677,7 @@ class RbacSeeder extends Seeder
                     'payments.update',
                     'payments.reverse',
                     'earnings.pools.view',
+                    'earnings.wallets.view',
                     'earnings.contributions.assign',
                     'earnings.pools.finalize',
                     'earnings.adjustments.create',

@@ -85,16 +85,31 @@
                 </a>
             @endcan
 
+            {{-- Staff Wallets --}}
+            @can('viewAny', App\Models\StaffWalletEntry::class)
+                <a
+                    href="{{ route('earnings.wallets.index') }}"
+                    class="oy-nav-link
+                        {{ request()->routeIs('earnings.wallets.*') ? 'is-active' : '' }}"
+                >
+                    <span>Staff Wallets</span>
+
+                    @if(request()->routeIs('earnings.wallets.*'))
+                        <span class="text-xs opacity-70">Active</span>
+                    @endif
+                </a>
+            @endcan
+
             {{-- Earnings --}}
             @can('viewAny', App\Models\OrderEarningsPool::class)
                 <a
                     href="{{ route('earnings.pools.index') }}"
                     class="oy-nav-link
-                        {{ request()->routeIs('earnings.*') ? 'is-active' : '' }}"
+                        {{ request()->routeIs('earnings.pools.*') ? 'is-active' : '' }}"
                 >
                     <span>Earnings</span>
 
-                    @if(request()->routeIs('earnings.*'))
+                    @if(request()->routeIs('earnings.pools.*'))
                         <span class="text-xs opacity-70">Active</span>
                     @endif
                 </a>
@@ -314,16 +329,31 @@
                         </a>
                     @endcan
 
+                    {{-- Staff Wallets --}}
+                    @can('viewAny', App\Models\StaffWalletEntry::class)
+                        <a
+                            href="{{ route('earnings.wallets.index') }}"
+                            class="oy-nav-link {{ request()->routeIs('earnings.wallets.*') ? 'is-active' : '' }}"
+                            data-app-mobile-menu-link
+                        >
+                            <span>Staff Wallets</span>
+
+                            @if(request()->routeIs('earnings.wallets.*'))
+                                <span class="text-xs opacity-70">Active</span>
+                            @endif
+                        </a>
+                    @endcan
+
                     {{-- Earnings --}}
                     @can('viewAny', App\Models\OrderEarningsPool::class)
                         <a
                             href="{{ route('earnings.pools.index') }}"
-                            class="oy-nav-link {{ request()->routeIs('earnings.*') ? 'is-active' : '' }}"
+                            class="oy-nav-link {{ request()->routeIs('earnings.pools.*') ? 'is-active' : '' }}"
                             data-app-mobile-menu-link
                         >
                             <span>Earnings</span>
 
-                            @if(request()->routeIs('earnings.*'))
+                            @if(request()->routeIs('earnings.pools.*'))
                                 <span class="text-xs opacity-70">Active</span>
                             @endif
                         </a>

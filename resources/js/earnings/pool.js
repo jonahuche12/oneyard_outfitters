@@ -19,6 +19,11 @@ $(function () {
         openModal($('#' + $(this).attr('data-open-pool-modal')));
     });
 
+    $('[data-reverse-entry]').on('click', function () {
+        $('#reverse-form').attr('action', $(this).attr('data-reverse-url'));
+        openModal($('#reverse-modal'));
+    });
+
     $('[data-void-contribution]').on('click', function () {
         $('#void-form').attr('action', $(this).attr('data-void-url'));
         $('#void-target').val($(this).attr('data-void-id'));
