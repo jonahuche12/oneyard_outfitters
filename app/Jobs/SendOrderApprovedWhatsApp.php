@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Actions\WhatsApp\SendWhatsAppTemplate;
 use App\Models\Order;
 use App\Models\OrderNotificationRecipient;
+use App\Support\WhatsAppNumber;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -69,16 +70,46 @@ class SendOrderApprovedWhatsApp implements ShouldQueue
             return;
         }
 
-        $sendTemplate(
-            $phone,
-            (string) config('services.whatsapp.templates.order_approved'),
-            [
-                $contact->first_name,
-                $order->order_number,
-                $order->organization->name,
-                route('public.orders.show', $recipient->access_token),
-            ]
-        );
+        $to = WhatsAppNumber::normalize($phone, $order->organization->country);
+
+        if ($to === null) {
+            Log::warning(
+                'Order approval WhatsApp notification skipped: phone number could not be converted to international format.',
+                [
+                    'order_id' => $order->id,
+                    'recipient_id' => $recipient->id,
+                    'contact_id' => $contact->id,
+                    'country' => $order->organization->country,
+                ]
+            );
+
+            return;
+        }
+
+        try {
+            $sendTemplate(
+                $to,
+                (string) config('services.whatsapp.templates.order_approved'),
+                [
+                    $contact->first_name,
+                    $order->order_number,
+                    $order->organization->name,
+                    route('public.orders.show', $recipient->access_token),
+                ]
+            );
+        } catch (RequestException $exception) {
+            $status = $exception->response->status();
+
+            // Permanent client errors (e.g. recipient not allowed) cannot
+            // succeed on retry. Rate limiting (429) and 5xx still retry.
+            if ($status >= 400 && $status < 500 && $status !== 429) {
+                $this->fail($exception);
+
+                return;
+            }
+
+            throw $exception;
+        }
     }
 
     public function failed(Throwable $exception): void

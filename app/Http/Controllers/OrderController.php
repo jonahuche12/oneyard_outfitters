@@ -211,12 +211,14 @@ class OrderController extends Controller
             ->contacts()
             ->where('is_active', true)
             ->whereIn('id', $validated['contact_ids'])
+            ->whereNotNull('email')
+            ->where('email', '!=', '')
             ->get();
 
         if ($contacts->count() !== count($validated['contact_ids'])) {
             return back()
                 ->withErrors([
-                    'contact_ids' => 'One or more selected contacts are invalid or inactive.',
+                    'contact_ids' => 'One or more selected contacts are invalid, inactive, or have no email address.',
                 ])
                 ->withInput();
         }
@@ -835,12 +837,14 @@ class OrderController extends Controller
             ->contacts()
             ->where('is_active', true)
             ->whereIn('id', $validated['contact_ids'])
+            ->whereNotNull('email')
+            ->where('email', '!=', '')
             ->get();
 
         if ($contacts->count() !== count($validated['contact_ids'])) {
             return back()
                 ->withErrors([
-                    'contact_ids' => 'One or more selected contacts are invalid or inactive.',
+                    'contact_ids' => 'One or more selected contacts are invalid, inactive, or have no email address.',
                 ])
                 ->withInput();
         }

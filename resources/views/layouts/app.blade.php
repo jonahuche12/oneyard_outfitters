@@ -100,6 +100,19 @@
                 </a>
             @endcan
 
+            {{-- Withdrawal Requests --}}
+            @if(auth()->user()?->hasPermission('earnings.withdrawals.manage'))
+                <a
+                    href="{{ route('earnings.withdrawals.index') }}"
+                    class="oy-nav-link {{ request()->routeIs('earnings.withdrawals.*') ? 'is-active' : '' }}"
+                >
+                    <span>Withdrawal Requests</span>
+                    @if(request()->routeIs('earnings.withdrawals.*'))
+                        <span class="text-xs opacity-70">Active</span>
+                    @endif
+                </a>
+            @endif
+
             {{-- Earnings --}}
             @can('viewAny', App\Models\OrderEarningsPool::class)
                 <a
@@ -343,6 +356,20 @@
                             @endif
                         </a>
                     @endcan
+
+                    {{-- Withdrawal Requests --}}
+                    @if(auth()->user()?->hasPermission('earnings.withdrawals.manage'))
+                        <a
+                            href="{{ route('earnings.withdrawals.index') }}"
+                            class="oy-nav-link {{ request()->routeIs('earnings.withdrawals.*') ? 'is-active' : '' }}"
+                            data-app-mobile-menu-link
+                        >
+                            <span>Withdrawal Requests</span>
+                            @if(request()->routeIs('earnings.withdrawals.*'))
+                                <span class="text-xs opacity-70">Active</span>
+                            @endif
+                        </a>
+                    @endif
 
                     {{-- Earnings --}}
                     @can('viewAny', App\Models\OrderEarningsPool::class)

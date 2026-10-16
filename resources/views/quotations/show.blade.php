@@ -183,7 +183,7 @@
                 <div class="oy-card-body">
                     <form
                         method="POST"
-                        action="{{ route('quotations.send-to-contacts', $quotation) }}"
+                        action="{{ route('quotations.send-to-contacts', $quotation) }}" data-submit-spinner data-send-contacts-form
                         class="space-y-4"
                     >
                         @csrf
@@ -209,6 +209,8 @@
                                         <input
                                             type="checkbox"
                                             name="contact_ids[]"
+                                            data-send-contact
+                                            @disabled(blank($contact->email))
                                             value="{{ $contact->id }}"
                                             class="mt-1 rounded border-slate-300"
                                             @checked(in_array(
@@ -243,7 +245,8 @@
                                 <p class="text-sm text-red-600">{{ $message }}</p>
                             @enderror
 
-                            <button type="submit" class="oy-btn oy-btn-primary">
+                            <p data-send-hint class="text-sm text-slate-500">Select at least one contact to send.</p>
+                            <button data-send-submit @disabled(empty(old('contact_ids'))) data-loading-text="Sending..." type="submit" class="oy-btn oy-btn-primary">
                                 Send Quotation
                             </button>
                         @endif
@@ -444,7 +447,7 @@
 
                 <form
                     method="POST"
-                    action="{{ route('quotation-items.store', $quotation) }}"
+                    action="{{ route('quotation-items.store', $quotation) }}" data-submit-spinner
                     class="oy-form"
                 >
                     @csrf
@@ -580,7 +583,7 @@
                     </div>
 
                     <div class="mt-5 flex justify-end">
-                        <button type="submit" class="oy-btn oy-btn-primary">
+                        <button data-loading-text="Adding item..." type="submit" class="oy-btn oy-btn-primary">
                             Add Quotation Item
                         </button>
                     </div>

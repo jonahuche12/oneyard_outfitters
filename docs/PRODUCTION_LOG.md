@@ -5651,3 +5651,186 @@ Step 5 design (finance finalization) presented for approval.
 - User states the template used is created on Meta. Name, category (utility vs authentication), language and approval status not provided; a live send has not been verified.
 - Finding: no app/Jobs/SendWhatsAppTemplate.php exists; sender location still to be found. App timezone is UTC, so "one withdrawal per day" must be computed in Africa/Lagos explicitly.
 - OTP design decisions (channels, day definition, failed-mail diagnosis) still unanswered.
+
+### 2026-10-15 — Withdrawal OTP: Inspection Findings
+- Correction: the WhatsApp sender is app/Actions/WhatsApp/SendWhatsAppTemplate.php (earlier note said none existed). Four jobs wrap it (offer accepted, order approved, quotation sent, staff onboarding). config/services.php has a templates map; OTP needs a new `withdrawal_otp` key and an authentication-category Meta template (not yet created).
+- git status: 4A/4B files untracked/modified, uncommitted (suite 636 green).
+- queue:failed, 11 newest: 9 WhatsApp jobs (2026-10-14; consistent with logged Meta template/credential issues, inferred), 2 mail jobs (StaffOnboardingInvitation, DeliveryActivationInvitation); mail failure cause not yet read.
+- Next: read 4B action/controller/model/view/tests, then build OTP.
+
+### 2026-10-15 — Withdrawal OTP Stage A (backend): IMPLEMENTED (not yet verified)
+- Added withdrawal_otps (migration 2026_10_15_160000), WithdrawalOtp model, WithdrawalOtpCode mailable (not queued) and view, IssueWithdrawalOtp, ConfirmWithdrawalOtp, config key services.whatsapp.templates.withdrawal_otp (env WHATSAPP_TEMPLATE_WITHDRAWAL_OTP, default withdrawal_otp_v1).
+- RequestStaffWithdrawal refactored: parseCents(), assertEligible() shared by issue and confirm, execute() takes an expected payout account id. New rule: one request per Africa/Lagos calendar day, all statuses counted.
+- OTP rules: 6 digits, hashed, 10 min expiry, 5 attempts, 60s cooldown, 3 sends per hour, new code supersedes the old, bound to user/amount/payout account. Email always; WhatsApp too when enabled and phone present; either channel suffices.
+- WhatsApp template is body-only (3 variables); an authentication-category template would need button support in SendWhatsAppTemplate (not built).
+- Tests: WithdrawalOtpTest (16) written; results pending. Existing WithdrawalRequestTest may need updates for the daily limit.
+- Known gap: the store route still bypasses the OTP until Stage B (controller, routes, UI, rewritten 4B tests).
+- Mail failure cause (StaffOnboardingInvitation, DeliveryActivationInvitation) still unread.
+
+### 2026-10-15 — Staff Withdrawal OTP and Confirmation Flow: IMPLEMENTED, TEST-VERIFIED
+
+This entry supersedes the earlier OTP implementation notes where they describe WhatsApp delivery, pending controller/UI work, or pending focused tests.
+
+- Withdrawal initiation now sends a six-digit OTP by **email only**. WhatsApp is not used as a withdrawal OTP channel, regardless of WhatsApp configuration or phone availability.
+- OTP remains hashed, expires after 10 minutes, allows five failed attempts, enforces a 60-second resend cooldown and three sends per hour, and is bound to the staff member, amount, and payout account. Issuing a new OTP supersedes the previous pending code.
+- Withdrawal registration requires the correct OTP. The one-request-per-day rule uses the Africa/Lagos calendar day and counts all withdrawal statuses.
+- After a withdrawal is successfully registered, a confirmation email is attempted. Mail failure is logged and does not undo the withdrawal or invite duplicate submission.
+- The withdrawal UI includes OTP entry/resend controls and a submit spinner that disables the submit button and updates its label while processing. Spinner behavior still requires browser verification.
+- Registered routes verified: `wallet.withdrawals`, `wallet.withdrawals.store`, `wallet.withdrawals.confirm`, and `wallet.withdrawals.cancel`.
+- Migration `2026_10_15_160000_create_withdrawal_otps_table` is applied in the current development database (batch 42).
+- Verification: `WithdrawalRequestTest` — 12 passed / 81 assertions; `WithdrawalOtpTest` — 18 passed / 117 assertions. Combined: 30 passed / 198 assertions / 0 failures.
+- Additional checks passed: `php artisan view:cache`, targeted PHP syntax checks, and `git diff --check`.
+- The implementation remains uncommitted. Browser verification is outstanding. The temporary bypass of the payout-account 24-hour waiting period must be restored before production; do not mark this feature production-ready until that is resolved and verified.
+
+### 2026-10-15 — Withdrawal Waiting Period Restored: TEST-VERIFIED
+
+- Restored the payout-account usability check in `RequestStaffWithdrawal::assertEligible()`. Newly created or changed payout accounts cannot be used until their `usable_from` time; this eligibility check applies to both OTP issuance and withdrawal confirmation.
+- Replaced tests that depended on the temporary bypass with coverage for the 24-hour waiting-period restriction.
+- Verification: `WithdrawalRequestTest` — 12 passed / 79 assertions; `WithdrawalOtpTest` — 18 passed / 122 assertions. Combined: 30 passed / 201 assertions / 0 failures.
+- Email-only OTP delivery, waiting-period rejection, and successful withdrawal after the account becomes usable are covered by the passing focused tests.
+- Browser verification of the OTP interface and submit spinner remains outstanding. This checkpoint is not a claim of full browser or production verification.
+
+
+### 2026-10-15 — Staff Withdrawals Management: IMPLEMENTED; TEST-VERIFIED
+
+- Added the withdrawal management screen and routes for authorized administrators and finance staff to review requests, reject requests with a reason, and mark approved requests as paid with a payment reference.
+- Access is guarded by `earnings.withdrawals.manage`; the permission is assigned to Administrator and Finance, while Super Admin receives all seeded permissions. Staff without the permission are denied access, inactive users are redirected to login, and requesters cannot approve or pay their own withdrawals.
+- Approval, rejection, and payment transitions are checked transactionally with row locking. Marking a withdrawal paid creates a negative `withdrawal` wallet-ledger entry in the same transaction and prevents duplicate payment.
+- Updated `RbacTest` to include the newly seeded `earnings.withdrawals.manage` permission in its expected permission list. `RbacTest`: 19 passed / 147 assertions.
+- Focused verification: `WithdrawalManagementTest` — 11 passed / 53 assertions; `WithdrawalRequestTest` — 12 passed / 79 assertions; `WithdrawalOtpTest` — 18 passed / 122 assertions. Combined withdrawal tests: 41 passed / 254 assertions.
+- Full `php artisan test` suite subsequently exited successfully after the RBAC expectation fix. The exact final suite totals were not captured in the supplied terminal output and are intentionally not stated here.
+- `git diff --check` passed for the RBAC test correction. No commit was made as part of this checkpoint.
+- Remaining verification: browser-check withdrawal management actions, the staff OTP interface and submit spinner, and the relevant navigation/access behavior. This entry does not claim production readiness.
+
+### 2026-10-16 — Staff Withdrawal Management UI: CHECKPOINT; MODALS NOT YET WORKING
+
+#### Objective
+
+Improve the administrator/finance withdrawal management screen before continuing other work. The scope includes a usable review interface, working search and filters, modal-based confirmation for withdrawal actions, and recording reasons for approval and rejection.
+
+#### Existing functionality previously implemented and test-verified
+
+- Staff can configure a payout account and submit withdrawal requests through the OTP-protected workflow.
+- Withdrawal OTP delivery is email-only. The six-digit OTP is hashed, expires after 10 minutes, allows five failed attempts, enforces resend cooldown and hourly limits, and is bound to the user, amount, and payout account.
+- The one-request-per-day rule uses the Africa/Lagos calendar day and counts requests across all statuses.
+- The 24-hour payout-account waiting period was restored and covered by focused tests.
+- Authorized administrators, finance staff, and super administrators can access withdrawal management through `earnings.withdrawals.manage`.
+- Approval, rejection, and payment transitions use transaction and row-lock protections.
+- Requesters cannot approve or pay their own withdrawals.
+- Rejection requires a reason. Marking an approved withdrawal as paid requires a payment reference and creates the negative wallet-ledger entry in the same transaction.
+- Staff are notified by email when withdrawal status changes; email delivery failures are logged without reversing a successful state transition.
+- Earlier focused tests covered `WithdrawalManagementTest`, `WithdrawalRequestTest`, and `WithdrawalOtpTest`. Those results predate the latest management UI changes and must not be treated as verification of the latest changes.
+
+#### Latest management-screen work
+
+- The management controller was extended with search, status filtering, requested-date filtering, and pagination that preserves query parameters.
+- Search was designed to cover staff name/email, withdrawal ID/reference, bank name, account name, and payment reference.
+- Summary cards and clearer status indicators were added to the Blade page.
+- Inline action forms were replaced with modal-trigger buttons for approval, rejection, and payment recording.
+- Approval was changed to require a reason, intended to be stored in the existing `staff_withdrawals.notes` field without a new migration.
+- Rejection continues to use `reject_reason`; payment recording continues to require `payment_reference`.
+- A dedicated withdrawal modal JavaScript module was added and registered through `resources/js/app.js`.
+- Management tests were updated to cover approval reasons, search, status filtering, withdrawal references, and requested-date filtering.
+
+#### Current status
+
+- The management page has been revised, but the frontend is **NOT COMPLETE**.
+- The user reports that the modals are not working properly. The modal implementation must be diagnosed and corrected before this UI can be accepted.
+- The latest management-controller, approval-action, view, JavaScript, and test changes have not been confirmed by a supplied successful test run.
+- Search and filter behavior has not yet been confirmed in the browser.
+- The latest approval-reason persistence has not yet been confirmed by a successful test run.
+- Browser verification of modal opening/closing, correct action URLs, required fields, validation errors, form submission, and payment confirmation remains outstanding.
+- No claim is made that the latest frontend is verified or production-ready.
+
+#### Remaining scope, in order
+
+1. Diagnose and fix the withdrawal modals. Confirm that each action opens the correct modal, displays the correct request details, submits to the correct route, and closes reliably. Remove any browser alert/confirm dependency from this page.
+2. Confirm approval reasons are required, validated, persisted, and displayed correctly without overwriting unrelated notes.
+3. Verify rejection reasons and payment references still work through their respective modals.
+4. Verify search by staff name/email, withdrawal ID, bank/account name, and payment reference.
+5. Verify status and date-range filters, invalid date ranges, reset behavior, empty results, and pagination query preservation.
+6. Run `WithdrawalManagementTest.php` and fix any failures.
+7. Run `WithdrawalRequestTest.php` and `WithdrawalOtpTest.php` to check for regressions in the existing withdrawal workflow.
+8. Run the full test suite, `php artisan view:cache`, relevant PHP syntax checks, and `git diff --check`.
+9. Browser-test the complete management flow using authorized accounts, including the restriction against reviewing or paying one's own withdrawal.
+10. Review the final diff, update this log with actual test results and browser-verification evidence, then commit only when explicitly approved.
+
+#### Working rules
+
+- Preserve existing permission checks, self-review/self-payment restrictions, transactional row locks, state-transition checks, and wallet-ledger safeguards.
+- Do not weaken the payout-account waiting period or withdrawal OTP requirements to make tests pass.
+- Do not mark untested behavior as verified.
+- Keep unrelated uncommitted work intact.
+- No commit is recorded by this checkpoint.
+
+
+### 2026-10-16 — Quotation Creation Redesign and WhatsApp Link — FINDINGS (design pending)
+- Submit spinner: shared module resources/js/submit-spinner.js registered in app.js and wired to the quotation create form (data-submit-spinner, data-loading-text). JS syntax and Blade compile checks passed in earlier steps; QuotationTest result and browser verification NOT reported. Status: IMPLEMENTED, not verified.
+- Create page contradiction: the page shows estimated amounts from specification unit_price while items are created at zero price. CreateQuotation total = max(0, subtotal - discount + additional_charges), so discount/charges at creation are meaningless under zero-price creation. Pricing decision A/B still open (recommended B).
+- WhatsApp link: SendQuotationSentWhatsApp passes the public quotation URL as the 4th body variable; SendWhatsAppTemplate builds only a body component. APP_URL is http://localhost:10000 so the link is not tappable (inferred; message not seen on a phone). Recommended fix: URL-button template quotation_sent_v2 (body 3 vars, button suffix = recipient access_token) plus sender button support. Requires production HTTPS domain and Meta approval.
+- Withdrawal management UI: scripts 5-6 (results partial, controller partial response) results not reported; browser verification pending.
+- Status: DESIGN ONLY for the create-page redesign and the WhatsApp button. No code changed beyond the spinner.
+
+### 2026-10-16 — Quotation Creation: Code vs Log Discrepancy FOUND (decision pending)
+- QuotationController::store() copies unit_price from the Product Specification into quotation items and computes line_total (approach A), with the flash message "using the current Product Specification prices". This contradicts the 2026-09-25/09-26 entries that logged zero-price creation (B) as verified. The change was not logged; the 10-11 entry lists the A/B decision as open.
+- Create page text is inconsistent with the code: the blue box and the Quotation Details card say prices are entered after the draft is created; the estimates and subtotal shown are actually what the draft receives.
+- update() supports discount and additional_charges and recalculates totals, so moving them off the create page needs no backend change under B.
+- quotations.send (direct draft to sent, no recipients, no WhatsApp) still exists although the UI action was removed; decision pending.
+- Earlier statement in this session that "the quotation never gets the specification price" was based on the log and was incorrect; corrected here.
+- Status: DESIGN ONLY. No quotation code changed. Spinner (resources/js/submit-spinner.js) implemented, not verified.
+
+### 2026-10-16 — Submit Spinner Extended; Quotation Send Gating — IMPLEMENTED (not yet verified)
+- QuotationTest after the create-form spinner: 27 passed / 171 assertions (user-run). Browser checks not reported.
+- Server rules confirmed in sendToContacts(): contact_ids required, min 1, contacts must belong to the organization and be active, every selected contact must have an email.
+- Added resources/js/quotation-send.js (Send disabled until a selectable contact is ticked; hint shown; contacts without email disabled). Added isDefaultPrevented guard to submit-spinner.js. Spinner wired to quotation edit (Save Changes), add item, send to contacts, and both cancel forms.
+- Pending: view cache / build / test results, browser verification (including whether Cancel has a confirmation), per-item update/remove spinner (not wired), UX redesign of create/show/edit (blocked on pricing A/B), WhatsApp URL-button template.
+
+### 2026-10-16 — Staff Withdrawal Management UI: COMPLETED (user-reported)
+**Type:** FEATURE / FIX
+**Status:** COMPLETED
+
+- User confirms the withdrawal management screen is finished, including the modals that were previously not working.
+- Scope delivered: search, status and date filters, modal-based approve (with reason), reject (with reason) and mark-paid (with payment reference).
+- Verification boundary: completion is user-reported. Final test totals and browser-check evidence were not supplied, so none are recorded here.
+- Uncommitted work remains (withdrawal 4A/4B, OTP, management). Git push still blocked by the missing credential.
+
+### Next
+Order approval UI/UX improvement (design below, awaiting approval).
+
+
+### 2026-10-16 — Order Approval UI: Contact Gating and Spinner — IMPLEMENTED (not yet verified)
+- Approve and Resend panels on orders/show reuse quotation-send.js (now handles multiple forms) and submit-spinner.js: button disabled until a selectable contact is ticked; spinner on submit.
+- Contacts without an email are disabled in the UI and rejected server-side (email required because recipients and Mail::to depend on it).
+- Added 2 tests in OrderTest. Results and browser verification pending.
+
+### 2026-10-16 — TROUBLESHOOT — Queue Mail/WhatsApp Failures: Mail Root Cause Confirmed
+**Type:** DIAGNOSIS
+**Status:** IN PROGRESS
+
+- Mail: Mailtrap sandbox returns 550 5.7.0 "Too many emails per second" (6 failures 02:48:05-02:48:13, plus OrderApprovedInternal at 03:14:26). Provider rate limit, not an application defect. Mitigation: run queue worker with --sleep=1 and a backoff; production SMTP provider must be chosen with adequate limits.
+- WhatsApp: HTTP 400 from Meta on SendOrderApprovedWhatsApp (recipient_id 8, 03:14:27, 03:14:58, 03:17:00). Error body not yet read; cause UNKNOWN.
+- Failed-jobs list also holds earlier OrderCreated mail jobs from the same rate limit (inferred from identical message).
+- Order approval UI (contact gating, spinner): implemented earlier today, test and browser results not yet reported.
+
+### 2026-10-16 — Order Approval UI: Contact Gating and Spinner — VERIFIED (test level)
+- User reports OrderTest and QuotationTest runs successful (totals not supplied, so none recorded). Approve and Resend panels gate the button on a selected contact with an email, use submit-spinner.js, and the server rejects contacts without email. Browser verification not reported.
+
+### 2026-10-16 — WhatsApp Number Normalization — IMPLEMENTED (not yet verified)
+- Added App\Support\WhatsAppNumber: local numbers (leading 0) converted to the organization's country dialing code; blank country defaults to Nigeria (234); unmapped country skips the send with a warning; +/00 prefixed numbers cleaned. Wired into SendOrderApprovedWhatsApp. Unit tests added; results pending.
+- Pending: SendQuotationSentWhatsApp not yet wired (file not inspected). Meta allow-list limitation unchanged.
+
+### 2026-10-16 — WhatsApp Order Approval: Template Fixed; Direct Send ACCEPTED
+- Root cause of the direct-send #132001: config sent order_approved_v1; the approved Meta template is oneyard_order_approved_v1. Set WHATSAPP_TEMPLATE_ORDER_APPROVED=oneyard_order_approved_v1, config:clear, queue:restart.
+- Direct send via SendWhatsAppTemplate to 2349036518913 with language `en`: ACCEPTED by Meta (user-run). Language `en_US` returns #132001, so `en` stays. Recipient is on the allow-list.
+- Not yet confirmed: handset delivery; a real order approval through the queue. Earlier queue #131030 failures not explained (suspect stale worker config).
+- Open: APP_URL is still http://localhost:10000, so the tracking link is unusable on phones. Other WhatsApp templates (quotation_sent, offer accepted, onboarding) not checked against Meta names.
+
+
+### 2026-10-16 — Mobile Sidebar Toggle (layouts.app) — IMPLEMENTED (not yet verified)
+- Cause: layouts.app had mobile menu markup but no script. Added resources/js/app-mobile-menu.js (open/close, backdrop, Escape, link click, close at >=1024px, body scroll lock), imported in app.js.
+- layouts.public mobile sidebar: "OY" block replaced by images/oneyard/oneyard_favicon.png. layouts.app already used oneyard_logo.png in all three spots; left unchanged.
+- Pending: npm run build and view:cache results, narrow-window browser check, then release via build-release.sh and deploy-server.sh (no migrations).
+
+### 2026-10-16 — Mobile Sidebar Toggle (layouts.app): VERIFIED locally
+- Browser verification (user-reported): hamburger opens the app sidebar and it closes as designed; public mobile sidebar shows the favicon image. Details of each close path were not itemised in the report.
+- Next: release to production (no migrations).

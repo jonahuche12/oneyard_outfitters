@@ -301,6 +301,7 @@ class RbacTest extends TestCase
             'users.activate',
             'users.deactivate',
             'users.assign-roles',
+            'earnings.withdrawals.manage',
             'deliveries.review_offline_payment',
             'leads.assign',
             'leads.convert',

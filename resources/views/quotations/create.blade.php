@@ -25,6 +25,7 @@
         action="{{ route('quotations.store') }}"
         class="oy-form"
         id="quotation-create-form"
+        data-submit-spinner
     >
         @csrf
 
@@ -428,6 +429,7 @@
                 <button
                     type="submit"
                     class="oy-btn oy-btn-primary"
+                    data-loading-text="Creating draft..."
                     @disabled($productSpecifications->isEmpty())
                 >
                     Create Draft Quotation

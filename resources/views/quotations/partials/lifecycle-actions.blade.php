@@ -20,9 +20,9 @@
     @if($quotation->status === \App\Models\Quotation::STATUS_DRAFT)
         <div class="oy-card-footer flex flex-wrap gap-2">
             @can('cancel', $quotation)
-                <form method="POST" action="{{ route('quotations.cancel', $quotation) }}">
+                <form method="POST" action="{{ route('quotations.cancel', $quotation) }}" data-submit-spinner>
                     @csrf
-                    <button type="submit" class="oy-btn oy-btn-danger">
+                    <button data-loading-text="Cancelling..." type="submit" class="oy-btn oy-btn-danger">
                         Cancel Quotation
                     </button>
                 </form>
@@ -31,9 +31,9 @@
     @elseif($quotation->status === \App\Models\Quotation::STATUS_SENT)
         @can('cancel', $quotation)
             <div class="oy-card-footer">
-                <form method="POST" action="{{ route('quotations.cancel', $quotation) }}">
+                <form method="POST" action="{{ route('quotations.cancel', $quotation) }}" data-submit-spinner>
                     @csrf
-                    <button type="submit" class="oy-btn oy-btn-danger">
+                    <button data-loading-text="Cancelling..." type="submit" class="oy-btn oy-btn-danger">
                         Cancel Quotation
                     </button>
                 </form>

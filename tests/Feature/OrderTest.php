@@ -927,4 +927,37 @@ class OrderTest extends TestCase
         $this->assertSame(60, $order->expected_delivery_days);
     }
 
+    public function test_order_cannot_be_approved_without_selecting_a_contact(): void
+    {
+        Mail::fake();
+
+        $user = $this->createApprovalUser();
+        $data = $this->createOrderWithContacts();
+
+        $this->actingAs($user)
+            ->post(route('orders.approve', $data['order']), ['contact_ids' => []])
+            ->assertSessionHasErrors('contact_ids');
+
+        $this->assertNotSame(Order::STATUS_APPROVED, $data['order']->fresh()->status);
+        $this->assertDatabaseCount('order_notification_recipients', 0);
+    }
+
+    public function test_order_cannot_be_approved_with_a_contact_that_has_no_email(): void
+    {
+        Mail::fake();
+
+        $user = $this->createApprovalUser();
+        $data = $this->createOrderWithContacts();
+
+        $data['secondary']->update(['email' => '']);
+
+        $this->actingAs($user)
+            ->post(route('orders.approve', $data['order']), [
+                'contact_ids' => [$data['secondary']->id],
+            ])
+            ->assertSessionHasErrors('contact_ids');
+
+        $this->assertNotSame(Order::STATUS_APPROVED, $data['order']->fresh()->status);
+        $this->assertDatabaseCount('order_notification_recipients', 0);
+    }
 }

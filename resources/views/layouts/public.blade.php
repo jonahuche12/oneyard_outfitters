@@ -139,9 +139,11 @@
                     class="flex items-center gap-3"
                     data-mobile-menu-link
                 >
-                    <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-950 text-sm font-black tracking-tight text-white">
-                        OY
-                    </span>
+                    <img
+                        src="{{ asset('images/oneyard/oneyard_favicon.png') }}"
+                        alt=""
+                        class="h-10 w-10 rounded-xl object-contain"
+                    >
 
                     <span>
                         <span class="block text-base font-bold tracking-tight text-slate-950">

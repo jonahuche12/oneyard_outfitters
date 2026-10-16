@@ -469,6 +469,17 @@ Route::middleware(['auth', 'active'])->prefix('earnings')->name('earnings.')->gr
     Route::post('wallets/{user}/entries/{entry}/reverse', [\App\Http\Controllers\StaffWalletAdminController::class, 'reverse'])->name('wallets.reverse');
 });
 
+Route::middleware(['auth', 'active'])->prefix('earnings')->name('earnings.')->group(function () {
+    Route::get('withdrawals', [\App\Http\Controllers\StaffWithdrawalManagementController::class, 'index'])
+        ->name('withdrawals.index');
+    Route::post('withdrawals/{withdrawal}/approve', [\App\Http\Controllers\StaffWithdrawalManagementController::class, 'approve'])
+        ->name('withdrawals.approve');
+    Route::post('withdrawals/{withdrawal}/reject', [\App\Http\Controllers\StaffWithdrawalManagementController::class, 'reject'])
+        ->name('withdrawals.reject');
+    Route::post('withdrawals/{withdrawal}/paid', [\App\Http\Controllers\StaffWithdrawalManagementController::class, 'markPaid'])
+        ->name('withdrawals.paid');
+});
+
 Route::middleware(['auth', 'active'])->group(function () {
     Route::get('wallet/payout-account', [\App\Http\Controllers\PayoutAccountController::class, 'show'])
         ->name('wallet.payout-account');
@@ -481,6 +492,8 @@ Route::middleware(['auth', 'active'])->group(function () {
         ->name('wallet.withdrawals');
     Route::post('wallet/withdrawals', [\App\Http\Controllers\WithdrawalController::class, 'store'])
         ->name('wallet.withdrawals.store');
+    Route::post('wallet/withdrawals/confirm', [\App\Http\Controllers\WithdrawalController::class, 'confirm'])
+        ->name('wallet.withdrawals.confirm');
     Route::post('wallet/withdrawals/{withdrawal}/cancel', [\App\Http\Controllers\WithdrawalController::class, 'cancel'])
         ->name('wallet.withdrawals.cancel');
 });

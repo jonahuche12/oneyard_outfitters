@@ -20,7 +20,7 @@
 
     <form
         method="POST"
-        action="{{ route('quotations.update', $quotation) }}"
+        action="{{ route('quotations.update', $quotation) }}" data-submit-spinner
         class="oy-form"
     >
         @csrf
@@ -186,7 +186,7 @@
                     Cancel
                 </a>
 
-                <button type="submit" class="oy-btn oy-btn-primary">
+                <button data-loading-text="Saving..." type="submit" class="oy-btn oy-btn-primary">
                     Save Changes
                 </button>
             </div>

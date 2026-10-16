@@ -18,6 +18,7 @@ class StaffWalletEntry extends Model
     public const TYPE_ADJUSTMENT = 'adjustment';
     public const TYPE_REVERSAL = 'reversal';
     public const TYPE_COMMISSION = 'commission';
+    public const TYPE_WITHDRAWAL = 'withdrawal';
 
     protected $fillable = [
         'user_id',

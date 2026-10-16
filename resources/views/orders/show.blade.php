@@ -1817,7 +1817,7 @@
                         Add an active contact before approving this order.
                     </div>
                 @else
-                    <form method="POST" action="{{ route('orders.approve', $order) }}">
+                    <form method="POST" action="{{ route('orders.approve', $order) }}" data-send-contacts-form data-submit-spinner>
                         @csrf
 
                         <div class="space-y-3">
@@ -1828,6 +1828,8 @@
                                         name="contact_ids[]"
                                         value="{{ $contact->id }}"
                                         class="mt-1"
+                                        data-send-contact
+                                        @disabled(blank($contact->email))
                                         @checked(in_array($contact->id, old('contact_ids', [])))
                                     >
 
@@ -1847,7 +1849,7 @@
                                         </span>
 
                                         <span class="mt-1 block text-sm text-slate-600">
-                                            {{ $contact->email }}
+                                            {{ $contact->email ?: 'No email address on file. This contact cannot be notified.' }}
                                         </span>
 
                                         @if($contact->position)
@@ -1874,7 +1876,8 @@
                         </div>
 
                         <div class="mt-6">
-                            <button type="submit" class="oy-btn oy-btn-primary">
+                            <p data-send-hint class="mb-3 text-sm text-slate-500">Select at least one contact to continue.</p>
+                            <button type="submit" class="oy-btn oy-btn-primary" data-send-submit data-loading-text="Approving..." disabled>
                                 Approve Order & Notify Selected Contacts
                             </button>
                         </div>
@@ -1909,7 +1912,7 @@
                         This organization has no active contacts available for notification.
                     </div>
                 @else
-                    <form method="POST" action="{{ route('orders.resend-approval', $order) }}">
+                    <form method="POST" action="{{ route('orders.resend-approval', $order) }}" data-send-contacts-form data-submit-spinner>
                         @csrf
 
                         <div class="space-y-3">
@@ -1920,6 +1923,8 @@
                                         name="contact_ids[]"
                                         value="{{ $contact->id }}"
                                         class="mt-1"
+                                        data-send-contact
+                                        @disabled(blank($contact->email))
                                         @checked(in_array($contact->id, old('contact_ids', [])))
                                     >
 
@@ -1939,7 +1944,7 @@
                                         </span>
 
                                         <span class="mt-1 block text-sm text-slate-600">
-                                            {{ $contact->email }}
+                                            {{ $contact->email ?: 'No email address on file. This contact cannot be notified.' }}
                                         </span>
 
                                         @if($contact->position)
@@ -1966,7 +1971,8 @@
                         </div>
 
                         <div class="mt-6">
-                            <button type="submit" class="oy-btn oy-btn-primary">
+                            <p data-send-hint class="mb-3 text-sm text-slate-500">Select at least one contact to continue.</p>
+                            <button type="submit" class="oy-btn oy-btn-primary" data-send-submit data-loading-text="Resending..." disabled>
                                 Resend Approval Email
                             </button>
                         </div>

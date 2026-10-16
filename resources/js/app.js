@@ -6,10 +6,14 @@ window.jQuery = $;
 
 import './quotations';
 import './ajax-list';
+import './submit-spinner';
+import './quotation-send';
 import './order-coordinator';
 import './procurements/photos';
 import './procurements/offers';
 import './earnings/pool';
+import './earnings/withdrawals';
+import './app-mobile-menu';
 
 $(function () {
     /*

@@ -13,6 +13,12 @@ class WithdrawalRequestTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        \Illuminate\Support\Facades\Mail::fake();
+    }
+
     private function staff(string $balance = '10000.00', bool $account = true, bool $usable = true): User
     {
         $user = User::factory()->create(['is_active' => true]);
@@ -37,10 +43,36 @@ class WithdrawalRequestTest extends TestCase
         ]);
     }
 
-    private function request(User $user, string $amount)
+    private function request(User $user, string $amount, array $extra = [])
     {
-        return $this->actingAs($user)->from(route('wallet.withdrawals'))
-            ->post(route('wallet.withdrawals.store'), ['amount' => $amount]);
+        $sentBefore = \Illuminate\Support\Facades\Mail::sent(\App\Mail\WithdrawalOtpCode::class)->count();
+
+        $response = $this->actingAs($user)->from(route('wallet.withdrawals'))
+            ->post(route('wallet.withdrawals.store'), array_merge(['amount' => $amount], $extra));
+
+        // Complete the OTP flow in these workflow tests. Dedicated OTP tests
+        // independently verify that initiation alone creates no withdrawal.
+        if ($response->getSession()->has('success')
+            && str_contains((string) $response->getSession()->get('success'), 'emailed')) {
+            $sent = \Illuminate\Support\Facades\Mail::sent(\App\Mail\WithdrawalOtpCode::class);
+
+            $this->assertGreaterThan(
+                $sentBefore,
+                $sent->count(),
+                'A successful withdrawal initiation must email an OTP.'
+            );
+
+            $latestOtp = $sent->last();
+
+            $this->assertNotNull($latestOtp, 'The withdrawal OTP email must exist.');
+
+            return $this->actingAs($user)->from(route('wallet.withdrawals'))
+                ->post(route('wallet.withdrawals.confirm'), [
+                    'code' => $latestOtp->code,
+                ]);
+        }
+
+        return $response;
     }
 
     public function test_guest_is_redirected(): void
@@ -96,20 +128,29 @@ class WithdrawalRequestTest extends TestCase
         $this->assertSame(1, StaffWithdrawal::query()->count());
     }
 
-    public function test_a_new_request_is_allowed_after_cancel_or_rejection(): void
+    public function test_cancelled_and_rejected_requests_still_count_toward_the_daily_limit(): void
     {
+        $this->travelTo(\Carbon\Carbon::parse('2026-10-15 10:00:00', 'Africa/Lagos'));
         $user = $this->staff('10000.00');
-        $this->request($user, '1000');
-        $this->actingAs($user)->post(route('wallet.withdrawals.cancel', StaffWithdrawal::query()->first()));
 
-        $this->request($user, '1500')->assertSessionHasNoErrors();
+        $this->request($user, '1000')->assertSessionHas('success');
+        $withdrawal = StaffWithdrawal::query()->firstOrFail();
+
+        $this->actingAs($user)->post(route('wallet.withdrawals.cancel', $withdrawal))
+            ->assertSessionHas('success');
+
+        $this->request($user, '1500')->assertSessionHasErrors('amount');
+
+        $this->travelTo(\Carbon\Carbon::parse('2026-10-16 10:00:00', 'Africa/Lagos'));
+        $this->request($user, '1500')->assertSessionHas('success');
+
         StaffWithdrawal::query()->where('status', 'requested')->update(['status' => 'rejected']);
-        $this->request($user, '2000')->assertSessionHasNoErrors();
 
-        $this->assertSame(3, StaffWithdrawal::query()->count());
+        $this->request($user, '2000')->assertSessionHasErrors('amount');
+        $this->assertSame(2, StaffWithdrawal::query()->count());
     }
 
-    public function test_account_must_exist_and_be_past_its_waiting_period(): void
+    public function test_account_must_exist_and_new_accounts_must_complete_the_waiting_period(): void
     {
         $none = $this->staff('10000.00', false);
         $waiting = $this->staff('10000.00', true, false);
@@ -162,7 +203,7 @@ class WithdrawalRequestTest extends TestCase
         $user = $this->staff('10000.00');
         $other = $this->staff('10000.00');
 
-        $this->actingAs($user)->post(route('wallet.withdrawals.store'), ['amount' => '1000', 'user_id' => $other->id]);
+        $this->request($user, '1000', ['user_id' => $other->id])->assertSessionHas('success');
         $this->assertSame($user->id, StaffWithdrawal::query()->firstOrFail()->user_id);
 
         $this->actingAs($other)->get(route('wallet.withdrawals'))->assertOk()->assertSee('No withdrawal requests yet.');

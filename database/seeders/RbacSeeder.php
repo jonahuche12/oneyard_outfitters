@@ -405,6 +405,11 @@ class RbacSeeder extends Seeder
                 'slug' => 'earnings.wallets.view',
                 'description' => 'View staff wallet balances and ledger entries.',
             ],
+            [
+                'name' => 'Manage Withdrawal Requests',
+                'slug' => 'earnings.withdrawals.manage',
+                'description' => 'Approve, reject and record payment of staff withdrawal requests.',
+            ],
 
             /*
              * Product Specifications
@@ -518,6 +523,7 @@ class RbacSeeder extends Seeder
                     'deliveries.confirm',
 
                     'payments.view',
+                    'earnings.withdrawals.manage',
 
                     'follow-ups.view',
                     'follow-ups.create',
@@ -678,6 +684,7 @@ class RbacSeeder extends Seeder
                     'payments.reverse',
                     'earnings.pools.view',
                     'earnings.wallets.view',
+                    'earnings.withdrawals.manage',
                     'earnings.contributions.assign',
                     'earnings.pools.finalize',
                     'earnings.adjustments.create',
