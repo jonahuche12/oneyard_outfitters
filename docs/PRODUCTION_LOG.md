@@ -6137,4 +6137,24 @@ Preserve all existing working-tree changes. No commit or unrelated cleanup perfo
 - Open: link #2 expiry anomaly (~1h17m instead of 14 days), cause unknown.
 - Uncommitted: SubmitMeasurements, migration, config/measurements.php, ValidateMeasurementPayload, public controller/views, tests.
 
+### 2026-10-20 — Measurement Entry B2 VERIFIED; B3 Public Entry Form (manual + commercial sizes) — IMPLEMENTED (tests pending)
+- B2: `SubmitMeasurementsTest` 8 passed / 24 assertions (user-run). User confirms link emails are being delivered.
+- User requirement: contact provides measurements manually, by Excel upload, or by choosing commercial sizes.
+- B3 adds PublicMeasurementController::store, POST measurements.public.store (throttle 10/min), per-item method choice, profile-based person rows (one per unit for piece), size grid, per-item errors, received/under-review/accepted states, correction reason display, plain-JS public/js/public-measurements.js (page does not load the Vite bundle), PublicMeasurementSubmitTest (4). Results pending.
+- Excel (B6) awaits approval: A phpoffice/phpspreadsheet (recommended) or B dependency-free reader.
+- Open: link expiry anomaly (dev links ~1-5h); B4/B5 staff accept/correct and review screen; measurements.review permission.
+
+### 2026-10-20 — Drafts Approved; phpspreadsheet Installed
+- User approved: reverse "no drafts"; per-item submit; staff progress on the order panel.
+- composer require phpoffice/phpspreadsheet resolved ^5.10. Composer reported 2 security advisories affecting 1 package (not identified; `composer audit` requested). Excel parser held until reviewed.
+- Pending: order 12 garment-type fix output.
+- Build order: B3a SaveMeasurementDraft (+ draft flag in validator), B3b per-item submit, B3c form (add person, top bar, save), B3d staff progress, B6 Excel.
+
+### 2026-10-20 — Measurement Entry B3: VERIFIED (focused); Audit Findings
+- `php artisan test tests/Feature/PublicMeasurementSubmitTest.php` (user-run): 4 passed / 16 assertions.
+- Git: HEAD 0687ffb = origin (B2 committed and pushed). B3 files, composer.json/lock uncommitted; RbacSeeder.php.bak tracked and modified; release.zip deleted; scripts/ untracked.
+- composer audit: 2 advisories, both in league/commonmark <=2.10.1 (medium: DisallowedRawHtml bypass; high: GFM table DoS). Not phpspreadsheet. Exposure depends on rendering untrusted Markdown (unchecked). Does not block B6.
+- Link expiry anomaly: still unexplained (output not supplied).
+- Full suite not rerun since B3.
+- Next: commonmark update check, full suite, B3 checkpoint commit, B3a draft design for approval.
 

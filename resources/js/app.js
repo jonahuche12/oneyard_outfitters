@@ -513,3 +513,4 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 });
+import './public-measurements';

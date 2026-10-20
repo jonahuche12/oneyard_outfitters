@@ -517,3 +517,7 @@ Route::middleware(['auth', 'active'])->group(function () {
 Route::get('/measurements/{token}', [\App\Http\Controllers\PublicMeasurementController::class, 'show'])
     ->middleware('throttle:30,1')
     ->name('measurements.public.show');
+
+Route::post('/measurements/{token}', [\App\Http\Controllers\PublicMeasurementController::class, 'store'])
+    ->middleware('throttle:10,1')
+    ->name('measurements.public.store');

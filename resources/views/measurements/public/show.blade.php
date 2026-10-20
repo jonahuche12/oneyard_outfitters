@@ -1,43 +1,122 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="robots" content="noindex, nofollow">
-    <meta name="referrer" content="no-referrer">
-    <title>Measurements — Oneyard Outfitters</title>
-</head>
-<body style="margin:0;background:#f1f5f9;font-family:Arial,Helvetica,sans-serif;color:#334155;">
-    <div style="max-width:680px;margin:32px auto;padding:0 16px;">
-        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:28px;">
-            <img src="{{ asset('images/oneyard/oneyard_logo.png') }}" alt="Oneyard Outfitters" style="height:48px;width:auto;display:block;margin-bottom:20px;">
-            <h1 style="margin:0 0 8px;font-size:24px;color:#0f172a;">Measurements for order {{ $order->order_number }}</h1>
-            <p style="margin:0 0 20px;font-size:15px;line-height:1.7;">
-                Hello {{ $contactName }}, {{ $organization->name }} needs to provide measurements for the items below.
-                This link is personal to you and expires on {{ $expiresAt->format('j F Y') }}.
-            </p>
+@extends('layouts.public')
 
-            <table style="width:100%;border-collapse:collapse;font-size:14px;">
-                <thead>
-                    <tr style="text-align:left;color:#64748b;font-size:12px;text-transform:uppercase;">
-                        <th style="padding:8px 0;">Item</th><th>Quantity</th><th>Unit</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach($items as $item)
-                        <tr style="border-top:1px solid #e2e8f0;">
-                            <td style="padding:10px 0;color:#0f172a;font-weight:600;">{{ $item->item_name }}</td>
-                            <td>{{ rtrim(rtrim(number_format((float) $item->quantity, 2, '.', ''), '0'), '.') }}</td>
-                            <td>{{ $item->unit }}</td>
-                        </tr>
-                    @endforeach
-                </tbody>
-            </table>
+@section('content')
+@php $input = 'w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500'; @endphp
 
-            <p style="margin:24px 0 0;padding:14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;line-height:1.6;">
-                Measurement entry is being prepared. You will be able to submit measurements on this page shortly.
-            </p>
-        </div>
+<section class="relative overflow-hidden bg-slate-950 text-white">
+    <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(245,158,11,0.16),_transparent_38%)]"></div>
+    <div class="relative mx-auto max-w-4xl px-6 py-14 sm:px-8">
+        <p class="text-sm font-semibold uppercase tracking-[0.24em] text-amber-400">Order {{ $order->order_number }}</p>
+        <h1 class="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">Provide your measurements</h1>
+        <p class="mt-4 max-w-2xl text-base leading-7 text-slate-300">
+            Hello {{ $contactName }}, {{ $organization->name }} needs to provide measurements for the items below.
+            This link is personal to you and expires on {{ $expiresAt->format('j F Y') }}. All measurements are in inches.
+        </p>
     </div>
-</body>
-</html>
+</section>
+
+<section class="bg-slate-50">
+    <div class="mx-auto max-w-4xl px-6 py-10 sm:px-8">
+
+        @if(session('status'))
+            <div class="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">{{ session('status') }}</div>
+        @endif
+        @if($errors->has('link') || $errors->has('items'))
+            <div class="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+                {{ $errors->first('link') ?: $errors->first('items') }}
+            </div>
+        @endif
+
+        @php $anyOpen = collect($states)->contains(fn ($s) => $s['open']); @endphp
+
+        <form method="POST" action="{{ route('measurements.public.store', ['token' => $token]) }}" id="measurement-form" data-submit-spinner data-loading-text="Submitting...">
+            @csrf
+            @foreach($items as $item)
+                @php
+                    $id = $item->id;
+                    $st = $states[$id];
+                    $profile = $st['profile'];
+                    $strict = $st['strict'];
+                    $qty = (int) round((float) $item->quantity);
+                    $method = old("items.$id.method", $profile ? 'individual' : 'size_quantity');
+                    $oldPeople = old("items.$id.people");
+                    $rows = is_array($oldPeople) ? array_values($oldPeople) : [];
+                    $rowCount = max(count($rows), $strict ? min($qty, 500) : 1);
+                    $itemErrors = collect($errors->getMessages())->filter(fn ($m, $k) => str_starts_with($k, "items.$id"))->flatten()->unique()->values();
+                @endphp
+
+                <div class="mb-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm" data-item>
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <h2 class="text-lg font-semibold text-slate-950">{{ $item->item_name }}</h2>
+                        <span class="text-sm text-slate-600">Quantity: {{ rtrim(rtrim(number_format((float) $item->quantity, 2, '.', ''), '0'), '.') }} {{ strtolower($item->unit) }}</span>
+                    </div>
+
+                    @if($st['status'] === 'submitted')
+                        <p class="mt-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-800">Received and under review.</p>
+                    @elseif($st['status'] === 'accepted')
+                        <p class="mt-4 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800">Accepted. Thank you.</p>
+                    @else
+                        @if($st['reason'])
+                            <p class="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                                Oneyard asked for a correction: {{ $st['reason'] }}
+                            </p>
+                        @endif
+                        @foreach($itemErrors as $msg)
+                            <p class="mt-3 text-sm text-red-700">{{ $msg }}</p>
+                        @endforeach
+
+                        @if($profile)
+                            <div class="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm text-slate-800">
+                                <label class="inline-flex items-center gap-2"><input type="radio" name="items[{{ $id }}][method]" value="individual" data-method @checked($method === 'individual')> Enter each person's measurements</label>
+                                <label class="inline-flex items-center gap-2"><input type="radio" name="items[{{ $id }}][method]" value="size_quantity" data-method @checked($method === 'size_quantity')> Choose our commercial sizes</label>
+                            </div>
+                        @else
+                            <input type="hidden" name="items[{{ $id }}][method]" value="size_quantity">
+                            <p class="mt-4 text-sm text-slate-600">Please choose how many you need in each commercial size.</p>
+                        @endif
+
+                        @if($profile)
+                            <div data-panel="individual" @if($method !== 'individual') hidden @endif>
+                                @if($strict)
+                                    <p class="mt-4 text-sm text-slate-600">Measurements are needed for exactly {{ $qty }} {{ $qty === 1 ? 'person' : 'people' }}.</p>
+                                @endif
+                                <div data-people data-next="{{ $rowCount }}">
+                                    @for($i = 0; $i < $rowCount; $i++)
+                                        @include('measurements.public._person', ['itemId' => $id, 'index' => $i, 'profile' => $profile, 'strict' => $strict, 'values' => $rows[$i] ?? []])
+                                    @endfor
+                                </div>
+                                @unless($strict)
+                                    <button type="button" data-add-person class="mt-4 rounded-lg border border-slate-900 px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-100">+ Add person</button>
+                                @endunless
+                                <template data-person-template>
+                                    @include('measurements.public._person', ['itemId' => $id, 'index' => '__INDEX__', 'profile' => $profile, 'strict' => $strict, 'values' => []])
+                                </template>
+                            </div>
+                        @endif
+
+                        <div data-panel="size_quantity" @if($profile && $method !== 'size_quantity') hidden @endif>
+                            <p class="mt-4 text-sm text-slate-600">
+                                Enter how many you need in each size @if($strict)(the total must be {{ $qty }})@endif.
+                            </p>
+                            <div class="mt-3 grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-8">
+                                @foreach(config('measurements.sizes') as $size)
+                                    <label class="block text-xs font-medium text-slate-600">{{ $size }}
+                                        <input type="text" inputmode="numeric" name="items[{{ $id }}][sizes][{{ $size }}]" value="{{ old("items.$id.sizes.$size") }}" class="{{ $input }} mt-1">
+                                    </label>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endif
+                </div>
+            @endforeach
+
+            @if($anyOpen)
+                <button type="submit" id="measurement-submit" class="rounded-xl bg-slate-950 px-6 py-3.5 text-sm font-bold text-white hover:bg-slate-800 disabled:opacity-60">
+                    Submit Measurements
+                </button>
+                <p class="mt-3 text-xs text-slate-500">Once submitted, Oneyard will review your measurements. You can only change them if a correction is requested.</p>
+            @endif
+        </form>
+    </div>
+</section>
+@endsection
