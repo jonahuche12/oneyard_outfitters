@@ -223,15 +223,30 @@ class RbacTest extends TestCase
         $this->seed(RbacSeeder::class);
 
         $expectedPermissions = [
+            'earnings.weights.manage',
+            'earnings.contributions.assign',
+            'earnings.pools.finalize',
+            'earnings.adjustments.create',
+            'earnings.pools.view',
+            'earnings.wallets.view',
             'organizations.view',
             'organizations.create',
             'organizations.update',
+            'organizations.export',
             'organizations.delete',
 
             'contacts.view',
             'contacts.create',
             'contacts.update',
+            'contacts.update-notes',
+            'contacts.activate',
+            'contacts.deactivate',
             'contacts.delete',
+
+            'contact-notes.view',
+            'contact-notes.create',
+            'contact-notes.update',
+            'contact-notes.delete',
 
             'requirements.view',
             'requirements.create',
@@ -247,6 +262,7 @@ class RbacTest extends TestCase
             'orders.create',
             'orders.update',
             'orders.approve',
+            'orders.assign',
 
             'suppliers.view',
             'suppliers.create',
@@ -285,6 +301,13 @@ class RbacTest extends TestCase
             'users.activate',
             'users.deactivate',
             'users.assign-roles',
+            'earnings.withdrawals.manage',
+            'deliveries.review_offline_payment',
+            'leads.assign',
+            'leads.convert',
+            'leads.create',
+            'leads.update',
+            'leads.view',
         ];
 
         $this->assertDatabaseCount(
@@ -309,10 +332,16 @@ class RbacTest extends TestCase
             'organizations.view',
             'organizations.create',
             'organizations.update',
+            'organizations.export',
 
             'contacts.view',
             'contacts.create',
             'contacts.update',
+            'contacts.update-notes',
+
+            'contact-notes.view',
+            'contact-notes.create',
+            'contact-notes.update',
 
             'requirements.view',
             'requirements.create',
@@ -328,6 +357,10 @@ class RbacTest extends TestCase
             'orders.create',
 
             'follow-ups.view',
+            'leads.convert',
+            'leads.create',
+            'leads.update',
+            'leads.view',
             'follow-ups.create',
             'follow-ups.update',
 

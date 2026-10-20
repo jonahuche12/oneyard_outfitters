@@ -6102,4 +6102,39 @@ Preserve all existing working-tree changes. No commit or unrelated cleanup perfo
 - 2 new render tests failed with 403: test users lacked orders.view / order visibility (Gate view), so the page never rendered. Test defect; application unchanged. Fixture fixed; re-run pending.
 - Public entry page still unbuilt: links are dead. Uncommitted.
 
+### 2026-10-20 — Measurement Link Email Queue: VERIFIED (focused)
+- `php artisan test tests/Feature/MeasurementLinkQueueTest.php tests/Feature/MeasurementLinkHttpTest.php` (user-run): 11 passed / 33 assertions. Old synchronous tests removed.
+- Queue run: first attempt failed in Mail::send, retry succeeded (backoff 10s). Exception message not read (tail cut it off); likely transient SMTP/rate limit (unconfirmed).
+- queue:failed contains only the older OrderCreated/OrderApproved*/WhatsApp rows from 2026-10-14..16 (visible portion); no measurement jobs seen.
+- Full suite not rerun; measurement-link work uncommitted; public entry page still a 404 stub; links are dead.
+
+### 2026-10-20 — Measurement Links: Coordinator Send, Queue, Order Panel — Full Suite VERIFIED
+- `php artisan test` (user-run): 742 passed / 2754 assertions / 0 failed (47s). Measurement link email delivered via queue worker (user-reported).
+- Included: MeasurementLinkController (multi-contact send), SendMeasurementLinkEmail (queued, encrypted, rate-limited, retries), MeasurementLinkInvitation, email view, orders/partials/measurement-links, routes, production role grant of measurements.links.manage.
+- Fixed in browser: contacts use first_name/last_name (partial ordering and name display).
+- Public entry page still a 404 stub; links are dead until it ships. Browser check of panel gating/revoke not reported.
+
+### 2026-10-20 — Public Measurement Page (read-only) — IMPLEMENTED (tests pending)
+- Prior state (user-run): full suite 742 passed / 2754 assertions; link work committed and pushed (user-reported).
+- Added PublicMeasurementController, views measurements.public.show/invalid (self-contained, not layouts.public), route measurements.public.show now live (throttle 30/min). Headers: X-Robots-Tag noindex, Referrer-Policy no-referrer, Cache-Control no-store. Any invalid/expired/revoked token returns the same generic 404 page. Shows required items only; records access.
+- Tests: PublicMeasurementPageTest (3). Results pending.
+- Next: garment field profiles config; measurement entry (individual and size-quantity); submission lifecycle; staff accept/correct screen; Excel upload (library not approved).
+
+### 2026-10-20 — Public Measurement Page: VERIFIED (focused)
+- `php artisan test tests/Feature/PublicMeasurementPageTest.php` (user-run): 3 passed / 16 assertions.
+- Schema read: measurement_submissions.status defaults to 'draft' (B2 must set 'submitted' explicitly); measurement_method and input_source are unconstrained strings (app-level constants needed); no measurement_link_id column yet.
+- Measurement entry design (B1-B6) awaiting answers: garment field lists, measurement_link_id, review permission, items without a profile.
+
+### 2026-10-20 — Measurement Entry B2: SubmitMeasurements — IMPLEMENTED (tests pending)
+- Prior: ValidateMeasurementPayloadTest 11 passed / 33 assertions (user-run). Browser: public page renders org, contact, required items (unit casing inconsistent: "Piece"/"piece"; cosmetic).
+- Discrepancy: page showed link expiry 20 Oct 2026 (today); code sets issue + 14 days. Unexplained; tinker/date output requested.
+- Added migration 2026_10_20_140000 (measurement_submissions.measurement_link_id, nullable FK), SubmitMeasurements (re-resolves token, locks order and items, all-or-nothing, new revision per submission with status submitted, only pending/correction items, errors keyed items.{id}.*), SubmitMeasurementsTest (8). Results pending.
+- Next: B3 public entry form, B4 accept/correct actions with measurements.review, B5 review screen, B6 Excel (library unapproved).
+
+### 2026-10-20 — Measurement Entry B2: Migration Applied; 7/8 Tests Pass
+- Migration 2026_10_20_140000 ran (user-run). `SubmitMeasurementsTest`: 7 passed / 1 failed / 24 assertions.
+- Failure: "a production plan blocks submission". Fixture kept the order `approved`; an approved order with a plan is unreachable. Test fixed to set in_production first (re-run pending). Action unchanged.
+- Open: link #2 expiry anomaly (~1h17m instead of 14 days), cause unknown.
+- Uncommitted: SubmitMeasurements, migration, config/measurements.php, ValidateMeasurementPayload, public controller/views, tests.
+
 

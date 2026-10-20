@@ -513,7 +513,7 @@ Route::middleware(['auth', 'active'])->group(function () {
         ->name('wallet.withdrawals.cancel');
 });
 
-// Placeholder until the public measurement entry page is built.
-Route::get('/measurements/{token}', fn (string $token) => abort(404))
+// Public measurement page (read-only for now).
+Route::get('/measurements/{token}', [\App\Http\Controllers\PublicMeasurementController::class, 'show'])
     ->middleware('throttle:30,1')
     ->name('measurements.public.show');
