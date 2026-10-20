@@ -2178,6 +2178,7 @@
     </div>
 
     @include('orders.partials.measurement-eligibility')
+@include('orders.partials.measurement-links')
 
     <div class="grid gap-6 lg:grid-cols-2">
 

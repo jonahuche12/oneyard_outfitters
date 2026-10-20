@@ -336,6 +336,16 @@ Route::resource('orders', OrderController::class)
     )->name('orders.items.measurement-eligibility');
 
     Route::post(
+        '/orders/{order}/measurement-links',
+        [\App\Http\Controllers\MeasurementLinkController::class, 'store']
+    )->name('orders.measurement-links.store');
+
+    Route::post(
+        '/orders/{order}/measurement-links/{link}/revoke',
+        [\App\Http\Controllers\MeasurementLinkController::class, 'revoke']
+    )->name('orders.measurement-links.revoke');
+
+    Route::post(
         '/orders/{order}/production-plan',
         [OrderController::class, 'createProductionPlan']
     )->name('orders.production-plan.store');
@@ -502,3 +512,8 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::post('wallet/withdrawals/{withdrawal}/cancel', [\App\Http\Controllers\WithdrawalController::class, 'cancel'])
         ->name('wallet.withdrawals.cancel');
 });
+
+// Placeholder until the public measurement entry page is built.
+Route::get('/measurements/{token}', fn (string $token) => abort(404))
+    ->middleware('throttle:30,1')
+    ->name('measurements.public.show');

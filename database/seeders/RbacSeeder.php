@@ -527,6 +527,7 @@ class RbacSeeder extends Seeder
                     'production.manage',
 
                     'measurements.eligibility.manage',
+                    'measurements.links.manage',
 
                     'quality-control.view',
 
@@ -646,6 +647,7 @@ class RbacSeeder extends Seeder
 
                     'production.view',
                     'production.manage',
+                    'measurements.links.manage',
 
                     'specifications.view',
                 ],

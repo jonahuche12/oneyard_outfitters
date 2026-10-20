@@ -6071,3 +6071,35 @@ Preserve all existing working-tree changes. No commit or unrelated cleanup perfo
 - `php artisan test tests/Feature/MeasurementLinkActionsTest.php tests/Feature/RbacTest.php` (user-run): 23 passed / 1 failed / 169 assertions. RbacTest 15 passed (permission count with measurements.links.manage accepted).
 - Failure: test_actor_without_permission_or_inactive_is_denied. Cause: test helper reused one `admin` role, so the later call granted the permission to the earlier actor. Test defect, actions unchanged. Fixed with distinct role slugs; re-run result pending.
 - Still open: grant measurements.links.manage to the admin role in RbacSeeder (block not yet inspected); HTTP/UI/email entry points; checkpoint commit unconfirmed (HEAD last seen 4eb57d7).
+### 2026-10-20 — Measurement Links: Findings
+- Git (user-run): HEAD 4eb57d7 = origin; checkpoint commit still not made. Measurement eligibility, gate and link work uncommitted.
+- RbacSeeder: admin role at line 482, sales 561, finance 683; roles synced via sync() at line 751. Grant of measurements.links.manage to admin pending inspection of the admin block.
+- Re-run of MeasurementLinkActionsTest after the fixture fix: result pending.
+### 2026-10-20 — Measurement Links Slice 3a VERIFIED; 3b-1 (mail + HTTP) IMPLEMENTED
+- `db:seed --class=RbacSeeder` ran; `MeasurementLinkActionsTest` + `RbacTest`: 24 passed / 170 assertions (user-run). Admin grant of measurements.links.manage confirmed.
+- Added (tests pending): MeasurementLinkInvitation mailable (synchronous, NOT queued so the raw token never enters jobs/failed_jobs), emails.measurements.invitation view, MeasurementLinkController (store: issue + send, sent_at only on success; revoke), routes orders.measurement-links.store / .revoke, placeholder public route measurements.public.show (404), MeasurementLinkHttpTest (5).
+- Decision (default, unconfirmed by user): sync mail; mail and controller before public page.
+- UI on orders/show intentionally withheld until the public page exists.
+- Git: checkpoint pushed by user earlier; this slice uncommitted.
+- Next: public entry page (resolve token, rate limiting, show required items), then individual and size-quantity entry.
+
+### 2026-10-20 — Measurement Links Slice 3b-1: VERIFIED (focused)
+- `php artisan test tests/Feature/MeasurementLinkHttpTest.php` (user-run): 5 passed / 18 assertions.
+- Routes registered: orders.measurement-links.store, orders.measurement-links.revoke, measurements.public.show (placeholder, 404).
+- Verified: admin issue + synchronous mail with sent_at set; mail failure leaves sent_at null and shows an error; no permission -> 403, nothing sent; revoke needs a reason; link from another order -> 404; mail not queued.
+- Not done: UI on orders/show (withheld until the public page exists); public entry page; full suite not rerun; slice uncommitted.
+- Check: subject line of MeasurementLinkInvitation (terminal echo showed it truncated).
+
+### 2026-10-20 — Measurement Links: Multi-Contact Send (coordinator request) — IMPLEMENTED (tests pending)
+- Requested: the order coordinator can send the measurement link to selected contacts.
+- MeasurementLinkController::store now takes contact_ids[] (1-10, distinct); one link and one synchronous email per contact; per-contact failures reported by name without blocking others. HTTP tests updated to contact_ids plus 2 new tests. Results pending.
+- Finding: measurements.links.manage is held only by admin/super-admin; coordinator access needs a role grant (production role block not yet inspected).
+- Public page still 404, so links are dead until the entry-page unit. Do not send real links before it ships.
+- Next: grant permission to the coordinating role, order-show panel (contact picker, link list, revoke modal) after inspecting orders/show and quotation-send.js.
+
+### 2026-10-20 — Measurement Links: Coordinator Grant VERIFIED; Order Panel — Render Tests Fixture Fix
+- RbacSeeder re-run; measurements.links.manage granted to the production role. `MeasurementLinkHttpTest` (first 7) + `MeasurementEligibilityRenderTest` + `RbacTest`: 26 passed / 174 assertions (user-run). `view:cache` clean; partial included at orders/show line 2180.
+- 2 new render tests failed with 403: test users lacked orders.view / order visibility (Gate view), so the page never rendered. Test defect; application unchanged. Fixture fixed; re-run pending.
+- Public entry page still unbuilt: links are dead. Uncommitted.
+
+
