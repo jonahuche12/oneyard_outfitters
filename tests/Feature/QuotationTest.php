@@ -83,6 +83,7 @@ class QuotationTest extends TestCase
             'organization_id' => $organization->id,
             'item_name' => 'School Shirt',
             'description' => 'White short-sleeve school shirt.',
+            'product_type' => 'shirt',
             'unit' => 'piece',
             'unit_price' => 3500,
             'status' => 'draft',
@@ -121,6 +122,7 @@ class QuotationTest extends TestCase
         $this->assertNotNull($item);
         $this->assertSame($specification->id, $item->product_specification_id);
         $this->assertSame('School Shirt', $item->item_name);
+        $this->assertSame('shirt', $item->product_type);
         $this->assertSame('White short-sleeve school shirt.', $item->description);
         $this->assertSame('piece', $item->unit);
         $this->assertSame('500.00', $item->quantity);

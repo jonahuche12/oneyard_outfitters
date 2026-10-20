@@ -166,4 +166,9 @@ class Order extends Model
             }
         });
     }
+
+    public function measurementLinks(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(\App\Models\MeasurementLink::class)->orderByDesc('id');
+    }
 }

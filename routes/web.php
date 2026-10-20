@@ -331,6 +331,11 @@ Route::resource('orders', OrderController::class)
     )->name('orders.assign-coordinator');
 
     Route::post(
+        '/orders/{order}/items/{item}/measurement-eligibility',
+        [OrderController::class, 'decideMeasurementEligibility']
+    )->name('orders.items.measurement-eligibility');
+
+    Route::post(
         '/orders/{order}/production-plan',
         [OrderController::class, 'createProductionPlan']
     )->name('orders.production-plan.store');

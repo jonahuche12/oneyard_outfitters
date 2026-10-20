@@ -60,6 +60,7 @@ class QuotationFulfillmentTest extends TestCase
             'description' => 'White short-sleeve school shirt.',
             'unit' => 'piece',
             'unit_price' => 700,
+            'product_type' => 'shirt',
             'status' => 'draft',
         ]);
 
@@ -68,6 +69,7 @@ class QuotationFulfillmentTest extends TestCase
             'product_specification_id' => $specification->id,
             'item_name' => 'School Shirt',
             'description' => 'White short-sleeve school shirt.',
+            'product_type' => 'shirt',
             'quantity' => 500,
             'unit' => 'piece',
             'unit_price' => 700,
@@ -134,12 +136,22 @@ class QuotationFulfillmentTest extends TestCase
     {
         $transaction = $this->createFulfillableTransaction();
 
+        $quotationItem = $transaction->quotationRecipient
+            ->quotation->items()->firstOrFail();
+
+        // A later specification edit must not rewrite the quotation snapshot.
+        ProductSpecification::query()
+            ->findOrFail($quotationItem->product_specification_id)
+            ->update(['product_type' => 'trouser']);
+
         $order = app(FulfillVerifiedQuotationPayment::class)
             ->execute($transaction);
 
         $item = $order->items()->first();
 
         $this->assertNotNull($item);
+        $this->assertSame('shirt', $quotationItem->product_type);
+        $this->assertSame('shirt', $item->product_type);
         $this->assertSame('School Shirt', $item->item_name);
         $this->assertSame(
             'White short-sleeve school shirt.',

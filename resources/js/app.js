@@ -9,6 +9,7 @@ import './ajax-list';
 import './submit-spinner';
 import './quotation-send';
 import './order-coordinator';
+import './measurement-eligibility';
 import './procurements/photos';
 import './procurements/offers';
 import './earnings/pool';

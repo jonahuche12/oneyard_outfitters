@@ -34,12 +34,12 @@ class ProductSpecificationFactory extends Factory
             ]),
 
             'product_type' => fake()->randomElement([
-                'uniform',
-                'sportswear',
-                'bag',
-                'shoe',
-                'branded_item',
-                'school_supply',
+                'shirt',
+                'trouser',
+                'shorts',
+                'pinafore',
+                'overall',
+                'jumpsuit',
                 'other',
             ]),
 

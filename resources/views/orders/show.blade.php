@@ -2177,6 +2177,8 @@
 
     </div>
 
+    @include('orders.partials.measurement-eligibility')
+
     <div class="grid gap-6 lg:grid-cols-2">
 
         <div class="oy-card oy-section">

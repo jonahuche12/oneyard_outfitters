@@ -245,6 +245,7 @@ class QuotationController extends Controller
 
             $items[] = [
                 'product_specification_id' => $specification->id,
+                'product_type' => $specification->product_type,
                 'item_name' => $specification->item_name,
                 'description' => $specification->description,
                 'quantity' => (float) $quantity,

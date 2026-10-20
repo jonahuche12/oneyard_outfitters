@@ -126,6 +126,7 @@ class OrderController extends Controller
             'quotation.payments',
             'items.productSpecification',
             'items.quotationItem',
+            'items.measurementEligibilityAudits.changedBy',
             'notificationRecipients.contact',
             'currentAssignment.user',
             'productionPlan.activities.activity',
@@ -155,6 +156,34 @@ class OrderController extends Controller
             'coordinatorCandidates',
             'productionActivities'
         ));
+    }
+
+    public function decideMeasurementEligibility(
+        Request $request,
+        Order $order,
+        \App\Models\OrderItem $item
+    ): RedirectResponse {
+        if ($item->order_id != $order->id) {
+            abort(404);
+        }
+
+        $eligibilityOpen = $order->status === Order::STATUS_APPROVED
+            || ($order->status === Order::STATUS_IN_PRODUCTION && ! $order->productionPlan()->exists());
+
+        if (! $eligibilityOpen) {
+            return back()
+                ->withErrors([
+                    'eligibility' => 'Measurement eligibility can only be decided before the production plan is created.',
+                ])
+                ->withInput();
+        }
+
+        app(\App\Actions\Measurements\ResolveOrderItemMeasurementEligibility::class)
+            ->execute($request->user(), $item, $request->only(['eligibility', 'reason']));
+
+        return redirect()
+            ->route('orders.show', $order)
+            ->with('status', 'Measurement eligibility recorded for "' . $item->item_name . '".');
     }
 
     public function edit(Order $order): View
@@ -375,6 +404,7 @@ class OrderController extends Controller
             $activity,
             $validated
         ): ProductionPlanActivity {
+
             $lockedActivity = ProductionPlanActivity::query()
                 ->whereKey($activity->id)
                 ->lockForUpdate()
@@ -420,8 +450,10 @@ class OrderController extends Controller
         Gate::authorize('unmarkActivity', [$order, $activity]);
 
         $lockedActivity = DB::transaction(function () use (
-            $activity
+            $activity,
+            $order
         ): ProductionPlanActivity {
+
             $lockedActivity = ProductionPlanActivity::query()
                 ->whereKey($activity->id)
                 ->lockForUpdate()
@@ -500,8 +532,10 @@ class OrderController extends Controller
                 $validated,
                 $evidence,
                 $filePath,
-                $request
+                $request,
+                $order
             ): ProductionPlanActivity {
+
                 $lockedActivity = ProductionPlanActivity::query()
                     ->whereKey($activity->id)
                     ->lockForUpdate()
@@ -580,6 +614,7 @@ class OrderController extends Controller
                 ->lockForUpdate()
                 ->firstOrFail();
 
+
             if ($lockedOrder->status !== Order::STATUS_IN_PRODUCTION) {
                 abort(
                     422,
@@ -650,6 +685,7 @@ class OrderController extends Controller
                 ->lockForUpdate()
                 ->firstOrFail();
 
+
             if ($lockedOrder->status !== Order::STATUS_CORRECTION_REQUIRED) {
                 abort(
                     422,
@@ -709,6 +745,18 @@ class OrderController extends Controller
         $plan = $order->productionPlan;
 
         DB::transaction(function () use ($order, $plan, $validated): void {
+            $lockedOrder = Order::query()
+                ->whereKey($order->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+
+            $plan = $lockedOrder->productionPlan;
+
+            if (! $plan) {
+                abort(422, 'A production plan is required before confirming production completion.');
+            }
+
             $plan = ProductionPlan::query()
                 ->whereKey($plan->id)
                 ->lockForUpdate()
@@ -722,7 +770,7 @@ class OrderController extends Controller
                 abort(422, 'All production activities must be completed before production can be confirmed.');
             }
 
-            $order->update([
+            $lockedOrder->update([
                 'status' => Order::STATUS_READY_FOR_QUALITY_CONTROL,
             ]);
 
@@ -796,6 +844,9 @@ class OrderController extends Controller
         }
 
         DB::transaction(function () use ($order, $activities, $request): void {
+            app(\App\Actions\Measurements\EnsureOrderMeasurementsReadyForProduction::class)
+                ->handle($order);
+
             $plan = ProductionPlan::create([
                 'order_id' => $order->id,
                 'coordinator_id' => $request->user()->id,

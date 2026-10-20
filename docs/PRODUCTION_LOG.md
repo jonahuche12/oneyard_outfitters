@@ -5834,3 +5834,240 @@ Order approval UI/UX improvement (design below, awaiting approval).
 ### 2026-10-16 — Mobile Sidebar Toggle (layouts.app): VERIFIED locally
 - Browser verification (user-reported): hamburger opens the app sidebar and it closes as designed; public mobile sidebar shows the favicon image. Details of each close path were not itemised in the report.
 - Next: release to production (no migrations).
+
+### 2026-10-19 — Garment Classification for Product Specifications — DESIGN REVISION
+- Requested: classify specifications by garment type (shirt, trouser, pinafore, overall, jumpsuit, etc.) so measurement collection asks garment-specific fields.
+- Revised order: (1) garment_type on specification, snapshotted to quotation and order items; (2) per-garment measurement profiles; (3) measurement collection links.
+- Open: reuse vs new field (product_type), garment list, measurement fields and unit, requirement scope.
+- Status: design only, awaiting approval. No code changed.
+
+### 2026-10-19 — Garment Classification — DECISION
+- Decision: reuse existing product_type as the garment classification; change the allowed options in the front end and validation (no new field).
+- Pending inspection: current product_type values and their usage, validation rules, existing data mapping, snapshot into quotation and order items.
+- Excel upload security considerations recorded (file type, size, row cap, formula sanitising, rate limiting); upload vs paste-grid decision open.
+- Status: design only. No code changed.
+
+### 2026-10-19 — Measurement Collection — DECISIONS LOCKED
+- product_type reused as garment classification; options changed. Required on all new specifications (and on edit of legacy rows); nullable in DB.
+- Draft measurement fields approved (shirt, trouser/shorts, pinafore, overall/jumpsuit). Unit: inches, fixed.
+- Excel upload approved: .xlsx/.csv only, 2 MB cap, first N rows, values only, formula-prefix sanitising, rate-limited, file parsed then deleted in finally. phpoffice/phpspreadsheet requires approval before install.
+- Build order: (1) garment classification + snapshot, (2) profiles config, (3) collection links + three methods, (4) Excel upload.
+- Status: design only; awaiting inspection output for Unit 1. No code changed.
+
+### 2026-10-19 — Garment Classification — INSPECTION FINDINGS
+- product_type is string(50) NOT NULL, validated in Store/UpdateProductSpecificationRequest; dev data: 6 specifications, all 'uniform'.
+- product_type is not carried on quotation_items or order_items (inferred from grep: no match in item models/migrations or fulfilment action); QuotationController reads it from the specification at lines ~323/332 (purpose not yet reviewed).
+- Tests (ProductSpecificationValidationTest) and ProductSpecificationFactory use 'uniform'/'other' and need updating.
+- Plan: new garment option list (shirt, trouser, shorts, pinafore, overall, jumpsuit, other); legacy 'uniform' shown as unclassified until edited; add product_type to quotation/order items and snapshot; piece-unit items without garment type are not eligible for measurement links.
+- git status: release.zip deleted, scripts/ untracked, log modified.
+- Status: design only; awaiting file output. No code changed.
+---
+
+## Development Checkpoint — 2026-10-19
+### Order Garment Measurements: Database Schema Verified
+
+**Pipeline position:** BUILD → TEST → REVIEW → LOG  
+**Current unit:** Measurement submission schema and automated schema tests  
+**Status:** IMPLEMENTED; SCHEMA VERIFIED; WORKFLOW NOT YET IMPLEMENTED
+
+#### 1. Database migration
+
+Created and applied:
+
+`database/migrations/2026_10_19_200000_create_measurement_submission_tables.php`
+
+Migration status: **Ran — batch 44**.
+
+Three tables were created and inspected against the development database:
+
+- `measurement_submissions`
+  - Belongs to an order item.
+  - Tracks revision, measurement method, input source, status, submission time, review metadata, and correction reason.
+  - Unique constraint on `(order_item_id, revision)`.
+  - Index on `(order_item_id, status)`.
+  - Order-item foreign key cascades on deletion; reviewer foreign key becomes null when the user is deleted.
+
+- `individual_measurements`
+  - Stores optional person label, JSON measurement data, notes, and position.
+  - Belongs to a measurement submission.
+  - Unique constraint on `(measurement_submission_id, position)`.
+
+- `measurement_size_quantities`
+  - Stores size labels and quantities for commercial-size distributions.
+  - Belongs to a measurement submission.
+  - Unique constraint on `(measurement_submission_id, size_label)`.
+
+The migration passed PHP syntax validation, its SQL was reviewed using `migrate --pretend`, and it was applied successfully. `migrate:status` and `db:table` confirmed the resulting development schema.
+
+#### 2. Automated schema tests
+
+Created:
+
+`tests/Feature/MeasurementSubmissionSchemaTest.php`
+
+Verified with:
+
+`php artisan test tests/Feature/MeasurementSubmissionSchemaTest.php`
+
+Result: **4 passed, 21 assertions, 0 failures**.
+
+Coverage:
+- Required measurement tables and columns exist.
+- Required unique indexes exist.
+- Required foreign keys exist.
+- Review fields and optional individual-measurement details are nullable.
+
+The test suite uses the project's SQLite in-memory configuration with `RefreshDatabase`, separately from the development database used for the migration inspection.
+
+#### 3. Approved product direction
+
+The intended workflow supports:
+- Individual measurements per person/garment.
+- Commercial-size quantity distributions, such as S, M, L, and XL.
+- Excel uploads that are parsed into validated canonical records; the original workbook must be deleted after processing, including failure paths.
+- Separate tracking of measurement method and input source.
+- A dedicated, secure measurement access token, not the existing generic order-view token.
+- Saved progress, quantity reconciliation, staff review, correction requests with reasons, revision preservation, and a production-readiness gate requiring accepted measurements.
+
+These are approved design goals, **not implemented functionality**.
+
+#### 4. Important constraints
+
+- Product specifications are organization-specific; they are not a global product catalogue.
+- Do not silently reclassify legacy specifications whose `product_type` is null.
+- Candidate garment types include `shirt`, `trouser`, `shorts`, `pinafore`, `overall`, and `jumpsuit`; eligibility rules still need to account for product units.
+- Do not assume that `pair`, `set`, or `pack` quantities equal the number of people being measured.
+- Fabric sold by the yard must not be treated as a garment measurement requirement.
+- No spreadsheet parsing library was found installed. Do not install one without explicit approval.
+- The existing public order access token must not be reused for measurement write access.
+- The database schema does not yet enforce allowed method/status values or create subsequent revisions through application logic.
+- Preserve all existing working-tree changes. Do not reset, restore, or overwrite unrelated work.
+
+#### 5. Resume point — next session
+
+**Resume with review of `tests/Feature/MeasurementSubmissionSchemaTest.php` and its passing result; do not repeat completed migration work.**
+
+Next controlled step:
+1. Record this checkpoint.
+2. Review the schema test and current working tree if needed.
+3. Proceed to the next approved, narrowly scoped unit: measurement-domain models and relationships, after checking existing model conventions and confirming the domain rules.
+4. Add focused tests before moving on to measurement entry, Excel parsing, review workflow, access control, or production-readiness enforcement.
+
+Do not build the entire measurement workflow in one step. Continue the established UNDERSTAND → ANALYZE → SCOPE → DESIGN → APPROVE → BUILD → TEST → REVIEW → LOG → CONTINUE pipeline.
+
+**Checkpoint boundary:** Database schema and schema tests are verified. No measurement UI, public submission endpoint, Excel parser, review workflow, dedicated measurement token, or production gate has been implemented or verified.
+
+---
+
+## Development Checkpoint — 2026-10-20
+### Order Garment Measurements: Domain Models and Relationships
+
+**Pipeline position:** BUILD → TEST → REVIEW → LOG
+**Status:** IMPLEMENTED; FOCUSED TESTS VERIFIED
+
+Implemented:
+- MeasurementSubmission model with order-item and reviewer relationships.
+- IndividualMeasurement model with JSON measurement casting.
+- MeasurementSizeQuantity model with integer quantity casting.
+- Ordered child relationships for individual measurements and size quantities.
+- OrderItem relationship returning measurement submissions in descending revision order.
+- Model tests using manually created fixture records; no unnecessary QuotationFactory was added.
+
+Verification:
+- MeasurementSubmissionModelTest: 3 passed, 11 assertions.
+- MeasurementSubmissionSchemaTest: 4 passed, 21 assertions, previously verified.
+- These results verify the current model and schema units only, not the complete measurement workflow.
+
+Not implemented:
+- Measurement entry and saving workflow.
+- Secure, dedicated measurement access tokens.
+- Spreadsheet parsing and temporary-upload cleanup.
+- Submission validation, staff review, correction requests, and revision creation.
+- Backend production blocking until the required measurement revision is accepted.
+
+Next unit:
+DESIGN the measurement submission lifecycle, allowed transitions, revision rules, validation requirements, and production-eligibility contract before implementing workflow logic.
+
+Preserve all existing working-tree changes. No commit or unrelated cleanup performed.
+### 2026-10-20 — Measurement Eligibility Decision: SCOPE CHANGE (design agreed, not implemented)
+- Eligibility is now an explicit staff decision per order item (pending default, required, not_required) with reason and an append-only audit table; replaces garment-type-based eligibility. Never inferred from product_type.
+- Rules: active actor + measurements.eligibility.manage; reason 10-1000 chars; no-op rejected; no return to pending; not_required blocked while a submitted/accepted revision exists (defaults, pending confirmation).
+- Future production gate treats pending as unresolved (pending confirmation).
+- Evidence requested: action/model conventions, User active flag, RbacTest count, git and migration state. No code changed.
+### 2026-10-20 — Reconciliation: Unlogged Measurement Eligibility Work Found
+- Present in repo (from user-run output; contents/tests not yet reviewed): migration 2026_10_19_193822 (product_type snapshots, batch 43) and 2026_10_20_100000 (measurement_eligibility columns on order_items, batch 45); OrderItemMeasurementEligibilityAudit model; OrderItem eligibility fields and audit relationship; permission measurements.eligibility.manage seeded; app/Actions/Measurements/ (contents unknown).
+- Column names are measurement_eligibility*, not measurement_requirement; plan adjusted to existing names.
+- Git: HEAD 4eb57d7 equals origin/wip/coordinator-check-offers (pushed). Measurement, snapshot and RBAC changes uncommitted.
+- Unverified: eligibility action behaviour, its tests, RbacTest expectation. No code changed this session.
+
+### 2026-10-20 — Measurement Eligibility Decision: VERIFIED (focused), gaps identified
+- Existing action ResolveOrderItemMeasurementEligibility, audit model/table and permission measurements.eligibility.manage reviewed against the five rules; all met.
+- `php artisan test` RbacTest + MeasurementSubmissionModelTest + MeasurementSubmissionSchemaTest: 26 passed / 188 assertions / 0 failed (user-run). Includes eligibility audit, history, denial and validation tests.
+- Gaps: no-op decisions accepted; not_required not blocked while submitted/accepted revision exists (pending approval); audit rows not append-only.
+- EnsureOrderMeasurementsReadyForProduction exists; call site and gate tests UNVERIFIED.
+- Measurement, snapshot and RBAC changes remain uncommitted.
+
+### 2026-10-20 — Measurement Production Gate: Wiring Found, Untested
+- EnsureOrderMeasurementsReadyForProduction is called at OrderController lines 305, 380, 430, 513, 593, 665, 731, 827 (uncommitted; +36 lines). No test references it. Which transitions each site guards is UNVERIFIED.
+- Risk: pending is the column default and blocks production, so all undecided in-flight orders would be blocked on release; grandfathering undecided. Gate uses abort(422).
+- Full-suite result since the gate was wired: UNKNOWN.
+- Next: classify call sites, gate tests, eligibility no-op/not_required guards (awaiting approval), grandfathering decision.
+### 2026-10-20 — Measurement Gate: Full Suite 685 passed / 2 failed
+- `php artisan test` (user-run): 685 passed / 2 failed / 2564 assertions. One failure: QualityControlTest "coordinator can resubmit corre…" returns 422 (gate abort) at line 523. Second failure not captured (tail cut).
+- Gate is called at 8 OrderController sites (305, 380, 430, 513, 593, 665, 731, 827). Context shows it also guards coordinator assignment (305) and unmark (430), which are not production start (INFERRED). Scope narrowing proposed, not approved.
+- No gate test exists. Grandfathering undecided. Nothing committed.
+### 2026-10-20 — Measurement Gate: Production Entry Confirmed (proposal pending)
+- Order enters in_production only in assignCoordinator when status is approved (OrderController ~334). Reassignment of in-production orders does not transition.
+- Proposed: gate called there only when status is approved; remove the three later gates (grandfathers in-flight orders by status). Script prepared, not run. Expected fallout: OrderProductionPlanTest fixtures need eligibility decisions.
+- Open: gate error UX (422 vs form error), eligibility guards, gate tests.
+
+### 2026-10-20 — Measurement Gate: Moved to Production Entry — VERIFIED (existing tests only)
+- Gate removed from start/complete activity and plan creation; now called once in assignCoordinator (line 306), only when order status is approved. Reassignment of in-production orders is not gated. Script scripts/move_measurement_gate.py; backups OrderController.php.pre-gate-narrowing.bak and .pre-gate-move.bak (delete before staging).
+- `php artisan test` (user-run): 687 passed / 2587 assertions / 0 failed.
+- Not verified: gate behaviour itself (no gate tests); existing fixtures did not trip the gate (reason unknown). Gate failure is a bare 422 (UX decision pending). Eligibility no-op and not_required guards pending approval. Release would block approved orders with undecided items until staff decide each item. Nothing committed.
+
+### 2026-10-20 — Measurement Gate UX and Eligibility Hardening — IMPLEMENTED (not yet verified)
+- Gate now throws ValidationException (key `measurements`) instead of abort(422), so assignCoordinator redirects back with a form error; transaction still rolls back.
+- ResolveOrderItemMeasurementEligibility: rejects no-op decisions; blocks not_required while a submitted/accepted revision exists. OrderItemMeasurementEligibilityAudit made append-only (update/delete throw).
+- Added tests/Feature/MeasurementGateTest.php (8 tests). Results pending.
+- Pending: eligibility tests for the new rules; controller-level gate tests (blocked approved order, allowed reassignment); full suite; browser check of the error message; delete OrderController .bak files; grandfathering confirmed as by-status. Nothing committed.
+### 2026-10-20 — Measurement Eligibility and Production Gate — VERIFIED (test level)
+- `php artisan test tests/Feature/MeasurementEligibilityAndAssignmentTest.php` (user-run): 10 passed / 23 assertions. Full suite: 705 passed / 2622 assertions / 0 failed.
+- Verified: no-op rejection, not_required guards (submitted/accepted blocked, draft allowed), unchanged state on rejection, append-only audit, assignCoordinator blocked/allowed/reassignment ungated.
+- Not verified: browser display of the gate error; no eligibility decision UI; no lifecycle actions (draft/submit/accept/correct). Release blocked: all approved orders with items would be unable to enter production.
+- Housekeeping: delete OrderController .bak files; decide on tracked .bak files; checkpoint commit recommended (exclude .bak and scripts/). Nothing committed.
+- Next: eligibility decision UI, then lifecycle actions; garment-type snapshot tests unlogged.
+
+### 2026-10-20 — Eligibility Decision UI: Include and Render Tests — IMPLEMENTED (not yet verified)
+- @include('orders.partials.measurement-eligibility') added to orders/show between Order Items and the Payment grid (script include_eligibility_partial.py; backup in /tmp). Added MeasurementEligibilityRenderTest (4 tests: button + banner, no button without permission, hidden in production, history rendered). Results pending.
+- Partial uses plain Tailwind rather than oy-* card classes; restyle after browser check.
+- Pending: test output, npm run build, browser check. Lifecycle actions still missing, so not releasable. Nothing committed.
+
+### 2026-10-20 — Measurement Collection: Defaults Approved; Unit 1 (gate move) starting
+- Defaults accepted: gate moves from assignCoordinator to createProductionPlan/startProductionActivity, exempt when a production plan exists; eligibility decisions allowed while approved, or in_production with no plan; person count any >=1 for pair/set/pack, equal for piece; no drafts; 14-day expiry; one link per contact per order.
+- Token design: store hash only, raw token in queued email with RateLimited('mail') middleware (QuotationInvitation is unqueued and stores the raw token; not copied).
+- Pending: current code of the two methods; script, test updates. Nothing committed.
+
+### 2026-10-20 — Measurement Gate: Moved to Plan Creation — IMPLEMENTED (not yet verified)
+- Gate removed from assignCoordinator; now at start of createProductionPlan transaction (orders with a plan are grandfathered since a second plan is rejected earlier). Eligibility decisions allowed when approved, or in_production with no plan (controller and partial).
+- Script scripts/move_gate_to_plan_creation.py; backups in /tmp. Expected test updates: assignment-block test, UI/render lock tests. Results pending. Nothing committed.
+### 2026-10-20 — Measurement Gate at Plan Creation — APPLIED; 3 expected test failures
+- Gate now only in createProductionPlan (OrderController line 847); eligibility decisions allowed when approved, or in_production with no plan. php -l and view:cache clean.
+- `php artisan test` (user-run): 712 passed / 3 failed. Failing (old behaviour): MeasurementEligibilityAndAssignmentTest "undecided item blocks coordinator assignment", MeasurementEligibilityRenderTest "decide button is hidden once order is in production", MeasurementEligibilityUiTest "decision is locked once order is in production". Failure messages not seen.
+- Pending: rewrite those tests; add plan-creation gate tests; then measurement_links unit. Nothing committed.
+### 2026-10-20 — Gate Move: Tests Updated — IMPLEMENTED (not yet verified)
+- Rewrote 3 tests to the new behaviour (assignment not gated; decide button/decisions allowed in production until a plan exists). Added MeasurementPlanGateTest (plan creation blocked with undecided item, allowed with not_required). scripts/update_gate_tests.py. Results pending.
+- Next: measurement_links migration/model/token action, public page, coordinator accept screen, sending UI. Nothing committed.
+### 2026-10-20 — Plan Gate Tests: Fixture Fix (pending run)
+- `php artisan test` (user-run): 715 passed / 2 failed. Three rewritten gate tests pass. MeasurementPlanGateTest failed with "activity ids field is required": seeder returned no required activities (test fixture, not application).
+- Fix: tests create their own required activity (scripts/fix_plan_gate_fixture.py). Result pending. Nothing committed.
+### 2026-10-20 — Measurement Links Slice 1: Schema, Model, Relation — IMPLEMENTED (tests pending)
+- Full suite before this slice: 717 passed / 2662 assertions / 0 failed (user-run). Git HEAD 4eb57d7; measurement work uncommitted.
+- Added migration 2026_10_20_120000 (measurement_links: hashed token, expires_at, access/sent/revoke fields, is_active_slot, unique (order, contact, slot)), MeasurementLink model (token_hash hidden), Order::measurementLinks(), MeasurementLinkSchemaTest.
+- Defaults assumed pending user confirmation: permission measurements.links.manage (admin; super-admin automatic), issuers = current coordinator + admin + super-admin, one link per contact per order, 14-day expiry.
+- Next: IssueMeasurementLink / RevokeMeasurementLink / ResolveMeasurementLink actions with tests; permission + RbacTest expectation.
+
+### 2026-10-20 — Measurement Links Slice 2: Actions — Focused Tests (fixture fix)
+- `php artisan test tests/Feature/MeasurementLinkActionsTest.php tests/Feature/RbacTest.php` (user-run): 23 passed / 1 failed / 169 assertions. RbacTest 15 passed (permission count with measurements.links.manage accepted).
+- Failure: test_actor_without_permission_or_inactive_is_denied. Cause: test helper reused one `admin` role, so the later call granted the permission to the earlier actor. Test defect, actions unchanged. Fixed with distinct role slugs; re-run result pending.
+- Still open: grant measurements.links.manage to the admin role in RbacSeeder (block not yet inspected); HTTP/UI/email entry points; checkpoint commit unconfirmed (HEAD last seen 4eb57d7).

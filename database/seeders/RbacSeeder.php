@@ -259,6 +259,16 @@ class RbacSeeder extends Seeder
                 'slug' => 'production.manage',
                 'description' => 'Create and manage production activities.',
             ],
+            [
+                'name' => 'Manage Measurement Eligibility',
+                'slug' => 'measurements.eligibility.manage',
+                'description' => 'Decide whether order items require body measurements.',
+            ],
+            [
+                'name' => 'Manage Measurement Links',
+                'slug' => 'measurements.links.manage',
+                'description' => 'Issue and revoke customer measurement links for orders.',
+            ],
 
             /*
              * Quality Control
@@ -515,6 +525,8 @@ class RbacSeeder extends Seeder
 
                     'production.view',
                     'production.manage',
+
+                    'measurements.eligibility.manage',
 
                     'quality-control.view',
 

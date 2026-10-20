@@ -119,6 +119,7 @@ class FulfillVerifiedQuotationPayment
                     'quotation_item_id' => $quotationItem->id,
                     'product_specification_id' =>
                         $quotationItem->product_specification_id,
+                    'product_type' => $quotationItem->product_type,
                     'item_name' => $quotationItem->item_name,
                     'description' => $quotationItem->description,
                     'quantity' => $quotationItem->quantity,

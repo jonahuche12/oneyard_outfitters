@@ -308,6 +308,8 @@ class RbacTest extends TestCase
             'leads.create',
             'leads.update',
             'leads.view',
+            'measurements.eligibility.manage',
+            'measurements.links.manage',
         ];
 
         $this->assertDatabaseCount(
