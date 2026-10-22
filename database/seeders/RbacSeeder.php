@@ -269,6 +269,11 @@ class RbacSeeder extends Seeder
                 'slug' => 'measurements.links.manage',
                 'description' => 'Issue and revoke customer measurement links for orders.',
             ],
+            [
+                'name' => 'Review Measurements',
+                'slug' => 'measurements.review',
+                'description' => 'Accept submitted measurements or request corrections.',
+            ],
 
             /*
              * Quality Control
@@ -528,6 +533,7 @@ class RbacSeeder extends Seeder
 
                     'measurements.eligibility.manage',
                     'measurements.links.manage',
+                    'measurements.review',
 
                     'quality-control.view',
 
@@ -648,6 +654,7 @@ class RbacSeeder extends Seeder
                     'production.view',
                     'production.manage',
                     'measurements.links.manage',
+                    'measurements.review',
 
                     'specifications.view',
                 ],

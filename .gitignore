@@ -28,3 +28,9 @@ Thumbs.db
 
 *.bak*
 backup_*.sql
+
+*.bak
+scripts/*.py
+
+# Generated Python bytecode
+__pycache__/

@@ -12,7 +12,8 @@ use Illuminate\Validation\ValidationException;
 
 class IssueMeasurementLink
 {
-    public const EXPIRY_DAYS = 14;
+    public const EXPIRY_DAYS = 3;
+    public const MINIMUM_EXPIRY_DAYS = 3;
 
     public static function hash(string $rawToken): string
     {
@@ -75,7 +76,7 @@ class IssueMeasurementLink
                 'order_id' => $lockedOrder->id,
                 'contact_id' => $contact->id,
                 'token_hash' => self::hash($rawToken),
-                'expires_at' => now()->addDays(self::EXPIRY_DAYS),
+                'expires_at' => now()->addDays(max(self::MINIMUM_EXPIRY_DAYS, self::EXPIRY_DAYS)),
                 'created_by' => $actor->id,
                 'is_active_slot' => 1,
             ]);

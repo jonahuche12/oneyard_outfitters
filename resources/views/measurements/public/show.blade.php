@@ -40,12 +40,17 @@
                     $qty = (int) round((float) $item->quantity);
                     $method = old("items.$id.method", $profile ? 'individual' : 'size_quantity');
                     $oldPeople = old("items.$id.people");
-                    $rows = is_array($oldPeople) ? array_values($oldPeople) : [];
-                    $rowCount = max(count($rows), $strict ? min($qty, 500) : 1);
+                    $rows = is_array($oldPeople) ? array_values($oldPeople) : ($st['draftPeople'] ?? []);
+                    $hasDraftPeople = !empty($st['draftPeople']) && !is_array($oldPeople);
+                    $rowCount = $hasDraftPeople ? count($rows) : max(count($rows), 1);
                     $itemErrors = collect($errors->getMessages())->filter(fn ($m, $k) => str_starts_with($k, "items.$id"))->flatten()->unique()->values();
                 @endphp
 
-                <div class="mb-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm" data-item>
+                <div class="mb-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
+                     data-item
+                     data-open="{{ $st['open'] ? '1' : '0' }}"
+                     data-strict="{{ $strict ? '1' : '0' }}"
+                     data-quantity="{{ $qty }}" data-save-sizes-url="{{ route('measurements.public.sizes.store', ['token' => $token, 'item' => $id]) }}">
                     <div class="flex flex-wrap items-center justify-between gap-2">
                         <h2 class="text-lg font-semibold text-slate-950">{{ $item->item_name }}</h2>
                         <span class="text-sm text-slate-600">Quantity: {{ rtrim(rtrim(number_format((float) $item->quantity, 2, '.', ''), '0'), '.') }} {{ strtolower($item->unit) }}</span>
@@ -69,6 +74,10 @@
                             <div class="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm text-slate-800">
                                 <label class="inline-flex items-center gap-2"><input type="radio" name="items[{{ $id }}][method]" value="individual" data-method @checked($method === 'individual')> Enter each person's measurements</label>
                                 <label class="inline-flex items-center gap-2"><input type="radio" name="items[{{ $id }}][method]" value="size_quantity" data-method @checked($method === 'size_quantity')> Choose our commercial sizes</label>
+                                <label class="inline-flex items-center gap-2"><input type="radio" value="upload" data-method-upload> Upload a spreadsheet</label>
+                            </div>
+                            <div data-panel-upload hidden>
+                                @include('measurements.public.partials.upload', ['id' => $id, 'token' => $token, 'garment' => $item->product_type])
                             </div>
                         @else
                             <input type="hidden" name="items[{{ $id }}][method]" value="size_quantity">
@@ -80,14 +89,35 @@
                                 @if($strict)
                                     <p class="mt-4 text-sm text-slate-600">Measurements are needed for exactly {{ $qty }} {{ $qty === 1 ? 'person' : 'people' }}.</p>
                                 @endif
-                                <div data-people data-next="{{ $rowCount }}">
+                                <div
+                                    data-people
+                                    data-next="{{ $rowCount }}"
+                                    data-strict="{{ $strict ? '1' : '0' }}"
+                                    data-max="{{ $strict ? $qty : config('measurements.max_people_per_item') }}"
+                                    data-save-url="{{ route('measurements.public.people.store', ['token' => $token, 'item' => $id]) }}"
+                                    data-update-url="{{ route('measurements.public.people.update', ['token' => $token, 'item' => $id, 'position' => 999999]) }}"
+                                    data-remove-url="{{ route('measurements.public.people.destroy', ['token' => $token, 'item' => $id, 'position' => 999999]) }}"
+                                >
                                     @for($i = 0; $i < $rowCount; $i++)
-                                        @include('measurements.public._person', ['itemId' => $id, 'index' => $i, 'profile' => $profile, 'strict' => $strict, 'values' => $rows[$i] ?? []])
+                                        @php
+                                            $personValues = $rows[$i] ?? [];
+                                            $isSavedPerson = $hasDraftPeople;
+                                            if ($isSavedPerson) {
+                                                $personValues['position'] = $personValues['position'] ?? ($i + 1);
+                                            }
+                                        @endphp
+                                        @include('measurements.public._person', ['itemId' => $id, 'index' => $i, 'profile' => $profile, 'strict' => $strict, 'values' => $personValues, 'saved' => $isSavedPerson])
                                     @endfor
                                 </div>
-                                @unless($strict)
-                                    <button type="button" data-add-person class="mt-4 rounded-lg border border-slate-900 px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-100">+ Add person</button>
-                                @endunless
+                                <button
+                                    type="button"
+                                    data-add-person
+                                    class="mt-4 inline-flex items-center gap-2 rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-900 hover:border-amber-500 hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                    <span aria-hidden="true" class="flex h-6 w-6 items-center justify-center rounded-full bg-slate-950 text-lg leading-none text-white">+</span>
+                                    Add another person
+                                </button>
+                                <p data-add-person-help class="mt-2 text-xs text-slate-500" aria-live="polite"></p>
                                 <template data-person-template>
                                     @include('measurements.public._person', ['itemId' => $id, 'index' => '__INDEX__', 'profile' => $profile, 'strict' => $strict, 'values' => []])
                                 </template>
@@ -101,7 +131,7 @@
                             <div class="mt-3 grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-8">
                                 @foreach(config('measurements.sizes') as $size)
                                     <label class="block text-xs font-medium text-slate-600">{{ $size }}
-                                        <input type="text" inputmode="numeric" name="items[{{ $id }}][sizes][{{ $size }}]" value="{{ old("items.$id.sizes.$size") }}" class="{{ $input }} mt-1">
+                                        <input type="text" inputmode="numeric" name="items[{{ $id }}][sizes][{{ $size }}]" value="{{ old("items.$id.sizes.$size", $st['draftSizes'][$size] ?? '') }}" class="{{ $input }} mt-1">
                                     </label>
                                 @endforeach
                             </div>
@@ -111,10 +141,14 @@
             @endforeach
 
             @if($anyOpen)
-                <button type="submit" id="measurement-submit" class="rounded-xl bg-slate-950 px-6 py-3.5 text-sm font-bold text-white hover:bg-slate-800 disabled:opacity-60">
+                <button type="submit" id="measurement-submit" disabled
+                        class="rounded-xl bg-slate-950 px-6 py-3.5 text-sm font-bold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50">
                     Submit Measurements
                 </button>
-                <p class="mt-3 text-xs text-slate-500">Once submitted, Oneyard will review your measurements. You can only change them if a correction is requested.</p>
+                <p data-submit-help class="mt-3 text-sm text-slate-600" aria-live="polite">
+                    Complete the required measurements for every item to enable submission.
+                </p>
+                <p class="mt-2 text-xs text-slate-500">Once submitted, Oneyard will review your measurements. You can only change them if a correction is requested.</p>
             @endif
         </form>
     </div>

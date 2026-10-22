@@ -346,6 +346,16 @@ Route::resource('orders', OrderController::class)
     )->name('orders.measurement-links.revoke');
 
     Route::post(
+        '/orders/{order}/measurement-submissions/{submission}/accept',
+        [\App\Http\Controllers\MeasurementReviewController::class, 'accept']
+    )->name('orders.measurements.accept');
+
+    Route::post(
+        '/orders/{order}/measurement-submissions/{submission}/correction',
+        [\App\Http\Controllers\MeasurementReviewController::class, 'requestCorrection']
+    )->name('orders.measurements.correction');
+
+    Route::post(
         '/orders/{order}/production-plan',
         [OrderController::class, 'createProductionPlan']
     )->name('orders.production-plan.store');
@@ -521,3 +531,35 @@ Route::get('/measurements/{token}', [\App\Http\Controllers\PublicMeasurementCont
 Route::post('/measurements/{token}', [\App\Http\Controllers\PublicMeasurementController::class, 'store'])
     ->middleware('throttle:10,1')
     ->name('measurements.public.store');
+
+Route::post('/measurements/{token}/items/{item}/people', [\App\Http\Controllers\PublicMeasurementController::class, 'savePerson'])
+    ->whereNumber('item')
+    ->middleware('throttle:30,1')
+    ->name('measurements.public.people.store');
+
+Route::put('/measurements/{token}/items/{item}/people/{position}', [\App\Http\Controllers\PublicMeasurementController::class, 'updatePerson'])
+    ->whereNumber('item')
+    ->whereNumber('position')
+    ->middleware('throttle:30,1')
+    ->name('measurements.public.people.update');
+
+Route::delete('/measurements/{token}/items/{item}/people/{position}', [\App\Http\Controllers\PublicMeasurementController::class, 'removePerson'])
+    ->whereNumber('item')
+    ->whereNumber('position')
+    ->middleware('throttle:30,1')
+    ->name('measurements.public.people.destroy');
+
+Route::post('/measurements/{token}/items/{item}/sizes', [\App\Http\Controllers\PublicMeasurementController::class, 'saveSizes'])
+    ->whereNumber('item')
+    ->middleware('throttle:20,1')
+    ->name('measurements.public.sizes.store');
+
+Route::post('/measurements/{token}/items/{item}/upload', [\App\Http\Controllers\PublicMeasurementController::class, 'uploadSpreadsheet'])
+    ->whereNumber('item')
+    ->middleware('throttle:5,1')
+    ->name('measurements.public.upload');
+
+Route::get('/measurements/{token}/items/{item}/template', [\App\Http\Controllers\PublicMeasurementController::class, 'template'])
+    ->whereNumber('item')
+    ->middleware('throttle:20,1')
+    ->name('measurements.public.template');

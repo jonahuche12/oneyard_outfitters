@@ -45,6 +45,37 @@ class ValidateMeasurementPayload
         return ['method' => $method, 'people' => [], 'sizes' => $this->sizes($strict, $quantity, $input['sizes'] ?? null)];
     }
 
+    /**
+     * Validate ONE person fully (used when saving a draft entry).
+     * Count and total reconciliation is intentionally not applied here.
+     *
+     * @return array{label:?string, notes:?string, measurements:array<string,string>, position:int}
+     *
+     * @throws ValidationException
+     */
+    public function person(?string $productType, mixed $person): array
+    {
+        $profile = self::profileFor($productType);
+
+        if (! $profile) {
+            $this->fail('method', 'Individual measurements are not available for this item. Please use sizes.');
+        }
+
+        return $this->people($profile, false, 1, [$person])[0];
+    }
+
+    /**
+     * Validate a size grid for a draft: shape only, no total reconciliation.
+     *
+     * @return array<string,int>
+     *
+     * @throws ValidationException
+     */
+    public function draftSizes(mixed $sizes): array
+    {
+        return $this->sizes(false, 0, $sizes);
+    }
+
     private function people(array $profile, bool $strict, int $quantity, mixed $people): array
     {
         if (! is_array($people) || $people === []) {

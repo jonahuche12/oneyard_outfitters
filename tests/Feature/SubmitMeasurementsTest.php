@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Actions\Measurements\IssueMeasurementLink;
 use App\Actions\Measurements\RevokeMeasurementLink;
+use App\Actions\Measurements\SaveMeasurementDraft;
 use App\Actions\Measurements\SubmitMeasurements;
 use App\Models\Contact;
 use App\Models\MeasurementSubmission;
@@ -83,6 +84,16 @@ class SubmitMeasurementsTest extends TestCase
         return [$this->shirt->id => $this->shirtPayload(), $this->cap->id => $this->capPayload()];
     }
 
+    private function saveShirtDraft(string $waist = '32'): void
+    {
+        app(SaveMeasurementDraft::class)->saveEntry(
+            $this->token,
+            $this->shirt->id,
+            null,
+            $this->shirtPayload($waist)['people'][0]
+        );
+    }
+
     private function submit(array $payloads)
     {
         return app(SubmitMeasurements::class)->execute($this->token, $payloads);
@@ -90,6 +101,7 @@ class SubmitMeasurementsTest extends TestCase
 
     public function test_submits_every_required_item_as_revision_one(): void
     {
+        $this->saveShirtDraft();
         $created = $this->submit($this->all());
 
         $this->assertCount(2, $created);
@@ -150,20 +162,24 @@ class SubmitMeasurementsTest extends TestCase
 
     public function test_submitted_items_are_locked_against_resubmission(): void
     {
+        $this->saveShirtDraft();
         $this->submit($this->all());
 
         $this->expectException(ValidationException::class);
+        $this->saveShirtDraft();
         $this->submit($this->all());
     }
 
     public function test_only_corrected_items_are_resubmitted_as_a_new_revision(): void
     {
+        $this->saveShirtDraft();
         $this->submit($this->all());
         MeasurementSubmission::where('order_item_id', $this->shirt->id)->update([
             'status' => 'correction_requested', 'correction_reason' => 'Waist looks wrong.',
         ]);
         MeasurementSubmission::where('order_item_id', $this->cap->id)->update(['status' => 'accepted']);
 
+        $this->saveShirtDraft('34');
         $created = $this->submit([$this->shirt->id => $this->shirtPayload('34')]);
 
         $this->assertCount(1, $created);
@@ -178,7 +194,8 @@ class SubmitMeasurementsTest extends TestCase
         app(RevokeMeasurementLink::class)->execute($this->admin, $this->link, ['reason' => 'Revoked for this test.']);
 
         try {
-            $this->submit($this->all());
+            $this->saveShirtDraft();
+        $this->submit($this->all());
             $this->fail('Expected validation failure.');
         } catch (ValidationException $e) {
             $this->assertArrayHasKey('link', $e->errors());
@@ -192,6 +209,65 @@ class SubmitMeasurementsTest extends TestCase
         ProductionPlan::create(['order_id' => $this->order->id, 'coordinator_id' => $this->admin->id, 'created_by' => $this->admin->id]);
 
         $this->expectException(ValidationException::class);
+        $this->saveShirtDraft();
         $this->submit($this->all());
+    }
+
+    public function test_switching_individual_draft_to_sizes_replaces_the_old_rows_on_submit(): void
+    {
+        $this->saveShirtDraft();
+        $sizes = ['method' => 'size_quantity', 'sizes' => ['S' => '2', 'M' => '3']];
+
+        $this->submit([$this->shirt->id => $sizes, $this->cap->id => $this->capPayload()]);
+
+        $s = MeasurementSubmission::where('order_item_id', $this->shirt->id)->firstOrFail();
+        $this->assertSame('submitted', $s->status);
+        $this->assertSame('size_quantity', $s->measurement_method);
+        $this->assertSame(0, $s->individualMeasurements()->count());
+        $this->assertSame(2, $s->sizeQuantities()->count());
+        $this->assertSame(1, MeasurementSubmission::where('order_item_id', $this->shirt->id)->count());
+    }
+
+    public function test_failed_switch_rolls_back_and_keeps_the_original_rows(): void
+    {
+        $this->saveShirtDraft();
+        $bad = ['method' => 'size_quantity', 'sizes' => ['ZZZ' => '1']];
+
+        try {
+            $this->submit([$this->shirt->id => $bad, $this->cap->id => $this->capPayload()]);
+            $this->fail('Expected a validation failure.');
+        } catch (ValidationException $e) {
+            $this->assertNotEmpty($e->errors());
+        }
+
+        $s = MeasurementSubmission::where('order_item_id', $this->shirt->id)->firstOrFail();
+        $this->assertSame('draft', $s->status);
+        $this->assertSame('individual', $s->measurement_method);
+        $this->assertSame(1, $s->individualMeasurements()->count());
+    }
+
+    public function test_invalid_method_is_rejected_for_a_draft(): void
+    {
+        $this->saveShirtDraft();
+
+        $this->expectException(ValidationException::class);
+        $this->submit([$this->shirt->id => ['method' => 'bogus'], $this->cap->id => $this->capPayload()]);
+    }
+
+    public function test_switching_to_individual_without_saved_people_is_rejected_and_keeps_sizes(): void
+    {
+        app(SaveMeasurementDraft::class)->saveSizes($this->token, $this->shirt->id, ['S' => '2', 'M' => '3']);
+
+        try {
+            $this->submit([$this->shirt->id => $this->shirtPayload(), $this->cap->id => $this->capPayload()]);
+            $this->fail('Expected a validation failure.');
+        } catch (ValidationException $e) {
+            $this->assertArrayHasKey('items.' . $this->shirt->id . '.people', $e->errors());
+        }
+
+        $s = MeasurementSubmission::where('order_item_id', $this->shirt->id)->firstOrFail();
+        $this->assertSame('draft', $s->status);
+        $this->assertSame('size_quantity', $s->measurement_method);
+        $this->assertSame(2, $s->sizeQuantities()->count());
     }
 }

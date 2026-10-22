@@ -61,15 +61,7 @@ class UpdateProductSpecificationRequest extends FormRequest
             'product_type' => [
                 'required',
                 'string',
-                Rule::in([
-                    'shirt',
-                    'trouser',
-                    'shorts',
-                    'pinafore',
-                    'overall',
-                    'jumpsuit',
-                    'other',
-                ]),
+                Rule::in(array_keys(config('specifications.product_types'))),
             ],
 
             'description' => [
@@ -81,6 +73,7 @@ class UpdateProductSpecificationRequest extends FormRequest
                 'required',
                 'string',
                 'max:50',
+                Rule::in(array_keys(config('specifications.units'))),
             ],
 
             'unit_price' => [

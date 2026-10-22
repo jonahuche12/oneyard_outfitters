@@ -17,7 +17,7 @@
                 </tr>
                 <tr>
                     <td style="padding:36px 32px 12px 32px;">
-                        <h1 style="margin:0;color:#0f172a;font-size:25px;line-height:1.3;font-weight:700;">We need your measurements</h1>
+                        <h1 style="margin:0;color:#0f172a;font-size:25px;line-height:1.3;font-weight:700;">{{ $correctionReason ? 'Please correct your measurements' : 'We need your measurements' }}</h1>
                     </td>
                 </tr>
                 <tr>
@@ -26,6 +26,10 @@
                         <p style="margin:0 0 18px;font-size:15px;line-height:1.7;">
                             To begin production of order <strong>{{ $order->order_number }}</strong>, please provide the measurements for the garments on this order using the secure link below.
                         </p>
+                        @if($correctionReason)
+                        <p style="margin:0 0 18px;font-size:15px;line-height:1.7;"><strong>What needs correcting:</strong><br>{!! nl2br(e($correctionReason)) !!}</p>
+                        <p style="margin:0 0 18px;font-size:15px;line-height:1.7;">Your previous entries have been cleared so you can start fresh. Open the link and enter your measurements again. You can enter each person's measurements, upload a spreadsheet, or choose our commercial sizes.</p>
+                        @endif
                         <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
                             <tr>
                                 <td align="left">

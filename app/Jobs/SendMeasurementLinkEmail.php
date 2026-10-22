@@ -26,6 +26,7 @@ class SendMeasurementLinkEmail implements ShouldQueue, ShouldBeEncrypted
     public function __construct(
         public MeasurementLink $link,
         public string $token,
+        public ?string $correctionReason = null,
     ) {
     }
 
@@ -50,7 +51,7 @@ class SendMeasurementLinkEmail implements ShouldQueue, ShouldBeEncrypted
 
         $url = route('measurements.public.show', ['token' => $this->token]);
 
-        Mail::to($link->contact->email)->send(new MeasurementLinkInvitation($link, $url));
+        Mail::to($link->contact->email)->send(new MeasurementLinkInvitation($link, $url, $this->correctionReason));
 
         $link->forceFill(['sent_at' => now()])->save();
     }

@@ -89,7 +89,8 @@ class MeasurementLinkActionsTest extends TestCase
         $this->assertSame(hash('sha256', $token), $link->token_hash);
         $this->assertDatabaseMissing('measurement_links', ['token_hash' => $token]);
         $this->assertSame(1, $link->is_active_slot);
-        $this->assertTrue($link->expires_at->between(now()->addDays(13), now()->addDays(14)->addMinute()));
+        $this->assertTrue($link->expires_at->between(now()->addDays(3)->subMinute(), now()->addDays(3)->addMinute()));
+        $this->assertTrue($link->expires_at->greaterThanOrEqualTo(now()->addDays(3)->subMinute()));
         $this->assertSame($admin->id, $link->created_by);
     }
 

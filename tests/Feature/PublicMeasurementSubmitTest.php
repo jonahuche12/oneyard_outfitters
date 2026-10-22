@@ -69,17 +69,30 @@ class PublicMeasurementSubmitTest extends TestCase
         ]];
     }
 
-    public function test_form_renders_both_methods_and_a_row_per_piece(): void
+    public function test_form_renders_both_methods_and_only_the_first_person_initially(): void
     {
         $this->get(route('measurements.public.show', $this->token))
             ->assertOk()
             ->assertSee('Choose our commercial sizes')
-            ->assertSee('items[' . $this->shirt->id . '][people][1][label]', false)
+            ->assertSee('items[' . $this->shirt->id . '][people][0][label]', false)
+            ->assertDontSee('items[' . $this->shirt->id . '][people][1][label]', false)
+            ->assertSee('Save measurements')
+            ->assertSee('Add another person')
             ->assertSee('Submit Measurements');
     }
 
     public function test_contact_submits_manual_and_size_measurements(): void
     {
+        foreach (['30', '32'] as $waist) {
+            $this->postJson(
+                route('measurements.public.people.store', [
+                    'token' => $this->token,
+                    'item' => $this->shirt->id,
+                ]),
+                ['person' => $this->person($waist)]
+            )->assertOk()->assertJsonPath('ok', true);
+        }
+
         $this->post(route('measurements.public.store', $this->token), $this->payload())
             ->assertRedirect(route('measurements.public.show', $this->token))
             ->assertSessionHas('status');

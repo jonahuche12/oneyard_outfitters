@@ -6158,3 +6158,122 @@ Preserve all existing working-tree changes. No commit or unrelated cleanup perfo
 - Full suite not rerun since B3.
 - Next: commonmark update check, full suite, B3 checkpoint commit, B3a draft design for approval.
 
+### 2026-10-20 — Measurement Entry B3: Full Suite VERIFIED
+- `php artisan test --compact` (user-run): 768 passed / 2843 assertions / 0 failed (45s).
+- B3 public entry form verified at test level (PublicMeasurementSubmitTest 4 passed / 16 assertions). Browser verification not reported.
+- Correction: public-measurements.js lives at resources/js/ (imported in app.js), not public/js/.
+- composer audit: 2 league/commonmark advisories (<=2.10.1), not phpspreadsheet; update check pending.
+- Link expiry anomaly still unexplained.
+- Next: checkpoint commit, then B3a (SaveMeasurementDraft) design for approval.
+
+### 2026-10-20 — Measurement Drafts (B3a): UX DESIGN REVISED (awaiting approval)
+- Requested: public form shows entries one at a time; an add icon creates a person entry; saved entries appear as summary rows with an edit icon (and remove); repeat until the item is complete.
+- Code read: SubmitMeasurements requires payloads for all pending items (blocks per-item submit); ValidateMeasurementPayload has no draft mode; strict unit 'piece' => entries must equal quantity.
+- Design: draft = measurement_submissions row status 'draft' per item; entries upserted by position via SaveMeasurementDraftEntry (token re-resolved, eligibility/no-plan checks, cap, locking, updated_at conflict check); size grid saved as draft; per-item submit after full validation; staff panel shows per-item progress.
+- Defaults pending approval: draft owned by item; survives revoked/expired link; same row cap; AJAX via $.ajax; correction cycle prefilled from previous revision (user to confirm).
+- Git: B3 appears committed (not in status; hash unconfirmed); composer.lock (commonmark 2.10.4) uncommitted.
+- Open: link-expiry anomaly (action code/timezone output still missing), full suite after commonmark update.
+- No code changed.
+
+### 2026-10-20 — Measurement Drafts (B3a) Unit 1: Backend — IMPLEMENTED (tests pending)
+- Design approved ("continue"); correction-prefill default (yes) applied; updated_at conflict check deferred (second-precision timestamps cannot detect near-simultaneous saves; draft_version column proposed).
+- Added: ValidateMeasurementPayload::person() and ::draftSizes() (single-person full validation; size grid without total reconciliation); SaveMeasurementDraft (saveEntry add/edit by position, removeEntry with renumbering and empty-draft deletion, saveSizes; token re-resolved; order open/no-plan; item must be required and in draft or correction_requested; method switch replaces other rows; cap and strict-quantity ceiling; correction drafts copy the previous revision).
+- Tests: tests/Feature/SaveMeasurementDraftTest.php (15). Results pending.
+- Known interim: SubmitMeasurements treats an item with a draft as not pending until Unit 2 (per-item submit). Possible issue: measurement_submissions.submitted_at nullability (drafts leave it null).
+- Git (user-run): HEAD d7a6043 (B3 public entry form), 1 commit ahead of origin; composer.lock (commonmark 2.10.4) uncommitted; RbacSeeder.php.bak modified, release.zip deleted, scripts/ untracked.
+- Open: link expiry anomaly (action code and timezone output still missing); full suite after commonmark update.
+
+### 2026-10-20 — Measurement Drafts (B3a) Unit 1: Backend — IMPLEMENTED (tests pending)
+- Design approved ("continue"); correction-prefill default (yes) applied; updated_at conflict check deferred (second-precision timestamps cannot detect near-simultaneous saves; draft_version column proposed).
+- Added: ValidateMeasurementPayload::person() and ::draftSizes() (single-person full validation; size grid without total reconciliation); SaveMeasurementDraft (saveEntry add/edit by position, removeEntry with renumbering and empty-draft deletion, saveSizes; token re-resolved; order open/no-plan; item must be required and in draft or correction_requested; method switch replaces other rows; cap and strict-quantity ceiling; correction drafts copy the previous revision).
+- Tests: tests/Feature/SaveMeasurementDraftTest.php (15). Results pending.
+- Known interim: SubmitMeasurements treats an item with a draft as not pending until Unit 2 (per-item submit). Possible issue: measurement_submissions.submitted_at nullability (drafts leave it null).
+- Git (user-run): HEAD d7a6043 (B3 public entry form), 1 commit ahead of origin; composer.lock (commonmark 2.10.4) uncommitted; RbacSeeder.php.bak modified, release.zip deleted, scripts/ untracked.
+- Open: link expiry anomaly (action code and timezone output still missing); full suite after commonmark update.
+
+### 2026-10-20 — Measurement Method Switch Override — VERIFIED (test level)
+- SubmitMeasurements: posted method wins; on a switch the draft's old-method rows are deleted and the validated new-method rows are stored via storeRows(), all inside the submit transaction. Earlier partial application had omitted the store step (switched submit saved 0 rows); fixed.
+- `php artisan test tests/Feature/SubmitMeasurementsTest.php` (user-run): 12 passed / 38 assertions (4 new switch tests).
+- Pending: PublicMeasurementSubmitTest + full suite rerun, SaveMeasurementDraftTest (file missing), confirm-on-switch modal, browser verification, prior-revision test.
+
+### 2026-10-20 — Measurement Link Expiry: anomaly resolved; 3-day minimum floor
+- IssueMeasurementLink sets issue + 14 days; no other code writes expires_at. Dev links 2-6 have expiries exactly one hour after the next link's creation time, consistent with manual tinker edits (inferred). Not an application defect.
+- Added MINIMUM_EXPIRY_DAYS = 3 floor in the issue action and a test assertion. Results pending.
+
+### 2026-10-21 — Excel Upload B6 Slice 1: ParseMeasurementSpreadsheet — IMPLEMENTED (not yet verified)
+- Decisions: upload replaces the item's draft entries after a confirm; contact-facing only; one template per garment profile (individual) plus a Size/Quantity template.
+- Added ParseMeasurementSpreadsheet (xlsx/csv, 2 MB, read-only values-only, header match, row-numbered errors, all-or-nothing, formula-prefix stripped) and ParseMeasurementSpreadsheetTest (10). Saves nothing.
+- Pending: test results; Slice 2 (replace-draft save, endpoint, throttle, temp-file cleanup, input_source = excel); Slice 3 (template download, UI confirm).
+- Open from earlier: confirm modal on method switch, SaveMeasurementDraftTest (missing), full-suite rerun, browser checks.
+
+### 2026-10-21 — Excel Upload B6 Slice 2: upload endpoint — IMPLEMENTED (not yet verified)
+- SaveMeasurementDraft::replaceFromImport, PublicMeasurementController::uploadSpreadsheet, route measurements.public.upload (throttle 5/min); temp file deleted in finally; input_source = excel.
+- Pending: lint/route output, tests, template download, UI with replace confirm, BOM handling.
+
+### 2026-10-21 — Excel Upload B6 Slice 2: lint and route VERIFIED; tests written
+- Lint clean on SaveMeasurementDraft, PublicMeasurementController, routes/web.php; route measurements.public.upload registered (POST, throttle 5/min).
+- MeasurementUploadTest (6) written; results pending.
+
+### 2026-10-21 — Excel Upload B6 Slice 2: VERIFIED (test level)
+- `php artisan test tests/Feature/MeasurementUploadTest.php` (user-run): 6 passed / 14 assertions.
+- Pending: Slice 3 (BOM strip, template download, upload UI with replace confirm), sizes-upload endpoint test, full suite, browser checks.
+- Earlier open items: confirm modal on method switch, SaveMeasurementDraftTest (missing), prior-revision test.
+
+### 2026-10-21 — Excel Upload B6 Slice 3: build, views, route OK; test append needs fix
+- npm run build, view:cache, route measurements.public.template and controller lint passed (user-run).
+- The BOM test append wrote a literal "\n" into ParseMeasurementSpreadsheetTest (script escaping error); correction supplied. Test results pending.
+
+### 2026-10-21 — Excel upload: security scan and row cap — IMPLEMENTED (not yet verified)
+- Added ScanSpreadsheetUpload (zip signature, entry count, 20 MB unpacked, ratio, macros/external links/embeddings, path traversal, DOCTYPE/ENTITY; CSV NUL/zip) run before the reader. Parser reads values only, first sheet, read-filtered to the needed rows/columns; individual() takes a limit (item quantity for piece items) and counts but never parses extra rows. Controller authorises link and item before touching the file; JS shows the "extra rows ignored" notice.
+- Tests written: SpreadsheetSecurityTest (8), ParseLimitTest (5). Results pending. ParseMeasurementSpreadsheetTest literal "\n" repair included.
+- Next: measurement review/approval, awaiting decisions above.
+- Still open: queue mail fix (Mailtrap 535), item 13 product_type, three-option layout verification, coordinator eligibility button.
+
+### 2026-10-21 — Measurement review action VERIFIED; measurements pagination — IMPLEMENTED (not yet verified)
+- ReviewMeasurementSubmissionTest (user-run): 11 passed / 16 assertions.
+- orders/partials/measurement-submissions paginates 5 per page (measurements_page); resources/js/measurement-pager.js swaps #measurement-submissions in place with pushState/popstate; shared ajax-list.js untouched (single-form module).
+- Pending: build/test output, browser check; measurements.review seeding and review buttons.
+
+### 2026-10-21 — Measurement Review Slice 1: permission measurements.review — VERIFIED
+- Added measurements.review to RbacSeeder (definition, admin grant, production grant). RbacTest expected list updated.
+- Access still limited by CanViewOrderMeasurements to active admin, super-admin and the current coordinator.
+- `php artisan test tests/Feature/RbacTest.php tests/Feature/ReviewMeasurementSubmissionTest.php`: 26 passed / 150 assertions / 0 failed (user-run).
+- Deployment note: run RbacSeeder on every other environment, or only super-admin can review.
+- Next: Slice 2, MeasurementReviewController with accept and request-correction routes.
+
+
+
+### 2026-10-21 — Measurement Correction Unit A: VERIFIED (test level)
+- `php artisan test` MeasurementReviewHttpTest + SubmitMeasurementsTest + ReviewMeasurementSubmissionTest + MeasurementLinkActionsTest (user-run): 39 passed / 125 assertions / 0 failed.
+- Verified: one fresh link and queued email per selected contact with the item reasons; refusal without contacts or with no-email, inactive or other-organization contacts (review not committed); new revision starts blank, rejected revision kept.
+- Not done: Unit B (modal contact checkboxes). The current modal posts no contacts, so browser correction requests fail validation until Unit B ships. Full suite not rerun; work uncommitted.
+
+### 2026-10-21 — Measurement Correction Unit B: Modal Contact Checkboxes — IMPLEMENTED (not yet verified)
+- Correction modal lists active organization contacts (no-email contacts disabled), pre-ticks contacts holding an active link, keeps ticks and reopens on server error; Send stays disabled until a contact is ticked (resources/js/measurement-review.js).
+- Modal wording now says previous entries are cleared; measurement-links panel expiry text now reads IssueMeasurementLink::EXPIRY_DAYS (was hardcoded 14).
+- Added render test in MeasurementReviewHttpTest. Edited via scripts/correction_unit_b.py.
+- Pending: test and build results; browser verification of the full correction cycle (reject, email, fresh link, blank form, three entry methods); full suite; commit.
+
+### 2026-10-21 — Measurement Correction Cycle: Browser VERIFIED (user-reported)
+- Request correction modal (contact checkboxes, Send enabled once a contact is ticked) works in the browser after scripts/correction_button_fix.py (document-level change handler, static disabled removed). Public quotation Confirm spinner fix: QuotationTest result not yet reported.
+- Totals for the Unit B/button-fix test runs were not supplied. Work uncommitted; .bak cleanup pending.
+
+### 2026-10-21 — Order Show Redesign Step 1: IMPLEMENTED (not yet verified)
+- Added components/ui/{icon,stat,kv}.blade.php; orders/show header now uses orders.partials.status-badge instead of a hand-built @if chain, and header buttons have icons. Edited via scripts/ordershow_header.py (backup /tmp/ordershow_bak).
+- Pending: OrderTest result, browser check, Step 2 (summary tiles, single paid/balance source).
+
+### 2026-10-21 — UI Redesign Tracker: 98 Views Listed (from `find resources/views`)
+HANDLED (this pass): layouts/app (shared sidebar include), layouts/partials/nav-links (collapsible groups, collapsed by default, active group opens, icon+label left), layouts/public (real active state, "Staff Login"), components/ui/{icon,kv,stat}, orders/show (Steps 1-2: header badge, icons, 4 summary tiles, paid/balance computed once), orders/partials/{status-badge,delivery-estimate,measurement-submissions (correction modal contacts, browser-verified),measurement-links (expiry text)}, public/quotations/show (confirm spinner; QuotationTest result unreported), emails/measurements/invitation (correction wording).
+FUNCTIONAL, NOT RESTYLED: orders/{index,edit,partials/table,partials/measurement-eligibility}; measurements/public/*; quotations/*; deliveries/*, public/deliveries/activate; procurements/* and offers/*; earnings/*, wallet/*; quality-control/*; staff/*; leads/*.
+NOT HANDLED: dashboard; organizations/*; contacts/*, contact-notes/*; assessments/*; follow-ups/*; product-specifications/*; auth/*; welcome, about, faq, how-it-works, contact, public/orders/show; layouts/public/app (unclear if used); 11 other email templates.
+OPEN: orders/show Steps 3-5; Quotations/Deliveries sidebar links; OrderTest and browser results for sidebar/tiles unreported.
+NEXT ORDER: orders/show -> orders/index + quotations -> deliveries + procurements -> dashboard + organizations -> rest.
+
+### 2026-10-22 — Dashboard UI pass — IMPLEMENTED (not yet verified)
+- Page: /dashboard (resources/views/dashboard.blade.php). Presentation only; routes, @can/permission gates, links and visible text unchanged.
+- Cards: text badges (STF/ORG/LDS/QTN/ORD/PAY) replaced with x-ui.icon matching the sidebar (users, building, inbox, document, clipboard, wallet); arrow added to Manage/View labels; titles and descriptions moved from raw Tailwind utilities to oy-dashboard-card-title/-description; Payments placeholder now muted (no hover lift, neutral colour); footer card is a quiet note.
+- CSS (resources/css/oneyard.css, dashboard block only): focus ring on card links, action hover state, "Coming soon" contrast raised, reduced-motion handling, new classes oy-dashboard-card-title/-description/-muted, oy-dashboard-icon-muted, oy-dashboard-note/-note-text. oy-dashboard-* is used by dashboard.blade.php only.
+- Edited via scripts/dashboard_ui.py (backup /tmp/dashboard_ui_bak). Work uncommitted.
+- Pending: npm run build, view compile, AuthenticationTest + ProcurementPolicyTest + EarningsPoolScreenTest + StaffWalletAdminTest, browser check (3 breakpoints, keyboard focus, Payments card).
+- Needs approval, not done: dashboard cards for Procurement, Quality Control, Earnings and My Wallet; Quotations and Deliveries sidebar links.
+- Next: orders/show Steps 3-5, then orders/index + quotations (per tracker).

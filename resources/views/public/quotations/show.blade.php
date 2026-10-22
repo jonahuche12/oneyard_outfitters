@@ -284,7 +284,7 @@
                                 </div>
                             </div>
 
-                            <form
+                            <form data-submit-spinner data-loading-text="Redirecting to payment..."
                                 method="POST"
                                 action="{{ route('public.quotations.accept', $recipient->access_token) }}"
                                 class="mt-6"
@@ -344,7 +344,7 @@
                                         Cancel
                                     </button>
 
-                                    <button
+                                    <button data-loading-text="Redirecting to payment..."
                                         type="submit"
                                         class="oy-btn oy-btn-primary w-full sm:w-auto"
                                     >

@@ -514,3 +514,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 import './public-measurements';
+import './measurement-upload';
+import './measurement-pager';
+import './measurement-review';

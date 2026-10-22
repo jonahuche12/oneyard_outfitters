@@ -9,23 +9,7 @@
             <div class="oy-page-title-row">
                 <h1 class="oy-page-title">{{ $order->order_number }}</h1>
 
-                @if($order->status === 'approved')
-                    <span class="oy-badge oy-badge-success">Approved</span>
-                @elseif($order->status === 'in_production')
-                    <span class="oy-badge oy-badge-neutral">In Production</span>
-                @elseif($order->status === \App\Models\Order::STATUS_READY_FOR_QUALITY_CONTROL)
-                    <span class="oy-badge oy-badge-info">Ready for QC</span>
-                @elseif($order->status === \App\Models\Order::STATUS_CORRECTION_REQUIRED)
-                    <span class="oy-badge oy-badge-danger">Correction Required</span>
-                @elseif($order->status === 'ready')
-                    <span class="oy-badge oy-badge-success">Ready</span>
-                @elseif($order->status === 'delivered')
-                    <span class="oy-badge oy-badge-success">Delivered</span>
-                @elseif($order->status === 'cancelled')
-                    <span class="oy-badge oy-badge-danger">Cancelled</span>
-                @else
-                    <span class="oy-badge oy-badge-warning">Pending</span>
-                @endif
+                @include('orders.partials.status-badge', ['orderStatus' => $order->status])
             </div>
 
             <p class="oy-page-description">
@@ -37,12 +21,12 @@
         <div class="oy-page-actions flex flex-wrap gap-2">
             @can('update', $order)
                 <a href="{{ route('orders.edit', $order) }}" class="oy-btn oy-btn-primary">
-                    Edit Delivery Estimate
+                    <x-ui.icon name="pencil" class="mr-1.5 inline h-4 w-4 align-[-3px]" />Edit Delivery Estimate
                 </a>
             @endcan
 
             <a href="{{ route('orders.index') }}" class="oy-btn oy-btn-secondary">
-                All Orders
+                <x-ui.icon name="arrow-left" class="mr-1.5 inline h-4 w-4 align-[-3px]" />All Orders
             </a>
         </div>
     </div>
@@ -60,6 +44,45 @@
             {{ $errors->first() }}
         </div>
     @endif
+
+    @php
+        $totalPaid = (float) $order->quotation->payments
+            ->where('status', 'completed')
+            ->sum(fn ($payment) => (float) $payment->amount);
+        $balanceDue = max(0, (float) $order->total - $totalPaid);
+        $isFullyPaid = $balanceDue <= 0.01;
+        $deliveryClosed = in_array($order->status, [\App\Models\Order::STATUS_DELIVERED, \App\Models\Order::STATUS_CANCELLED], true);
+    @endphp
+
+    <div class="oy-section mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4" id="order-summary">
+        <x-ui.stat label="Order Total" :value="'₦' . number_format((float) $order->total, 2)" icon="document" />
+        <x-ui.stat label="Amount Paid" :value="'₦' . number_format($totalPaid, 2)" icon="check" tone="green" />
+        <x-ui.stat
+            label="Balance Due"
+            :value="'₦' . number_format($balanceDue, 2)"
+            :hint="$isFullyPaid ? 'Paid in full' : 'Outstanding'"
+            :icon="$isFullyPaid ? 'check' : 'alert'"
+            :tone="$isFullyPaid ? 'green' : 'amber'"
+        />
+        <div class="flex items-start gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
+                <x-ui.icon name="clock" class="h-5 w-5" />
+            </span>
+            <div class="min-w-0">
+                <p class="text-xs font-medium uppercase tracking-wide text-slate-500">Delivery</p>
+                <div class="mt-1 text-sm font-semibold text-slate-900">
+                    @if($deliveryClosed)
+                        {{ \App\Models\Order::statusLabels()[$order->status] ?? ucfirst($order->status) }}
+                    @else
+                        @include('orders.partials.delivery-estimate', ['order' => $order])
+                    @endif
+                </div>
+                @if($order->expected_delivery_date)
+                    <p class="mt-0.5 text-xs text-slate-500">{{ $order->expected_delivery_date->format('d M Y') }}</p>
+                @endif
+            </div>
+        </div>
+    </div>
 
     {{-- Production coordination --}}
     <div class="oy-card oy-section">
@@ -79,6 +102,7 @@
                             href="{{ route('orders.procurements.create', $order) }}"
                             class="oy-btn oy-btn-primary shrink-0"
                         >
+                            <x-ui.icon name="cube" class="h-4 w-4" />
                             Create Procurement
                         </a>
                     @endcan
@@ -90,6 +114,7 @@
                                 id="openCoordinatorModal"
                                 class="oy-btn oy-btn-primary shrink-0"
                             >
+                                <x-ui.icon name="users" class="h-4 w-4" />
                                 {{ $order->currentAssignment
                                     ? 'Reassign Coordinator'
                                     : 'Assign Coordinator' }}
@@ -329,6 +354,7 @@
                         id="openProductionPlanModal"
                         class="oy-btn oy-btn-primary shrink-0"
                     >
+                        <x-ui.icon name="clipboard" class="h-4 w-4" />
                         Create Production Plan
                     </button>
                 @endif
@@ -2179,6 +2205,7 @@
 
     @include('orders.partials.measurement-eligibility')
 @include('orders.partials.measurement-links')
+@include('orders.partials.measurement-submissions')
 
     <div class="grid gap-6 lg:grid-cols-2">
 
@@ -2193,16 +2220,7 @@
             <div class="oy-card-body">
 
                 @php
-                    $totalPaid = (float) $order->quotation->payments
-                        ->where('status', 'completed')
-                        ->sum(fn ($payment) => (float) $payment->amount);
-
-                    $balanceDue = max(
-                        0,
-                        (float) $order->total - $totalPaid
-                    );
-
-                    $isFullyPaid = $balanceDue <= 0.01;
+                    // totals are computed once at the top of the page
 
                     $paymentArrangement =
                         $order->delivery?->payment_arrangement;

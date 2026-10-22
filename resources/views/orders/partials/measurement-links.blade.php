@@ -14,7 +14,7 @@
 <section class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm" id="measurement-links">
     <h2 class="text-lg font-semibold text-slate-900">Customer Measurements</h2>
     <p class="mt-1 text-sm text-slate-600">
-        Send a secure link so selected contacts can provide measurements for the items that require them. Links expire after 14 days.
+        Send a secure link so selected contacts can provide measurements for the items that require them. Links expire after {{ \App\Actions\Measurements\IssueMeasurementLink::EXPIRY_DAYS }} days.
     </p>
 
     @if($errors->has('measurements'))

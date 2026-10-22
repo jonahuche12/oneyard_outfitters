@@ -49,7 +49,7 @@ class SubmitMeasurements
             foreach ($items as $id => $item) {
                 $latest[$id] = MeasurementSubmission::query()
                     ->where('order_item_id', $id)->orderByDesc('revision')->first();
-                if (! $latest[$id] || $latest[$id]->status === 'correction_requested') {
+                if (! $latest[$id] || in_array($latest[$id]->status, ['draft', 'correction_requested'], true)) {
                     $pending[$id] = $item;
                 }
             }
@@ -65,13 +65,57 @@ class SubmitMeasurements
             }
 
             $clean = [];
+            $switched = [];
             foreach ($pending as $id => $item) {
-                if (! isset($payloads[$id]) || ! is_array($payloads[$id])) {
-                    $this->fail("items.$id", 'Please provide measurements for "' . $item->item_name . '".');
+                $existing = $latest[$id];
+
+                // Saved drafts are the source of truth; never depend on the browser
+                // to resend measurements that are already stored on the server.
+                if ($existing && $existing->status === 'draft') {
+                    // The contact's current choice is authoritative. A change of
+                    // method replaces whatever was collected under the old one.
+                    $selectedMethod = is_array($payloads[$id] ?? null)
+                        ? ($payloads[$id]['method'] ?? null)
+                        : null;
+
+                    if (! in_array($selectedMethod, ['individual', 'size_quantity'], true)) {
+                        $this->fail("items.$id.method", 'Please choose how you want to provide measurements.');
+                    }
+
+                    if ($selectedMethod !== $existing->measurement_method) {
+                        $existing->individualMeasurements()->delete();
+                        $existing->sizeQuantities()->delete();
+                        $existing->forceFill(['measurement_method' => $selectedMethod])->save();
+                        $switched[$id] = true;
+                        $source = $payloads[$id];
+                    } else {
+                        $existing->load(['individualMeasurements', 'sizeQuantities']);
+
+                        $source = [
+                            'method' => $existing->measurement_method,
+                            'people' => $existing->individualMeasurements
+                                ->sortBy('position')
+                                ->map(fn ($person) => [
+                                    'label' => $person->person_label,
+                                    'measurements' => $person->measurements,
+                                    'notes' => $person->notes,
+                                ])->values()->all(),
+                            'sizes' => $existing->sizeQuantities
+                                ->pluck('quantity', 'size_label')->all(),
+                        ];
+                    }
+                } else {
+                    if (! isset($payloads[$id]) || ! is_array($payloads[$id])) {
+                        $this->fail("items.$id", 'Please provide measurements for "' . $item->item_name . '".');
+                    }
+
+                    $source = $payloads[$id];
+
                 }
+
                 try {
                     $clean[$id] = app(ValidateMeasurementPayload::class)
-                        ->handle($item->product_type, (string) $item->unit, $item->quantity, $payloads[$id]);
+                        ->handle($item->product_type, (string) $item->unit, $item->quantity, $source);
                 } catch (ValidationException $e) {
                     $prefixed = [];
                     foreach ($e->errors() as $key => $messages) {
@@ -79,38 +123,68 @@ class SubmitMeasurements
                     }
                     throw ValidationException::withMessages($prefixed);
                 }
+
+            }
+
+            foreach ($pending as $id => $item) {
+                if (
+                    (! ($latest[$id] && $latest[$id]->status === 'draft') || isset($switched[$id]))
+                    && app(ValidateMeasurementPayload::class)->profileFor($item->product_type)
+                    && ($clean[$id]['method'] ?? null) === 'individual'
+                ) {
+                    $this->fail(
+                        "items.$id.people",
+                        'Save each person’s measurements as a draft before submitting.'
+                    );
+                }
             }
 
             $created = collect();
             foreach ($pending as $id => $item) {
                 $data = $clean[$id];
 
-                $submission = MeasurementSubmission::query()->forceCreate([
-                    'order_item_id' => $id,
-                    'revision' => ($latest[$id]?->revision ?? 0) + 1,
-                    'measurement_method' => $data['method'],
-                    'input_source' => 'manual',
-                    'status' => 'submitted',
-                    'submitted_at' => now(),
-                    'measurement_link_id' => $link->id,
-                ]);
+                if ($latest[$id] && $latest[$id]->status === 'draft') {
+                    // Validation above checks the stored draft against the item's
+                    // complete requirements before it becomes reviewable.
+                    $submission = $latest[$id];
+                    $submission->forceFill([
+                        'measurement_method' => $data['method'],
+                        'status' => 'submitted',
+                        'submitted_at' => now(),
+                        'measurement_link_id' => $link->id,
+                    ])->save();
 
-                foreach ($data['people'] as $person) {
-                    IndividualMeasurement::query()->forceCreate([
-                        'measurement_submission_id' => $submission->id,
-                        'person_label' => $person['label'],
-                        'measurements' => $person['measurements'],
-                        'notes' => $person['notes'],
-                        'position' => $person['position'],
+                    if (isset($switched[$id])) {
+                        $this->storeRows($submission, $data);
+                    }
+                } else {
+                    $submission = MeasurementSubmission::query()->forceCreate([
+                        'order_item_id' => $id,
+                        'revision' => ($latest[$id]?->revision ?? 0) + 1,
+                        'measurement_method' => $data['method'],
+                        'input_source' => 'manual',
+                        'status' => 'submitted',
+                        'submitted_at' => now(),
+                        'measurement_link_id' => $link->id,
                     ]);
-                }
 
-                foreach ($data['sizes'] as $label => $qty) {
-                    MeasurementSizeQuantity::query()->forceCreate([
-                        'measurement_submission_id' => $submission->id,
-                        'size_label' => $label,
-                        'quantity' => $qty,
-                    ]);
+                    foreach ($data['people'] as $person) {
+                        IndividualMeasurement::query()->forceCreate([
+                            'measurement_submission_id' => $submission->id,
+                            'person_label' => $person['label'],
+                            'measurements' => $person['measurements'],
+                            'notes' => $person['notes'],
+                            'position' => $person['position'],
+                        ]);
+                    }
+
+                    foreach ($data['sizes'] as $label => $qty) {
+                        MeasurementSizeQuantity::query()->forceCreate([
+                            'measurement_submission_id' => $submission->id,
+                            'size_label' => $label,
+                            'quantity' => $qty,
+                        ]);
+                    }
                 }
 
                 $created->push($submission);
@@ -118,6 +192,30 @@ class SubmitMeasurements
 
             return $created;
         });
+    }
+
+    /**
+     * @param  array{people: array, sizes: array}  $data
+     */
+    private function storeRows(MeasurementSubmission $submission, array $data): void
+    {
+        foreach ($data['people'] as $person) {
+            IndividualMeasurement::query()->forceCreate([
+                'measurement_submission_id' => $submission->id,
+                'person_label' => $person['label'],
+                'measurements' => $person['measurements'],
+                'notes' => $person['notes'],
+                'position' => $person['position'],
+            ]);
+        }
+
+        foreach ($data['sizes'] as $label => $qty) {
+            MeasurementSizeQuantity::query()->forceCreate([
+                'measurement_submission_id' => $submission->id,
+                'size_label' => $label,
+                'quantity' => $qty,
+            ]);
+        }
     }
 
     private function fail(string $key, string $message): never

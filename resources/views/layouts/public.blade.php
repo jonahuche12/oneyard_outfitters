@@ -45,28 +45,28 @@
             >
                 <a
                     href="{{ url('/') }}"
-                    class="text-sm font-semibold text-slate-950 transition hover:text-amber-700"
+                    class="text-sm transition {{ request()->is('/') ? 'font-semibold text-slate-950' : 'font-medium text-slate-600 hover:text-slate-950' }}"
                 >
                     Home
                 </a>
 
                 <a
                     href="{{ url('/about') }}"
-                    class="text-sm font-medium text-slate-600 transition hover:text-slate-950"
+                    class="text-sm transition {{ request()->is('about') ? 'font-semibold text-slate-950' : 'font-medium text-slate-600 hover:text-slate-950' }}"
                 >
                     About
                 </a>
 
                 <a
                     href="{{ url('/how-it-works') }}"
-                    class="text-sm font-medium text-slate-600 transition hover:text-slate-950"
+                    class="text-sm transition {{ request()->is('how-it-works') ? 'font-semibold text-slate-950' : 'font-medium text-slate-600 hover:text-slate-950' }}"
                 >
                     How It Works
                 </a>
 
                 <a
                     href="{{ url('/faq') }}"
-                    class="text-sm font-medium text-slate-600 transition hover:text-slate-950"
+                    class="text-sm transition {{ request()->is('faq') ? 'font-semibold text-slate-950' : 'font-medium text-slate-600 hover:text-slate-950' }}"
                 >
                     FAQ
                 </a>
@@ -305,7 +305,7 @@
                         </a>
 
                         <a href="{{ route('dashboard') }}" class="block text-slate-300 hover:text-white">
-                            Staff Dashboard
+                            Staff Login
                         </a>
                     </div>
                 </div>

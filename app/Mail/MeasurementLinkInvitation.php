@@ -16,12 +16,15 @@ class MeasurementLinkInvitation extends Mailable
     public function __construct(
         public MeasurementLink $link,
         public string $measurementUrl,
+        public ?string $correctionReason = null,
     ) {
     }
 
     public function envelope(): Envelope
     {
-        return new Envelope(subject: 'Measurements needed for your Oneyard Outfitters order');
+        return new Envelope(subject: $this->correctionReason
+            ? 'Please correct your measurements: Oneyard Outfitters'
+            : 'Measurements needed for your Oneyard Outfitters order');
     }
 
     public function content(): Content
@@ -33,6 +36,7 @@ class MeasurementLinkInvitation extends Mailable
                 'order' => $this->link->order,
                 'measurementUrl' => $this->measurementUrl,
                 'expiresAt' => $this->link->expires_at,
+                'correctionReason' => $this->correctionReason,
             ],
         );
     }

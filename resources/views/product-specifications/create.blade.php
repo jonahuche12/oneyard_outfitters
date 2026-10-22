@@ -189,15 +189,7 @@
                         >
                             <option value="">Select type</option>
 
-                            @foreach([
-                                'uniform' => 'Uniform',
-                                'sportswear' => 'Sportswear',
-                                'bag' => 'Bag',
-                                'shoe' => 'Shoe',
-                                'branded_item' => 'Branded Item',
-                                'school_supply' => 'School Supply',
-                                'other' => 'Other',
-                            ] as $value => $label)
+                            @foreach(config('specifications.product_types') as $value => $label)
                                 <option
                                     value="{{ $value }}"
                                     @selected(old('product_type') === $value)
@@ -217,14 +209,12 @@
                             Unit <span class="oy-form-required">*</span>
                         </label>
 
-                        <input
-                            type="text"
-                            name="unit"
-                            value="{{ old('unit') }}"
-                            class="oy-input @error('unit') is-invalid @enderror"
-                            required
-                            placeholder="e.g. piece, pair, set"
-                        >
+                        <select name="unit" class="oy-select @error('unit') is-invalid @enderror" required>
+                            <option value="">Select unit</option>
+                            @foreach(config('specifications.units') as $uv => $ul)
+                                <option value="{{ $uv }}" @selected(strtolower((string) old('unit')) === $uv)>{{ $ul }}</option>
+                            @endforeach
+                        </select>
 
                         @error('unit')
                             <div class="oy-error">{{ $message }}</div>

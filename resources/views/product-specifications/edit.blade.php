@@ -183,15 +183,10 @@
                             class="oy-select @error('product_type') is-invalid @enderror"
                             required
                         >
-                            @foreach([
-                                'uniform' => 'Uniform',
-                                'sportswear' => 'Sportswear',
-                                'bag' => 'Bag',
-                                'shoe' => 'Shoe',
-                                'branded_item' => 'Branded Item',
-                                'school_supply' => 'School Supply',
-                                'other' => 'Other',
-                            ] as $value => $label)
+                            @if(! array_key_exists(old('product_type', $productSpecification->product_type), config('specifications.product_types')))
+                                <option value="" selected disabled>(legacy) {{ old('product_type', $productSpecification->product_type) }} — choose a type</option>
+                            @endif
+                            @foreach(config('specifications.product_types') as $value => $label)
                                 <option
                                     value="{{ $value }}"
                                     @selected(old('product_type', $productSpecification->product_type) === $value)
@@ -211,13 +206,14 @@
                             Unit <span class="oy-form-required">*</span>
                         </label>
 
-                        <input
-                            type="text"
-                            name="unit"
-                            value="{{ old('unit', $productSpecification->unit) }}"
-                            class="oy-input @error('unit') is-invalid @enderror"
-                            required
-                        >
+                        <select name="unit" class="oy-select @error('unit') is-invalid @enderror" required>
+                            @if(! array_key_exists(strtolower((string) old('unit', $productSpecification->unit)), config('specifications.units')))
+                                <option value="" selected disabled>(legacy) {{ old('unit', $productSpecification->unit) }} — choose a unit</option>
+                            @endif
+                            @foreach(config('specifications.units') as $uv => $ul)
+                                <option value="{{ $uv }}" @selected(strtolower((string) old('unit', $productSpecification->unit)) === $uv)>{{ $ul }}</option>
+                            @endforeach
+                        </select>
 
                         @error('unit')
                             <div class="oy-error">{{ $message }}</div>
