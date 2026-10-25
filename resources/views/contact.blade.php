@@ -16,16 +16,15 @@
 
         <div class="max-w-3xl">
             <p class="text-sm font-semibold uppercase tracking-[0.24em] text-amber-400">
-                Contact Oneyard Outfitters
+                Request a Quote
             </p>
 
             <h1 class="mt-5 text-4xl font-semibold tracking-tight sm:text-5xl">
-                Tell us what you need.
+                Tell us what you need. Get a clear quote.
             </h1>
 
             <p class="mt-6 max-w-2xl text-lg leading-8 text-slate-300">
-                Give us the basic details of your requirement and continue the
-                conversation with Oneyard Outfitters on WhatsApp.
+                Share the basics of your requirement and our team will take it from there on WhatsApp, with a clear plan and a quotation you can review and approve.
             </p>
         </div>
 
@@ -43,17 +42,15 @@
         <div>
 
             <p class="text-sm font-semibold uppercase tracking-[0.2em] text-amber-600">
-                Start a conversation
+                Fastest way to reach us
             </p>
 
             <h2 class="mt-3 text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">
-                Let's understand the requirement.
+                Start with what you have.
             </h2>
 
             <p class="mt-6 text-base leading-8 text-slate-600">
-                Whether you need fabrics, uniforms, clothing, institutional
-                supplies, procurement, or sourcing support, start by telling
-                us what you are trying to get done.
+                Uniforms, clothing, fabrics, institutional supplies or sourcing: send us the requirement, even a rough list or headcount, and we will help you define the rest.
             </p>
 
             <div class="mt-10 rounded-3xl bg-slate-950 p-7 text-white">
@@ -67,8 +64,7 @@
                 </h3>
 
                 <p class="mt-3 text-sm leading-7 text-slate-300">
-                    Send your requirement directly and continue the conversation
-                    with our team.
+                    Message our team directly. Quickest if you already know what you need.
                 </p>
 
                 <a
@@ -77,7 +73,7 @@
                     rel="noopener noreferrer"
                     class="mt-6 inline-flex items-center justify-center rounded-full bg-amber-400 px-6 py-3 text-sm font-semibold text-slate-950 transition hover:bg-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 focus:ring-offset-slate-950"
                 >
-                    Chat on WhatsApp
+                    Message Us on WhatsApp
                 </a>
 
             </div>
@@ -90,12 +86,11 @@
 
             <div class="mb-8">
                 <h2 class="text-2xl font-semibold tracking-tight text-slate-950">
-                    Tell us about your requirement
+                    Request your quote in one minute
                 </h2>
 
                 <p class="mt-2 text-sm leading-7 text-slate-600">
-                    You do not need to provide every detail. Give us enough
-                    information to understand what you need.
+                    No final list needed. Give us enough to understand what you need and we will help with the rest.
                 </p>
             </div>
 
@@ -132,7 +127,7 @@
                             for="contact-organization"
                             class="block text-sm font-medium text-slate-900"
                         >
-                            Organization
+                            Organization or school
                         </label>
 
                         <input
@@ -174,7 +169,7 @@
                             for="contact-phone"
                             class="block text-sm font-medium text-slate-900"
                         >
-                            Phone number
+                            Phone number (WhatsApp)
                         </label>
 
                         <input
@@ -220,7 +215,7 @@
                         for="contact-message"
                         class="block text-sm font-medium text-slate-900"
                     >
-                        Tell us about the requirement
+                        What should we know? (items, quantities, timing)
                     </label>
 
                     <textarea
@@ -236,9 +231,7 @@
 
                 <div class="rounded-2xl border border-amber-200 bg-amber-50 p-4">
                     <p class="text-sm leading-6 text-slate-700">
-                        When you continue, WhatsApp will open with your
-                        information already prepared as a message. You can
-                        review it before sending.
+                        Tapping the button opens WhatsApp with your details already written. Review it, then send. No account or payment needed.
                     </p>
                 </div>
 
@@ -247,7 +240,7 @@
                     type="submit"
                     class="inline-flex w-full items-center justify-center rounded-xl bg-slate-950 px-6 py-3.5 text-sm font-semibold text-white transition hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-950 focus:ring-offset-2 sm:w-auto"
                 >
-                    Continue on WhatsApp
+                    Send My Request on WhatsApp
                 </button>
 
             </form>
@@ -265,15 +258,15 @@
     <div class="mx-auto max-w-4xl px-6 py-20 text-center sm:px-8 lg:py-24">
 
         <p class="text-sm font-semibold uppercase tracking-[0.2em] text-amber-600">
-            Prefer a direct message?
+            Prefer to just chat?
         </p>
 
         <h2 class="mt-3 text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">
-            Chat with Oneyard Outfitters directly.
+            Talk to our team directly.
         </h2>
 
         <p class="mx-auto mt-5 max-w-2xl text-base leading-8 text-slate-600">
-            You can also open WhatsApp without filling out the form.
+            Skip the form and open WhatsApp straight away.
         </p>
 
         <a
@@ -282,7 +275,7 @@
             rel="noopener noreferrer"
             class="mt-8 inline-flex items-center justify-center rounded-full bg-amber-400 px-7 py-3.5 text-sm font-semibold text-slate-950 transition hover:bg-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2"
         >
-            Open WhatsApp
+            Message Us on WhatsApp
         </a>
 
     </div>

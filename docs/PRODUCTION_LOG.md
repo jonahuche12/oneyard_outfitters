@@ -6277,3 +6277,5 @@ NEXT ORDER: orders/show -> orders/index + quotations -> deliveries + procurement
 - Pending: npm run build, view compile, AuthenticationTest + ProcurementPolicyTest + EarningsPoolScreenTest + StaffWalletAdminTest, browser check (3 breakpoints, keyboard focus, Payments card).
 - Needs approval, not done: dashboard cards for Procurement, Quality Control, Earnings and My Wallet; Quotations and Deliveries sidebar links.
 - Next: orders/show Steps 3-5, then orders/index + quotations (per tracker).
+- 2026-10-25: about.blade.php copy rewrite (accountability positioning, closing CTA "Request a Quote"). Copy only; markup, images, routes unchanged.
+- 2026-10-25: faq.blade.php copy rewrite (objection-led questions, quotation step explained, CTA "Request a Quote"). Copy only; accordion hooks and markup unchanged.

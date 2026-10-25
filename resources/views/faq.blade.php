@@ -19,12 +19,11 @@
             </p>
 
             <h1 class="mt-5 text-4xl font-semibold tracking-tight sm:text-5xl">
-                Questions about working with Oneyard Outfitters.
+                Straight answers before you request a quote.
             </h1>
 
             <p class="mt-6 max-w-2xl text-lg leading-8 text-slate-300">
-                Here are answers to some common questions about our products,
-                sourcing, production, and organizational supply process.
+                What we supply, who we work with, how an order works and how to get started.
             </p>
         </div>
     </div>
@@ -50,7 +49,7 @@
                         data-faq-trigger
                     >
                         <span class="text-base font-semibold text-slate-950">
-                            What does Oneyard Outfitters provide?
+                            What can Oneyard supply for my organization?
                         </span>
 
                         <span
@@ -67,9 +66,7 @@
                     data-faq-panel
                 >
                     <p class="text-sm leading-7 text-slate-600">
-                        Oneyard Outfitters works across fabrics, clothing, uniforms,
-                        institutional supplies, procurement, sourcing, and related
-                        production requirements.
+                        Uniforms, clothing, fabrics and institutional supplies, plus the sourcing, procurement and production behind them. You deal with one team instead of coordinating several vendors.
                     </p>
                 </div>
             </article>
@@ -86,7 +83,7 @@
                         data-faq-trigger
                     >
                         <span class="text-base font-semibold text-slate-950">
-                            Who can work with Oneyard Outfitters?
+                            Who do you work with?
                         </span>
 
                         <span
@@ -103,9 +100,7 @@
                     data-faq-panel
                 >
                     <p class="text-sm leading-7 text-slate-600">
-                        Our services are designed for schools, businesses,
-                        organizations, and institutions with defined supply,
-                        clothing, uniform, sourcing, or production requirements.
+                        Schools, businesses, organizations and institutions that need uniforms, clothing, supplies or sourcing handled properly. If you are responsible for getting the order right, this service is built for you.
                     </p>
                 </div>
             </article>
@@ -122,7 +117,7 @@
                         data-faq-trigger
                     >
                         <span class="text-base font-semibold text-slate-950">
-                            Can I request uniforms or clothing for an organization?
+                            Can you make uniforms or clothing to our design and sizes?
                         </span>
 
                         <span
@@ -139,10 +134,7 @@
                     data-faq-panel
                 >
                     <p class="text-sm leading-7 text-slate-600">
-                        Yes. Uniforms and clothing can be discussed as an
-                        organization-specific requirement. The details can include
-                        the design, materials, quantities, sizing, branding,
-                        and other relevant specifications.
+                        Yes. Tell us the design, materials, quantities, sizing and branding you need. We turn that into a clear specification and a quotation for your approval before production starts.
                     </p>
                 </div>
             </article>
@@ -159,7 +151,7 @@
                         data-faq-trigger
                     >
                         <span class="text-base font-semibold text-slate-950">
-                            Can Oneyard source products or materials that are not already listed?
+                            Can you source items that are not on your list?
                         </span>
 
                         <span
@@ -176,10 +168,7 @@
                     data-faq-panel
                 >
                     <p class="text-sm leading-7 text-slate-600">
-                        Procurement and sourcing requirements can be discussed
-                        based on the organization's specific need. The first step
-                        is to provide enough information for the requirement to
-                        be understood and assessed.
+                        Often, yes. Send us what you need and we will assess it, then come back with a clear answer and a quotation.
                     </p>
                 </div>
             </article>
@@ -196,7 +185,7 @@
                         data-faq-trigger
                     >
                         <span class="text-base font-semibold text-slate-950">
-                            How does the process usually begin?
+                            What happens after I request a quote?
                         </span>
 
                         <span
@@ -213,10 +202,7 @@
                     data-faq-panel
                 >
                     <p class="text-sm leading-7 text-slate-600">
-                        The process starts with understanding the requirement.
-                        We then clarify the specification, determine the appropriate
-                        sourcing or production approach, and proceed through the
-                        relevant stages toward delivery.
+                        We confirm your requirement and define the specification. You receive a quotation to review and approve. Once approved, we source or produce, inspect the work and deliver.
                     </p>
                 </div>
             </article>
@@ -233,7 +219,7 @@
                         data-faq-trigger
                     >
                         <span class="text-base font-semibold text-slate-950">
-                            Do I need to know exactly what I want before contacting you?
+                            I do not have a final list yet. Can I still start?
                         </span>
 
                         <span
@@ -250,9 +236,7 @@
                     data-faq-panel
                 >
                     <p class="text-sm leading-7 text-slate-600">
-                        Not necessarily. The more information you can provide,
-                        the easier it is to understand the requirement, but the
-                        conversation can begin with the need you are trying to solve.
+                        Yes. Start with what you have, even a rough list, a headcount or a description of the problem. We will help you define the rest.
                     </p>
                 </div>
             </article>
@@ -269,7 +253,7 @@
                         data-faq-trigger
                     >
                         <span class="text-base font-semibold text-slate-950">
-                            Can requirements include branding or organization-specific details?
+                            Can you match our branding and organization details?
                         </span>
 
                         <span
@@ -286,9 +270,7 @@
                     data-faq-panel
                 >
                     <p class="text-sm leading-7 text-slate-600">
-                        Yes. Where relevant, organization-specific requirements
-                        such as branding, design references, measurements, samples,
-                        or other specifications can form part of the requirement.
+                        Yes. Branding, design references, measurements, samples and other organization-specific details can all form part of the specification, so the finished order matches what you approved.
                     </p>
                 </div>
             </article>
@@ -305,7 +287,7 @@
                         data-faq-trigger
                     >
                         <span class="text-base font-semibold text-slate-950">
-                            How do I start a conversation?
+                            How do I get started?
                         </span>
 
                         <span
@@ -322,9 +304,7 @@
                     data-faq-panel
                 >
                     <p class="text-sm leading-7 text-slate-600">
-                        Use the contact page to tell us what you need, including
-                        the type of product or service, quantities where known,
-                        timing, and any available reference materials.
+                        Use the contact page to request a quote. Tell us the products you need, quantities if known, your timing and any reference materials you have.
                     </p>
                 </div>
             </article>
@@ -345,19 +325,18 @@
         </p>
 
         <h2 class="mt-3 text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">
-            Tell us what you are trying to get done.
+            Ready for a clear quote?
         </h2>
 
         <p class="mx-auto mt-5 max-w-2xl text-base leading-8 text-slate-600">
-            Start with the requirement. We can work through the relevant details
-            from there.
+            Send us your requirement, even a rough list. We will respond with a clear plan and a quotation you can review and approve.
         </p>
 
         <a
             href="{{ url('/contact') }}"
             class="mt-8 inline-flex items-center justify-center rounded-full bg-slate-950 px-7 py-3.5 text-sm font-semibold text-white transition hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-950 focus:ring-offset-2"
         >
-            Contact Oneyard Outfitters
+            Request a Quote
         </a>
 
     </div>

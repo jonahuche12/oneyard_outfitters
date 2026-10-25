@@ -20,13 +20,11 @@
             </p>
 
             <h1 class="mt-5 text-4xl font-semibold tracking-tight sm:text-5xl lg:text-6xl">
-                From requirement to delivery, one clear process.
+                From first request to delivery, one clear process you can follow.
             </h1>
 
             <p class="mt-7 max-w-2xl text-lg leading-8 text-slate-300">
-                We start by understanding what your organization needs, then
-                organize the specification, sourcing or production, quality
-                checking, and delivery around that requirement.
+                Tell us what your organization needs. We define the specification, agree the quotation, then source or produce, inspect and deliver, so you always know what was agreed and what happens next.
             </p>
 
         </div>
@@ -48,24 +46,20 @@
                 </p>
 
                 <h2 class="mt-3 text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">
-                    Good execution begins with understanding the requirement.
+                    Every good order starts with getting the requirement right.
                 </h2>
 
                 <div class="mt-6 space-y-5 text-base leading-8 text-slate-600">
                     <p>
-                        Every requirement is different. A school may need uniforms
-                        and supplies, while a business may need clothing, fabrics,
-                        or other sourced items.
+                        Every organization is different. A school may need uniforms and supplies; a business may need workwear, fabrics or sourced items.
                     </p>
 
                     <p>
-                        Rather than beginning with assumptions, we first establish
-                        what is actually needed and organize the important details.
+                        We do not work from assumptions. We confirm what is actually needed and organize the details before anything is made or bought.
                     </p>
 
                     <p>
-                        From there, the appropriate sourcing, production, quality,
-                        and delivery steps can be coordinated.
+                        From there, sourcing, production, quality checks and delivery are coordinated around one agreed requirement.
                     </p>
                 </div>
             </div>
@@ -97,12 +91,11 @@
             </p>
 
             <h2 class="mt-3 text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">
-                Five stages that keep the work organized.
+                A clear path from first request to delivery.
             </h2>
 
             <p class="mt-5 text-base leading-8 text-slate-600">
-                The exact work varies according to the requirement, but the overall
-                approach remains simple: understand, define, execute, check, and deliver.
+                Every order is different, but the path is the same: understand, specify, produce, inspect, deliver.
             </p>
 
         </div>
@@ -125,13 +118,11 @@
                     </p>
 
                     <h3 class="mt-2 text-2xl font-semibold text-slate-950">
-                        We understand what you need.
+                        We confirm what you need.
                     </h3>
 
                     <p class="mt-4 max-w-3xl text-base leading-8 text-slate-600">
-                        We begin with the requirement. This may include the type of
-                        product, intended use, quantities, timing, reference materials,
-                        existing designs, or other information relevant to the request.
+                        Share what you have: the products, quantities, timing, reference materials or existing designs. A rough list is enough to start.
                     </p>
                 </div>
 
@@ -153,13 +144,11 @@
                     </p>
 
                     <h3 class="mt-2 text-2xl font-semibold text-slate-950">
-                        We turn the requirement into clear specifications.
+                        We define exactly what will be made.
                     </h3>
 
                     <p class="mt-4 max-w-3xl text-base leading-8 text-slate-600">
-                        Details such as materials, designs, measurements, quantities,
-                        branding, product references, and other relevant requirements
-                        are clarified before execution begins.
+                        Materials, designs, measurements, quantities and branding are defined and agreed, with a quotation for your approval, before any production begins.
                     </p>
                 </div>
 
@@ -181,13 +170,11 @@
                     </p>
 
                     <h3 class="mt-2 text-2xl font-semibold text-slate-950">
-                        We source the requirement or move it into production.
+                        We source it or produce it, to the agreed specification.
                     </h3>
 
                     <p class="mt-4 max-w-3xl text-base leading-8 text-slate-600">
-                        Depending on the requirement, the work may involve sourcing
-                        materials or products, coordinating procurement, or producing
-                        clothing and uniforms according to the agreed specification.
+                        Depending on the order, we source materials or products, coordinate procurement, or produce clothing and uniforms exactly to what was approved.
                     </p>
                 </div>
 
@@ -209,13 +196,11 @@
                     </p>
 
                     <h3 class="mt-2 text-2xl font-semibold text-slate-950">
-                        Completed work is checked against the requirement.
+                        Every order is inspected before it ships.
                     </h3>
 
                     <p class="mt-4 max-w-3xl text-base leading-8 text-slate-600">
-                        Before delivery, the completed work goes through the relevant
-                        checking stage so that it can be assessed against the defined
-                        requirement and identified corrections can be addressed.
+                        Before delivery, completed work is checked against the agreed requirement, and any corrections are addressed before it reaches you.
                     </p>
                 </div>
 
@@ -237,12 +222,11 @@
                     </p>
 
                     <h3 class="mt-2 text-2xl font-semibold text-slate-950">
-                        The completed requirement moves to delivery.
+                        Your order is delivered.
                     </h3>
 
                     <p class="mt-4 max-w-3xl text-base leading-8 text-slate-600">
-                        Once the relevant work has been completed and checked, the
-                        order proceeds to the delivery stage for the organization.
+                        Once the work is complete and checked, your order is delivered to your organization.
                     </p>
                 </div>
 
@@ -265,13 +249,11 @@
             </p>
 
             <h2 class="mt-3 text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">
-                The details stay connected from beginning to end.
+                Nothing gets lost between the request and the delivery.
             </h2>
 
             <p class="mt-5 text-base leading-8 text-slate-600">
-                A supply requirement can involve several moving parts. Keeping those
-                parts organized makes it easier to understand what was requested,
-                what is being sourced or produced, and what needs to be checked before delivery.
+                Uniform and supply orders have many moving parts. Keeping them in one process means you can always see what was requested, what is being made and what gets checked before delivery.
             </p>
         </div>
 
@@ -279,34 +261,31 @@
 
             <article class="rounded-2xl border border-slate-200 bg-slate-50 p-7">
                 <h3 class="text-xl font-semibold text-slate-950">
-                    Clear requirements
+                    Agreed up front
                 </h3>
 
                 <p class="mt-3 text-sm leading-7 text-slate-600">
-                    Important details are established before execution so the work
-                    has a clear reference point.
+                    Details are settled before execution, so everyone works from the same reference point.
                 </p>
             </article>
 
             <article class="rounded-2xl border border-slate-200 bg-slate-50 p-7">
                 <h3 class="text-xl font-semibold text-slate-950">
-                    Coordinated execution
+                    One team, one plan
                 </h3>
 
                 <p class="mt-3 text-sm leading-7 text-slate-600">
-                    Sourcing, production, and other relevant activities are organized
-                    around the defined requirement.
+                    Sourcing, production and logistics are organized around your defined requirement.
                 </p>
             </article>
 
             <article class="rounded-2xl border border-slate-200 bg-slate-50 p-7">
                 <h3 class="text-xl font-semibold text-slate-950">
-                    Quality before delivery
+                    Checked before it ships
                 </h3>
 
                 <p class="mt-3 text-sm leading-7 text-slate-600">
-                    Completed work is checked before it moves through the final
-                    delivery stage.
+                    Completed work is inspected against the agreement before it moves to delivery.
                 </p>
             </article>
 
@@ -330,12 +309,11 @@
                 </p>
 
                 <h2 class="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">
-                    Start with what you need.
+                    Tell us what you need. Get a clear quote.
                 </h2>
 
                 <p class="mt-5 text-base leading-8 text-slate-300">
-                    Tell us about the requirement, the products involved, and any
-                    information you already have. We can take it from there.
+                    Send your requirement, the products involved and whatever information you already have. We will respond with a clear plan and a quotation to review.
                 </p>
 
             </div>
@@ -344,7 +322,7 @@
                 href="{{ url('/contact') }}"
                 class="inline-flex items-center justify-center rounded-full bg-amber-400 px-7 py-3.5 text-sm font-semibold text-slate-950 transition hover:bg-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 focus:ring-offset-slate-950"
             >
-                Start a Conversation
+                Request a Quote
             </a>
 
         </div>

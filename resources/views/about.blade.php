@@ -19,12 +19,11 @@
             </p>
 
             <h1 class="text-4xl font-semibold tracking-tight sm:text-5xl lg:text-6xl">
-                We help organizations turn supply needs into finished, usable solutions.
+                One accountable supplier for everything your organization wears and uses.
             </h1>
 
             <p class="mt-7 max-w-2xl text-lg leading-8 text-slate-300">
-                Oneyard Outfitters brings fabrics, clothing, uniforms, institutional supplies,
-                sourcing, and production coordination into one organized process.
+                Oneyard Outfitters brings fabrics, clothing, uniforms, institutional supplies, sourcing and production into one accountable process, so you deal with one team from requirement to delivery.
             </p>
         </div>
     </div>
@@ -43,25 +42,20 @@
             </p>
 
             <h2 class="mt-3 text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">
-                A practical supply and production partner.
+                One partner instead of a chain of vendors.
             </h2>
 
             <div class="mt-6 space-y-5 text-base leading-8 text-slate-600">
                 <p>
-                    Oneyard Outfitters is built around a simple idea:
-                    organizations should not have to coordinate every part of a supply,
-                    clothing, or uniform requirement through disconnected conversations.
+                    Oneyard Outfitters exists because organizations should not have to manage every part of a uniform, clothing or supply order through scattered conversations with tailors, suppliers and couriers.
                 </p>
 
                 <p>
-                    We help bring requirements together, clarify what is needed,
-                    source or produce the right items, coordinate the work, and
-                    deliver the completed order.
+                    We bring it all together. We clarify what is needed, source or produce the right items, coordinate the work and deliver the completed order.
                 </p>
 
                 <p>
-                    Our focus is practical execution — understanding the requirement,
-                    organizing the details, and moving the work through the right stages.
+                    Our focus is execution: a clear requirement, organized details, and every stage managed until the order is delivered.
                 </p>
             </div>
         </div>
@@ -91,12 +85,11 @@
             </p>
 
             <h2 class="mt-3 text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">
-                From materials to finished requirements.
+                Everything your order needs, under one roof.
             </h2>
 
             <p class="mt-5 text-base leading-8 text-slate-600">
-                Our work covers the products and coordination needed to move an
-                institutional requirement from an idea or specification to delivery.
+                From fabric to finished garment to delivery, we cover the products and coordination needed to move a requirement from specification to your door.
             </p>
         </div>
 
@@ -112,8 +105,7 @@
                 </h3>
 
                 <p class="mt-3 text-sm leading-7 text-slate-600">
-                    Fabric and material sourcing for clothing, uniforms, and other
-                    requirements.
+                    Fabric and material sourcing for clothing, uniforms and other requirements, matched to your specification.
                 </p>
             </article>
 
@@ -127,8 +119,7 @@
                 </h3>
 
                 <p class="mt-3 text-sm leading-7 text-slate-600">
-                    Clothing and uniform production based on the requirements of
-                    the organization being served.
+                    Clothing and uniform production built around the requirements of your organization, with consistent quality across every piece.
                 </p>
             </article>
 
@@ -142,8 +133,7 @@
                 </h3>
 
                 <p class="mt-3 text-sm leading-7 text-slate-600">
-                    Practical supplies that support schools, businesses, and
-                    other organizations.
+                    Practical supplies for schools, businesses and other organizations, supplied alongside your clothing order.
                 </p>
             </article>
 
@@ -157,8 +147,7 @@
                 </h3>
 
                 <p class="mt-3 text-sm leading-7 text-slate-600">
-                    Coordinated sourcing for requirements that need products,
-                    materials, or production support.
+                    Coordinated sourcing when your requirement needs products, materials or production support, managed by us so you do not have to.
                 </p>
             </article>
 
@@ -190,12 +179,11 @@
                 </p>
 
                 <h2 class="mt-3 text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">
-                    Built around organizational requirements.
+                    Built for the people accountable for the order.
                 </h2>
 
                 <p class="mt-6 text-base leading-8 text-slate-600">
-                    Our services are designed for organizations that need coordinated
-                    sourcing, clothing, uniforms, fabrics, or institutional supplies.
+                    If you are responsible for outfitting a school, business or institution, our service takes the coordination, follow-ups and vendor management off your desk.
                 </p>
 
                 <div class="mt-8 space-y-4">
@@ -203,21 +191,21 @@
                     <div class="rounded-2xl border border-slate-200 p-5">
                         <h3 class="font-semibold text-slate-950">Schools</h3>
                         <p class="mt-2 text-sm leading-7 text-slate-600">
-                            Uniforms, clothing, supplies, and other school-related requirements.
+                            Uniforms, clothing, supplies and other school requirements, organized for large student populations.
                         </p>
                     </div>
 
                     <div class="rounded-2xl border border-slate-200 p-5">
                         <h3 class="font-semibold text-slate-950">Businesses</h3>
                         <p class="mt-2 text-sm leading-7 text-slate-600">
-                            Clothing, uniforms, fabrics, and other operational supply needs.
+                            Clothing, uniforms, fabrics and operational supplies, consistent across your whole team.
                         </p>
                     </div>
 
                     <div class="rounded-2xl border border-slate-200 p-5">
                         <h3 class="font-semibold text-slate-950">Organizations & Institutions</h3>
                         <p class="mt-2 text-sm leading-7 text-slate-600">
-                            Coordinated sourcing and production for defined organizational requirements.
+                            Coordinated sourcing and production for defined requirements and recurring needs.
                         </p>
                     </div>
 
@@ -241,12 +229,11 @@
             </p>
 
             <h2 class="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">
-                A clear path from requirement to delivery.
+                A clear path from request to delivery.
             </h2>
 
             <p class="mt-5 text-base leading-8 text-slate-300">
-                Good execution starts with understanding exactly what is required.
-                We organize the work into clear stages so important details are not lost.
+                Good execution starts with knowing exactly what is required. Every order moves through clear stages, so important details are never lost.
             </p>
         </div>
 
@@ -256,7 +243,7 @@
                 <span class="text-sm font-semibold text-amber-400">01</span>
                 <h3 class="mt-4 font-semibold">Understand</h3>
                 <p class="mt-2 text-sm leading-7 text-slate-400">
-                    We understand the organization's requirement.
+                    We confirm exactly what your organization needs.
                 </p>
             </div>
 
@@ -264,7 +251,7 @@
                 <span class="text-sm font-semibold text-amber-400">02</span>
                 <h3 class="mt-4 font-semibold">Specify</h3>
                 <p class="mt-2 text-sm leading-7 text-slate-400">
-                    Requirements, quantities, materials, designs, and details are clarified.
+                    Quantities, materials, designs and details are defined and agreed.
                 </p>
             </div>
 
@@ -272,7 +259,7 @@
                 <span class="text-sm font-semibold text-amber-400">03</span>
                 <h3 class="mt-4 font-semibold">Source / Produce</h3>
                 <p class="mt-2 text-sm leading-7 text-slate-400">
-                    The required materials or products are sourced or produced.
+                    The materials or products are sourced or produced to what was agreed.
                 </p>
             </div>
 
@@ -280,7 +267,7 @@
                 <span class="text-sm font-semibold text-amber-400">04</span>
                 <h3 class="mt-4 font-semibold">Quality-check</h3>
                 <p class="mt-2 text-sm leading-7 text-slate-400">
-                    Completed work is checked against the defined requirement.
+                    Completed work is inspected against the agreed requirement.
                 </p>
             </div>
 
@@ -288,7 +275,7 @@
                 <span class="text-sm font-semibold text-amber-400">05</span>
                 <h3 class="mt-4 font-semibold">Deliver</h3>
                 <p class="mt-2 text-sm leading-7 text-slate-400">
-                    The completed requirement moves to the organization for delivery.
+                    The finished order is delivered to your organization.
                 </p>
             </div>
 
@@ -307,17 +294,15 @@
 
             <div class="max-w-3xl">
                 <p class="text-sm font-semibold uppercase tracking-[0.2em] text-amber-700">
-                    Let's work from the requirement
+                    Ready to get started?
                 </p>
 
                 <h2 class="mt-3 text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">
-                    Tell us what you need. We will help organize the next step.
+                    Tell us what you need. We will come back with a clear plan and quotation.
                 </h2>
 
                 <p class="mt-5 text-base leading-8 text-slate-600">
-                    Whether the requirement involves fabrics, uniforms, clothing,
-                    institutional supplies, or procurement, start with the details
-                    and let the work take shape from there.
+                    Whether it is fabrics, uniforms, clothing, institutional supplies or procurement, start with what you have, even a rough list or headcount, and we will take it from there.
                 </p>
             </div>
 
@@ -325,7 +310,7 @@
                 href="{{ url('/contact') }}"
                 class="inline-flex items-center justify-center rounded-full bg-slate-950 px-7 py-3.5 text-sm font-semibold text-white transition hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-950 focus:ring-offset-2"
             >
-                Start a Conversation
+                Request a Quote
             </a>
 
         </div>
