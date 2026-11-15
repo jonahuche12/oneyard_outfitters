@@ -311,6 +311,7 @@ class RbacTest extends TestCase
             'measurements.eligibility.manage',
             'measurements.links.manage',
             'measurements.review',
+            'stores.manage',
         ];
 
         $this->assertDatabaseCount(

@@ -276,6 +276,15 @@ class RbacSeeder extends Seeder
             ],
 
             /*
+             * Stores & Inventory
+             */
+            [
+                'name' => 'Manage Stores',
+                'slug' => 'stores.manage',
+                'description' => 'Create stores and assign, reassign or remove store staff.',
+            ],
+
+            /*
              * Quality Control
              */
             [
@@ -534,6 +543,8 @@ class RbacSeeder extends Seeder
                     'measurements.eligibility.manage',
                     'measurements.links.manage',
                     'measurements.review',
+
+                    'stores.manage',
 
                     'quality-control.view',
 

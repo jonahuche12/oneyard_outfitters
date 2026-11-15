@@ -517,3 +517,4 @@ import './public-measurements';
 import './measurement-upload';
 import './measurement-pager';
 import './measurement-review';
+import './store-staff';

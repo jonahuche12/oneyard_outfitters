@@ -21,9 +21,11 @@
         ],
         'Administration' => [
             ['Staff', 'staff.index', 'staff.*', 'users', \Illuminate\Support\Facades\Gate::allows('viewAny', \App\Models\User::class)],
+            ['Stores', 'stores.index', 'stores.*', 'store', \Illuminate\Support\Facades\Gate::allows('viewAny', \App\Models\Store::class)],
         ],
         'My Account' => [
             ['My Wallet', 'wallet.index', 'wallet.*', 'wallet', true],
+            ['My Store', 'my-store', 'my-store', 'store', (bool) $navUser?->activeStoreAssignment()->exists()],
         ],
     ];
     // Groups start collapsed. Set to false to keep the current page's group closed too.

@@ -59,6 +59,27 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::patch('/staff/{user}/deactivate', [StaffController::class, 'deactivate'])
         ->name('staff.deactivate');
 
+    Route::resource('stores', \App\Http\Controllers\StoreController::class)
+        ->except(['destroy']);
+
+    Route::patch('/stores/{store}/activate', [\App\Http\Controllers\StoreController::class, 'activate'])
+        ->name('stores.activate');
+
+    Route::patch('/stores/{store}/deactivate', [\App\Http\Controllers\StoreController::class, 'deactivate'])
+        ->name('stores.deactivate');
+
+    Route::get('/my-store', [\App\Http\Controllers\StoreController::class, 'mine'])
+        ->name('my-store');
+
+    Route::post('/stores/{store}/staff', [\App\Http\Controllers\StoreStaffController::class, 'assign'])
+        ->name('stores.staff.assign');
+
+    Route::post('/stores/{store}/staff/{assignment}/move', [\App\Http\Controllers\StoreStaffController::class, 'move'])
+        ->name('stores.staff.move');
+
+    Route::post('/stores/{store}/staff/{assignment}/end', [\App\Http\Controllers\StoreStaffController::class, 'end'])
+        ->name('stores.staff.end');
+
     Route::resource('leads', LeadController::class)
         ->except(['destroy']);
 

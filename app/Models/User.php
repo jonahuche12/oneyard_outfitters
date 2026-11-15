@@ -124,4 +124,20 @@ class User extends Authenticatable
             ->whereIn('slug', ['admin', 'super-admin'])
             ->exists();
     }
+
+    /**
+     * Every store assignment this user has had (history included).
+     */
+    public function storeAssignments(): HasMany
+    {
+        return $this->hasMany(StoreStaff::class);
+    }
+
+    /**
+     * The user's current store assignment, if any (at most one).
+     */
+    public function activeStoreAssignment(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(StoreStaff::class)->whereNull('ends_at');
+    }
 }
