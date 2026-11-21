@@ -49,4 +49,9 @@ class StoreDailyCashRecord extends Model
     {
         return $this->hasMany(StoreExpense::class);
     }
+
+    public function remittances(): HasMany
+    {
+        return $this->hasMany(StoreRemittance::class, 'store_daily_cash_record_id');
+    }
 }
