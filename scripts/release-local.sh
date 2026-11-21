@@ -42,13 +42,13 @@ echo "---- production vendor"
   || fail "composer install failed"
 
 rm -f "$OUT" "$INFO"
-( cd "$TMP" && zip -rq "$OUT" . )
+( cd "$TMP" && find . -mindepth 1 -printf '%P\0' | xargs -0 zip -rq "$OUT" )
 
 echo "---- verifying zip"
 LIST="$(unzip -Z1 "$OUT")"
-has() { printf '%s\n' "$LIST" | grep -qE "$1"; }
+has() { printf '%s\n' "$LIST" | grep -E "$1" >/dev/null; }
 
-has '^public/build/manifest\.json$' || fail "manifest missing"
+has '(^|\./)public/build/manifest\.json$' || fail "manifest missing"
 has '^vendor/autoload\.php$'        || fail "vendor/autoload.php missing"
 has '^artisan$'                     || fail "artisan missing"
 if has '^\.env$'; then fail ".env is in the zip"; fi

@@ -3,10 +3,13 @@
 namespace Tests\Feature\Stores;
 
 use App\Models\Store;
+use App\Models\StoreDailyCashRecord;
+use App\Models\StoreExpense;
 use App\Models\StoreStaff;
 use App\Models\User;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -19,6 +22,21 @@ class StoreSchemaTest extends TestCase
     {
         $this->assertTrue(Schema::hasTable('stores'));
         $this->assertTrue(Schema::hasTable('store_staff'));
+        $this->assertTrue(Schema::hasTable('store_daily_cash_records'));
+
+        $this->assertTrue(Schema::hasTable('store_expenses'));
+
+        $this->assertTrue(Schema::hasColumns('store_expenses', [
+            'id', 'store_id', 'store_daily_cash_record_id', 'amount',
+            'category', 'payment_method', 'description', 'recorded_by',
+            'created_at', 'updated_at',
+        ]));
+
+        $this->assertTrue(Schema::hasColumns('store_daily_cash_records', [
+            'id', 'store_id', 'business_date', 'opening_cash', 'opening_bank',
+            'closing_cash', 'closing_bank', 'opened_by', 'closed_by',
+            'created_at', 'updated_at',
+        ]));
 
         $this->assertTrue(Schema::hasColumns('stores', [
             'id', 'name', 'code', 'type', 'general_warehouse_slot', 'address',
@@ -34,6 +52,8 @@ class StoreSchemaTest extends TestCase
 
     public function test_required_unique_indexes_exist(): void
     {
+        $this->assertUniqueIndex('store_daily_cash_records', ['store_id', 'business_date']);
+        $this->assertUniqueIndex('store_daily_cash_records', ['id', 'store_id']);
         $this->assertUniqueIndex('stores', ['name']);
         $this->assertUniqueIndex('stores', ['code']);
         $this->assertUniqueIndex('stores', ['general_warehouse_slot']);
@@ -43,11 +63,50 @@ class StoreSchemaTest extends TestCase
 
     public function test_required_foreign_keys_exist(): void
     {
+        $this->assertForeignKey('store_daily_cash_records', 'store_id', 'stores');
+        $this->assertForeignKey('store_daily_cash_records', 'opened_by', 'users');
+        $this->assertForeignKey('store_daily_cash_records', 'closed_by', 'users');
+        $this->assertForeignKey('store_expenses', 'store_id', 'stores');
+        $this->assertCompositeForeignKey(
+            'store_expenses',
+            ['store_daily_cash_record_id', 'store_id'],
+            'store_daily_cash_records',
+            ['id', 'store_id']
+        );
+        $this->assertForeignKey('store_expenses', 'recorded_by', 'users');
         $this->assertForeignKey('stores', 'created_by', 'users');
         $this->assertForeignKey('store_staff', 'store_id', 'stores');
         $this->assertForeignKey('store_staff', 'user_id', 'users');
         $this->assertForeignKey('store_staff', 'assigned_by', 'users');
         $this->assertForeignKey('store_staff', 'ended_by', 'users');
+    }
+
+
+    public function test_expense_must_reference_a_daily_cash_record_from_the_same_store(): void
+    {
+        $recordStore = $this->makeStore();
+        $expenseStore = $this->makeStore();
+        $user = User::factory()->create();
+
+        $dailyCashRecord = StoreDailyCashRecord::query()->create([
+            'store_id' => $recordStore->id,
+            'business_date' => today()->toDateString(),
+            'opening_cash' => '1000.00',
+            'opening_bank' => '2000.00',
+            'opened_by' => $user->id,
+        ]);
+
+        $this->expectException(QueryException::class);
+
+        StoreExpense::query()->create([
+            'store_id' => $expenseStore->id,
+            'store_daily_cash_record_id' => $dailyCashRecord->id,
+            'amount' => '500.00',
+            'category' => 'transportation',
+            'payment_method' => 'cash',
+            'description' => 'Constraint test',
+            'recorded_by' => $user->id,
+        ]);
     }
 
     public function test_store_name_must_be_unique(): void
@@ -181,5 +240,24 @@ class StoreSchemaTest extends TestCase
             ->contains(fn (array $key) => $key['columns'] === [$column] && $key['foreign_table'] === $foreignTable);
 
         $this->assertTrue($found, "Missing foreign key {$table}.{$column} -> {$foreignTable}");
+    }
+
+    private function assertCompositeForeignKey(
+        string $table,
+        array $columns,
+        string $foreignTable,
+        array $foreignColumns
+    ): void {
+        $found = collect(Schema::getForeignKeys($table))->contains(
+            fn (array $key) => $key['columns'] === $columns
+                && $key['foreign_table'] === $foreignTable
+                && $key['foreign_columns'] === $foreignColumns
+        );
+
+        $this->assertTrue(
+            $found,
+            "Missing composite foreign key {$table} (".implode(', ', $columns)
+                .") -> {$foreignTable} (".implode(', ', $foreignColumns).')'
+        );
     }
 }

@@ -16,6 +16,8 @@ use App\Http\Controllers\ProcurementController;
 use App\Http\Controllers\ProcurementOfferController;
 use App\Http\Controllers\StaffController;
 use App\Http\Controllers\StaffOnboardingController;
+use App\Http\Controllers\StockItemController;
+use App\Http\Controllers\StockProcessingController;
 use App\Http\Controllers\QualityControlController;
 use App\Http\Controllers\PublicContactController;
 use App\Http\Controllers\LeadController;
@@ -68,8 +70,44 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::patch('/stores/{store}/deactivate', [\App\Http\Controllers\StoreController::class, 'deactivate'])
         ->name('stores.deactivate');
 
-    Route::get('/my-store', [\App\Http\Controllers\StoreController::class, 'mine'])
+    Route::get('/stores/{store}/dashboard', [\App\Http\Controllers\StoreDashboardController::class, 'show'])
+        ->name('stores.dashboard');
+
+Route::get('/my-store', [\App\Http\Controllers\StoreController::class, 'mine'])
         ->name('my-store');
+
+    Route::post('/stores/{store}/daily-cash/open', [\App\Http\Controllers\StoreDailyCashController::class, 'open'])
+        ->name('stores.daily-cash.open');
+
+    Route::post('/stores/{store}/daily-cash/close', [\App\Http\Controllers\StoreDailyCashController::class, 'close'])
+        ->name('stores.daily-cash.close');
+
+    Route::prefix('stores/{store}/sales')->name('stores.sales.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\StoreSalesController::class, 'index'])
+            ->name('index');
+        Route::get('/create', [\App\Http\Controllers\StoreSalesController::class, 'create'])
+            ->name('create');
+        Route::post('/', [\App\Http\Controllers\StoreSalesController::class, 'store'])
+            ->name('store');
+        Route::post('/{sale}/payments', [\App\Http\Controllers\StoreSalesController::class, 'payment'])
+            ->name('payments.store');
+        Route::get('/outstanding', [\App\Http\Controllers\StoreSalesController::class, 'outstanding'])
+            ->name('outstanding');
+    });
+
+    Route::prefix('stores/{store}/expenses')->name('stores.expenses.')->group(function () {
+    Route::get('/', [\App\Http\Controllers\StoreExpensesController::class, 'index'])->name('index');
+    Route::post('/', [\App\Http\Controllers\StoreExpensesController::class, 'store'])->name('store');
+});
+
+Route::prefix('stores/{store}/customers')->name('stores.customers.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\StoreCustomersController::class, 'index'])
+            ->name('index');
+        Route::get('/create', [\App\Http\Controllers\StoreCustomersController::class, 'create'])
+            ->name('create');
+        Route::post('/', [\App\Http\Controllers\StoreCustomersController::class, 'store'])
+            ->name('store');
+    });
 
     Route::post('/stores/{store}/staff', [\App\Http\Controllers\StoreStaffController::class, 'assign'])
         ->name('stores.staff.assign');
@@ -400,6 +438,21 @@ Route::resource('orders', OrderController::class)
         '/quotations/{quotation}/items/{item}',
         [QuotationItemController::class, 'destroy']
     )->name('quotation-items.destroy');
+    Route::prefix('stock')->name('stock.')->group(function () {
+        Route::get('/', [StockItemController::class, 'index'])->name('index');
+        Route::get('/items/create', [StockItemController::class, 'create'])->name('items.create');
+        Route::get('/items/{stockItem}', [StockItemController::class, 'show'])->name('items.show');
+        Route::get('/items/{stockItem}/photos/{photo}', [StockItemController::class, 'showPhoto'])->name('items.photos.show');
+        Route::post('/items', [StockItemController::class, 'store'])->name('items.store');
+        Route::get('/items/{stockItem}/edit', [StockItemController::class, 'edit'])->name('items.edit');
+        Route::put('/items/{stockItem}', [StockItemController::class, 'update'])->name('items.update');
+        Route::get('/processings/create', [StockProcessingController::class, 'create'])
+            ->name('processings.create');
+        Route::post('/processings', [StockProcessingController::class, 'store'])
+            ->name('processings.store');
+        Route::get('/processings/{processing}', [StockProcessingController::class, 'show'])
+            ->name('processings.show');
+    });
 });
 
 Route::get(
@@ -584,3 +637,20 @@ Route::get('/measurements/{token}/items/{item}/template', [\App\Http\Controllers
     ->whereNumber('item')
     ->middleware('throttle:20,1')
     ->name('measurements.public.template');
+
+// Stock consignment dispatch and receipt.
+Route::middleware(['auth', 'active'])->prefix('stock')->name('stock.')->group(function () {
+    Route::get('/consignments/create', [\App\Http\Controllers\StockConsignmentController::class, 'create'])->name('consignments.create');
+    Route::post('/consignments', [\App\Http\Controllers\StockConsignmentController::class, 'store'])->name('consignments.store');
+    Route::get('/consignments/{consignment}', [\App\Http\Controllers\StockConsignmentController::class, 'show'])->name('consignments.show');
+    Route::post('/consignments/{consignment}/discrepancies/{discrepancy}/confirm', [\App\Http\Controllers\StockConsignmentDiscrepancyController::class, 'confirm'])->name('consignments.discrepancies.confirm');
+});
+
+Route::middleware(['auth', 'active'])->prefix('stock')->name('stock.')->group(function () {
+    Route::get('/consignments/{consignment}/acknowledgements/create', [\App\Http\Controllers\StockConsignmentAcknowledgementController::class, 'create'])->name('consignments.acknowledgements.create');
+    Route::get('/consignments/{consignment}/returns/create', [\App\Http\Controllers\StockConsignmentReturnController::class, 'create'])->name('consignments.returns.create');
+    Route::post('/consignments/{consignment}/returns', [\App\Http\Controllers\StockConsignmentReturnController::class, 'store'])->name('consignments.returns.store');
+    Route::get('/consignment-returns/{stockReturn}/receive', [\App\Http\Controllers\StockConsignmentReturnController::class, 'receive'])->name('consignments.returns.receive');
+    Route::post('/consignment-returns/{stockReturn}/confirm', [\App\Http\Controllers\StockConsignmentReturnController::class, 'confirmReceipt'])->name('consignments.returns.confirm');
+    Route::post('/consignments/{consignment}/acknowledgements', [\App\Http\Controllers\StockConsignmentAcknowledgementController::class, 'store'])->name('consignments.acknowledgements.store');
+});

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Actions\Stores\CreateStore;
 use App\Actions\Stores\SetStoreActive;
 use App\Actions\Stores\UpdateStore;
+use App\Models\StockConsignment;
 use App\Models\Store;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
@@ -79,8 +80,75 @@ class StoreController extends Controller
                 ->get()
             : collect();
 
-        $canManageStaff = Gate::allows('manageStaff', $store) && ! $store->isWarehouse();
+        $canManageStaff = Gate::allows('manageStaff', $store);
         $canAssign = $canManageStaff && $store->is_active;
+
+        $activeAssignment = request()->user()->activeStoreAssignment;
+        $canOperateStock = $store->is_active
+            && $activeAssignment
+            && (int) $activeAssignment->store_id === (int) $store->id
+            && in_array($activeAssignment->role, ['coordinator', 'assistant'], true);
+
+        $dailyCashToday = $store->dailyCashRecords()
+            ->whereDate('business_date', today()->toDateString())
+            ->with(['openedBy', 'closedBy'])
+            ->first();
+
+        $dailyCashHistory = $store->dailyCashRecords()
+            ->with(['openedBy', 'closedBy'])
+            ->orderByDesc('business_date')
+            ->orderByDesc('id')
+            ->limit(14)
+            ->get();
+
+        // Incoming consignments still requiring acknowledgement at this store.
+        $incomingConsignments = collect();
+
+        if ($canOperateStock) {
+            $incomingConsignments = StockConsignment::query()
+                ->where('destination_store_id', $store->id)
+                ->whereNotNull('dispatched_at')
+                ->where('status', '!=', StockConsignment::STATUS_CANCELLED)
+                ->with([
+                    'sourceStore:id,name',
+                    'items.acknowledgementItems',
+                ])
+                ->latest('dispatched_at')
+                ->get()
+                ->map(function ($consignment) {
+                    $pendingItems = $consignment->items->filter(
+                        function ($line) {
+                            $accounted = (float) $line->acknowledgementItems->sum(
+                                fn ($acknowledgement) =>
+                                    (float) $acknowledgement->quantity_good
+                                    + (float) $acknowledgement->quantity_damaged
+                                    + (float) $acknowledgement->quantity_shortage
+                            );
+
+                            $line->quantity_remaining = max(
+                                0,
+                                (float) $line->quantity_dispatched - $accounted
+                            );
+
+                            return $line->quantity_remaining > 0;
+                        }
+                    );
+
+                    $consignment->setAttribute(
+                        'pending_quantity',
+                        $pendingItems->sum('quantity_remaining')
+                    );
+
+                    $consignment->setAttribute(
+                        'pending_line_count',
+                        $pendingItems->count()
+                    );
+
+                    return $consignment;
+                })
+                ->filter(fn ($consignment) => $consignment->pending_line_count > 0)
+                ->values();
+        }
 
         // Only active users who currently belong to no store can be assigned.
         $assignableUsers = $canAssign
@@ -93,7 +161,6 @@ class StoreController extends Controller
 
         $destinationStores = $canManageStaff
             ? Store::query()
-                ->where('type', Store::TYPE_STORE)
                 ->where('is_active', true)
                 ->orderBy('name')
                 ->get(['id', 'name'])
@@ -106,6 +173,10 @@ class StoreController extends Controller
             'canAssign' => $canAssign,
             'assignableUsers' => $assignableUsers,
             'destinationStores' => $destinationStores,
+            'canOperateStock' => (bool) $canOperateStock,
+            'incomingConsignments' => $incomingConsignments,
+            'dailyCashToday' => $dailyCashToday,
+            'dailyCashHistory' => $dailyCashHistory,
         ]);
     }
 

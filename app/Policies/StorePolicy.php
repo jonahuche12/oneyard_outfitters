@@ -48,6 +48,20 @@ class StorePolicy
         return $this->manages($user);
     }
 
+    public function viewDashboard(User $user, Store $store): bool
+    {
+        return $this->manages($user)
+            || (
+                $user->is_active
+                && StoreStaff::query()
+                    ->active()
+                    ->where('user_id', $user->id)
+                    ->where('store_id', $store->id)
+                    ->where('role', StoreStaff::ROLE_COORDINATOR)
+                    ->exists()
+            );
+    }
+
     private function manages(User $user): bool
     {
         return $user->is_active && $user->hasPermission('stores.manage');

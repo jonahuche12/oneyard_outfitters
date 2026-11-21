@@ -254,16 +254,21 @@ class StoreHttpTest extends TestCase
             ->assertSee('Edit Store');
     }
 
-    public function test_the_warehouse_page_explains_how_it_is_operated(): void
+    public function test_general_store_page_supports_normal_staff_management(): void
     {
         $manager = $this->manager();
-        $warehouse = $this->makeStore(['name' => 'General Warehouse', 'code' => 'WH', 'type' => Store::TYPE_WAREHOUSE]);
+        $warehouse = $this->makeStore(['name' => 'General Store', 'code' => 'WH', 'type' => Store::TYPE_WAREHOUSE]);
 
         $this->actingAs($manager)
             ->get(route('stores.show', $warehouse))
             ->assertOk()
-            ->assertSee('operated by administrators')
-            ->assertDontSee('Assignment history');
+            ->assertSee('Store coordinator')
+            ->assertSee('Assistants')
+            ->assertSee('Assign coordinator')
+            ->assertSee('Add assistant')
+            ->assertSee('Assignment history')
+            ->assertDontSee('operated by administrators')
+            ->assertDontSee('Deactivate');
     }
 
     // -------------------------------------------------------------------- Helpers

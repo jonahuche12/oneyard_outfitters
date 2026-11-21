@@ -54,11 +54,6 @@ trait StoreActionSupport
 
     protected function assertStoreAcceptsStaff(Store $store): void
     {
-        if ($store->isWarehouse()) {
-            throw ValidationException::withMessages([
-                'store' => 'Staff are assigned to stores, not to the general warehouse.',
-            ]);
-        }
 
         if (! $store->is_active) {
             throw ValidationException::withMessages([

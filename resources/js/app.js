@@ -15,6 +15,7 @@ import './procurements/offers';
 import './earnings/pool';
 import './earnings/withdrawals';
 import './app-mobile-menu';
+import './stock/photo-upload';
 
 $(function () {
     /*
@@ -518,3 +519,4 @@ import './measurement-upload';
 import './measurement-pager';
 import './measurement-review';
 import './store-staff';
+import './stores/dashboard';

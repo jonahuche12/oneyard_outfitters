@@ -69,4 +69,45 @@ class Store extends Model
     {
         return $this->activeStaff()->where('role', StoreStaff::ROLE_ASSISTANT);
     }
+
+    /** Stock definitions permanently owned by this store. */
+    public function stockItems(): HasMany
+    {
+        return $this->hasMany(StockItem::class);
+    }
+
+    /** Customers registered specifically for this store. */
+    public function customers(): HasMany
+    {
+        return $this->hasMany(Customer::class);
+    }
+
+    /** Sales recorded against this store's inventory. */
+    public function sales(): HasMany
+    {
+        return $this->hasMany(StockSale::class);
+    }
+
+    public function sourceConsignments(): HasMany
+    {
+        return $this->hasMany(StockConsignment::class, 'source_store_id');
+    }
+
+    public function destinationConsignments(): HasMany
+    {
+        return $this->hasMany(StockConsignment::class, 'destination_store_id');
+    }
+
+    /** Daily opening and closing cash/bank records for this store. */
+    public function dailyCashRecords(): HasMany
+    {
+        return $this->hasMany(StoreDailyCashRecord::class);
+    }
+
+    /** Expenses recorded against this store's daily cash records. */
+    public function expenses(): HasMany
+    {
+        return $this->hasMany(StoreExpense::class);
+    }
+
 }

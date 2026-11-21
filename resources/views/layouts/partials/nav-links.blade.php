@@ -12,6 +12,7 @@
         'Operations' => [
             ['Orders', 'orders.index', 'orders.*', 'clipboard', \Illuminate\Support\Facades\Gate::allows('viewAny', \App\Models\Order::class)],
             ['Procurement', 'procurements.index', 'procurements.*', 'cube', \Illuminate\Support\Facades\Gate::allows('viewAny', \App\Models\Procurement::class)],
+            ['Stock', 'stock.index', 'stock.*', 'cube', $navUser && ($navUser->isAdministrator() || $navUser->activeStoreAssignment()->exists())],
             ['Quality Control', 'quality-control.index', 'quality-control.*', 'shield', \Illuminate\Support\Facades\Gate::allows('viewQualityControl', \App\Models\Order::class)],
         ],
         'Finance & Earnings' => [

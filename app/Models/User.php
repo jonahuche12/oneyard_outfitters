@@ -140,4 +140,35 @@ class User extends Authenticatable
     {
         return $this->hasOne(StoreStaff::class)->whereNull('ends_at');
     }
+
+    public function consignmentsCreated(): HasMany
+    {
+        return $this->hasMany(StockConsignment::class, 'created_by');
+    }
+
+    public function consignmentsDispatched(): HasMany
+    {
+        return $this->hasMany(StockConsignment::class, 'dispatched_by');
+    }
+
+    public function consignmentAcknowledgements(): HasMany
+    {
+        return $this->hasMany(StockConsignmentAcknowledgement::class, 'acknowledged_by');
+    }
+
+    public function consignmentDiscrepanciesReported(): HasMany
+    {
+        return $this->hasMany(StockConsignmentDiscrepancy::class, 'reported_by');
+    }
+
+    public function consignmentDiscrepanciesResolved(): HasMany
+    {
+        return $this->hasMany(StockConsignmentDiscrepancy::class, 'resolved_by');
+    }
+
+    public function consignmentExpensesRecorded(): HasMany
+    {
+        return $this->hasMany(StockConsignmentExpense::class, 'recorded_by');
+    }
+
 }

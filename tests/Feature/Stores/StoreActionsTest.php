@@ -225,21 +225,54 @@ class StoreActionsTest extends TestCase
         $this->assertSame(1, StoreStaff::query()->count());
     }
 
-    public function test_staff_cannot_be_assigned_to_the_warehouse_or_an_inactive_store(): void
+    public function test_general_store_accepts_staff_but_inactive_stores_reject_assignments(): void
     {
         $manager = $this->manager();
         $warehouse = $this->makeStore(['type' => Store::TYPE_WAREHOUSE]);
         $inactive = $this->makeStore(['is_active' => false]);
 
+        $coordinator = $this->staffUser();
+        $assistant = $this->staffUser();
+
+        app(AssignStoreStaff::class)->execute(
+            $manager,
+            $warehouse,
+            $coordinator,
+            StoreStaff::ROLE_COORDINATOR
+        );
+
+        app(AssignStoreStaff::class)->execute(
+            $manager,
+            $warehouse,
+            $assistant,
+            StoreStaff::ROLE_ASSISTANT
+        );
+
+        $this->assertDatabaseHas('store_staff', [
+            'store_id' => $warehouse->id,
+            'user_id' => $coordinator->id,
+            'role' => StoreStaff::ROLE_COORDINATOR,
+            'ends_at' => null,
+        ]);
+
+        $this->assertDatabaseHas('store_staff', [
+            'store_id' => $warehouse->id,
+            'user_id' => $assistant->id,
+            'role' => StoreStaff::ROLE_ASSISTANT,
+            'ends_at' => null,
+        ]);
+
         $this->assertValidationFails(
-            fn () => app(AssignStoreStaff::class)->execute($manager, $warehouse, $this->staffUser(), StoreStaff::ROLE_ASSISTANT),
+            fn () => app(AssignStoreStaff::class)->execute(
+                $manager,
+                $inactive,
+                $this->staffUser(),
+                StoreStaff::ROLE_ASSISTANT
+            ),
             'store'
         );
-        $this->assertValidationFails(
-            fn () => app(AssignStoreStaff::class)->execute($manager, $inactive, $this->staffUser(), StoreStaff::ROLE_ASSISTANT),
-            'store'
-        );
-        $this->assertSame(0, StoreStaff::query()->count());
+
+        $this->assertSame(2, StoreStaff::query()->count());
     }
 
     public function test_an_invalid_role_is_rejected(): void

@@ -6279,3 +6279,351 @@ NEXT ORDER: orders/show -> orders/index + quotations -> deliveries + procurement
 - Next: orders/show Steps 3-5, then orders/index + quotations (per tracker).
 - 2026-10-25: about.blade.php copy rewrite (accountability positioning, closing CTA "Request a Quote"). Copy only; markup, images, routes unchanged.
 - 2026-10-25: faq.blade.php copy rewrite (objection-led questions, quotation step explained, CTA "Request a Quote"). Copy only; accordion hooks and markup unchanged.
+
+### 2026-11-15 — Inventory, Consignment & Sales Module: DESIGN REVISED (awaiting approval)
+- Scope change: multi-location (general warehouse + stores). Replaces earlier single-shop, per-catalogue-item design.
+- Requirements recorded: intake types picking / thrift bale / lot (weight kg or lb, cost per lb); sales per yard; admin/super admin create stores and staff; one store coordinator per store (reassignable) plus assistants; warehouse consignments pushed to stores and acknowledged by the store coordinator; stores may add own inventory.
+- Proposed: stores table (warehouse/store), store_staff with history and one active coordinator, intakes + stock_items (price and cost per item), stock_levels per location, append-only stock_movements, consignments with dispatch/receive/variance, store-scoped permissions, adjustment approval for reductions.
+- Decisions pending: A cost allocation, B weighing, C pricing across stores, D price overrides, E staff in several stores, F warehouse permission, G customers, H adjustment approval, I part-payment.
+- Inspection of existing conventions still requested. No code changed.
+### 2026-11-15 — Inventory Module: Decisions Recorded; Design Revised (awaiting CONTINUE)
+- Decisions: weight-based cost with manual cost entry allowed; per-store pricing, dynamic sale price, final price collected after sale is recorded, free negotiation; warehouse ops by super-admin + admin-permission staff; separate fabric-store customers; assistants add freely, reductions need coordinator approval; part-payment with balance.
+- New requirement: sales by yard, kg or bale. Design: unit per stock item; raw bale (count) and lot (kg) items; processing records convert raw stock to yard items with manual cost and allocated-vs-consumed check; sale lifecycle recorded -> agreed amount -> payments; sale_amount_changes audit.
+- Inspection: Laravel 13.32.0, PHP 8.4.1, UTC. No supplier/stock/fabric tables found (grep matched assessments only). is_active_slot pattern exists and will enforce one coordinator per store. route:list --columns invalid; re-run pending.
+- Pending: staff-in-several-stores default, final-price granularity, guide-price authority, cost-mismatch policy. No code changed.
+### 2026-11-15 — Stores & Staffing Slice 1a: VERIFIED
+- Correction: tests/Feature/Stores = 16 passed / 48 assertions (not 15). Full suite (user-run): 848 passed / 3061 assertions / 0 failed.
+- Migration 2026_11_15_100000 applied on MySQL as batch 48; db:table confirmed columns, unique slot indexes and foreign keys (restrict/set null) as designed.
+- Residual: slot uniqueness proven on SQLite only; MySQL behaviour to be exercised in the 1d browser walkthrough. Nothing committed.
+
+### 2026-11-15 — Stores & Staffing Slice 1b: Actions — IMPLEMENTED (not yet verified)
+- Added app/Actions/Stores: StoreActionSupport (trait), CreateStore, UpdateStore, SetStoreActive, AssignStoreStaff, EndStoreStaffAssignment, ReassignStoreStaff; tests/Feature/Stores/StoreActionsTest.php (22).
+- Rules: actor active + stores.manage; one warehouse; type fixed after creation; warehouse cannot be deactivated; staff only to active non-warehouse stores; one active store per user; new coordinator ends the previous one (reason recorded); reassignment also changes role in the same store; ending needs a reason (10-500 chars); lock order user -> store -> assignment rows; unique-violation races become validation errors.
+- Defaults applied pending user change: code stays editable; coordinator replacement ends (not demotes) the old coordinator.
+- Pending: test results; 1c (stores.manage permission definition + admin grant, StorePolicy, RbacTest list); 1d (controllers, routes, views, nav row, icon, JS). Nothing committed.
+
+### 2026-11-15 — Stores & Staffing Slice 1b: VERIFIED
+- `php artisan test tests/Feature/Stores` (user-run): 38 passed / 125 assertions (22 new StoreActionsTest). Full suite: 870 passed / 3138 assertions / 0 failed.
+- Not covered: real concurrent requests (SQLite tests cannot race); locks and unique slots are the safeguard. Nothing committed.
+
+### 2026-11-15 — Stores & Staffing Slice 1c: Permission and Policy — IMPLEMENTED (not yet verified)
+- Added permission stores.manage (RbacSeeder definition; admin grant; super-admin automatic), RbacTest expected list updated (scripts/add_stores_manage_permission.py; backups /tmp/*.pre-stores.bak), StorePolicy (manage abilities need active user + stores.manage; view also allowed for the user's current store only), StorePolicyTest (4), StorePermissionSeedTest (2).
+- Default applied: members cannot list stores; a "My Store" link is planned in 1d.
+- Deployment: run RbacSeeder on every environment.
+- Pending: test results, db:seed on dev. Then 1d (controllers, routes, views, nav row, icon, JS). Nothing committed.
+
+### 2026-11-15 — Stores & Staffing Slice 1c: VERIFIED
+- `php artisan test tests/Feature/Stores tests/Feature/RbacTest.php` (user-run): 59 passed / 298 assertions. Full suite: 876 passed / 3176 assertions / 0 failed. RbacSeeder run on dev (stores.manage present).
+- Nothing committed.
+
+### 2026-11-15 — Stores & Staffing Slice 1d-1: Store Screens — IMPLEMENTED (not yet verified)
+- Added StoreController (index/create/store/show/edit/update/activate/deactivate; thin, calls the 1b Actions; validation lives in the Actions, so no Form Requests), routes stores.* (resource except destroy + activate/deactivate PATCH, in the auth+active group), views stores/{index,create,edit,show} + partials/form, Stores row in Administration nav, 'store' icon, StoreHttpTest (13). Edits via scripts/add_store_ui_hooks.py (backups /tmp/*.pre-stores-ui.bak).
+- Behaviour: list for managers only; members open only their own store (no manage controls, no history); warehouse listed first; deactivate hidden for the warehouse; deactivating a store does not end staff assignments (to revisit when stock exists). Staff panel is read-only until 1d-2.
+- Pending: test results, npm run build, browser walkthrough (incl. first warehouse creation on MySQL). Then 1d-2 (assign/replace/end/reassign modals + JS, My Store link). Nothing committed.
+
+### 2026-11-15 — Stores & Staffing Slice 1d-1: VERIFIED (test level)
+- `php artisan test tests/Feature/Stores` (user-run): 57 passed / 238 assertions. Full suite: 889 passed / 3251 assertions / 0 failed. view:cache and npm run build clean; route:list shows 8 stores.* rows (PUT|PATCH share one row; earlier count of 9 was wrong).
+- Browser walkthrough (incl. first warehouse creation on MySQL) not yet reported. Nothing committed.
+
+### 2026-11-15 — Stores & Staffing Slice 1d-2: Staff Assignment UI — IMPLEMENTED (not yet verified)
+- Added StoreStaffController (assign / move / end, each delegating to the 1b Actions), routes stores.staff.assign|move|end and my-store, StoreController::mine() and show() staff data, views stores/partials/staff-panel + staff-modals (stores/show now includes the panel), resources/js/store-staff.js (registered in app.js), "My Store" sidebar row for users with an active assignment, StoreStaffHttpTest (15). Edits via scripts/add_store_staff_ui.py (backups /tmp/*.pre-stores-staff.bak).
+- Behaviour: assign picker lists only active users with no store; "Make coordinator" and "Move" use the reassign Action; end needs a reason; a stale or foreign-store assignment in the URL is rejected (404 / validation error); a rejected submit reopens its modal; members see no staff controls. Default applied: assigning or moving into an inactive store is not offered.
+- Pending: test results, npm run build, browser walkthrough (9 steps). After that Unit 1 is complete. Nothing committed.
+
+### 2026-11-15 — Stores & Staffing Slice 1d-2: VERIFIED (test level); Unit 1 complete at test level
+- `php artisan test tests/Feature/Stores` (user-run): 72 passed / 324 assertions. Full suite: 904 passed / 3337 assertions / 0 failed. view:cache, route:list (11 stores routes + my-store) and npm run build clean.
+- Browser walkthrough (9 steps, incl. first warehouse on MySQL) not yet reported. Unit 1 uncommitted; checkpoint commit recommended.
+
+### 2026-11-15 — Inventory Unit 2 (Stock Core): DESIGN PROPOSED (awaiting approval)
+- Proposed: immutable intakes (picking / thrift bale / lot by weight), stock_items per unit (yard/kg/bale) with 6-dp unit cost, stock_levels per store with store guide price, append-only stock_movements via a single StockLedger service, stock_processings (raw bale/kg -> yard items, manual line cost, warn-and-allow cost difference), stock:reconcile command, block deactivating a store that holds stock.
+- Permissions: warehouse.manage (admin+super-admin), inventory.view_all; store stock changed only by that store's active members; admins view-only on store stock; cost visible to coordinators and admins, not assistants.
+- Defaults applied: free-text supplier name; no supplier payment tracking; intakes immutable (corrections via later adjustments unit).
+- Slices: 2a schema/models, 2b ledger + intakes, 2c processing + reconcile, 2d permissions/policy, 2e UI. No code changed.
+
+### 2026-11-15 — Stores & Staffing: Unit 1 appears committed (inferred); docs hygiene
+- git status --short (user-run) lists only docs/PRODUCTION_LOG.md, docs/production_log.md and scripts/release-local.sh as modified; Unit 1 files are not listed, so Unit 1 appears committed (push state unknown).
+- Issue: two log files differing only by case (PRODUCTION_LOG.md / production_log.md) exist and were both modified; choose one authoritative file. Browser walkthrough of Unit 1 still unreported.
+
+### 2026-11-15 — Inventory Unit 2 Slice 2a: Stock Core Schema and Models — IMPLEMENTED (not yet verified)
+- Evidence: bcmath installed (CLI); money is decimal(15,2) with decimal:2 casts; append-only convention = model hooks throwing LogicException (eligibility audit).
+- Added migration 2026_11_15_120000 (intakes, stock_items, stock_levels, stock_movements [append-only, created_at only], stock_processings, stock_processing_outputs; all FKs restrict; unique (stock_item, store) on levels and unique stock_item on outputs; decimals: quantity 12,3, unit_cost 15,6, money 15,2, rate 15,4), models Intake, StockItem, StockLevel, StockMovement, StockProcessing, StockProcessingOutput, tests StockSchemaTest (9) and StockModelTest (7).
+- Design adjustments: stock_processing_outputs table instead of a circular stock_items -> processings FK; INT-/PRC- numbers derived from ids (no stored number); every item keeps its origin intake; no edits to existing files (Store relations arrive in 2b).
+- Deploy note: production PHP needs bcmath (2b onward).
+- Defaults still open until 2d: cost visibility for assistants; admins view-only on store stock.
+- Pending: test results, full suite, migration on dev (MySQL precision check via db:table). Then 2b (StockLedger, intake Actions, store-deactivation guard). Nothing committed.
+
+
+### 2026-11-15 — Inventory Unit 2 Slice 2b: Supplier Intake Action — VERIFIED
+- Implemented `app/Actions/Stock/RecordStockIntake.php` as a transactional supplier-intake action.
+- Authorization: active Admin/Super Admin users or the active coordinator assigned to the receiving store. Assistants and coordinators assigned to other stores are denied.
+- Picking intake supports multiple approved stock items. Repeated lines for the same item are consolidated before receipt posting.
+- Bale intake requires a separately defined, approved raw stock item measured in kilograms. Supports kg and lb input, records the original weight and normalized kg weight, and links the raw item to its first bale intake.
+- Lot intake is explicitly rejected until its workflow is implemented.
+- Each receipt updates the store-specific stock level and moving weighted-average cost, creates an `IntakeItem`, and records an append-only `StockMovement` sourced to the intake. Global reference cost is not overwritten.
+- Focused verification: `php artisan test tests/Feature/Stock` — **37 passed / 206 assertions** (user-run).
+- `git diff --check` passed.
+- Verification boundary: automated stock tests passed. Browser walkthrough, full application suite after this unit, and production deployment have not been reported. No commit or push recorded.
+
+
+### 2026-11-16 — Inventory Unit 2 Slice 2c: Bale Processing Action — VERIFIED
+- Implemented `app/Actions/Stock/RecordStockProcessing.php` as a transactional bale-processing action.
+- Authorization: active Admin/Super Admin users or the active coordinator assigned to the processing store. Assistants and coordinators assigned to other stores are denied.
+- Validates approved raw stock measured in kilograms, approved finished fabric measured in yards, and approved reusable-waste stock measured in kilograms with the `reusable-waste` category.
+- Records consumed raw weight once, posts the processing-out movement, records finished and reusable-waste outputs, updates store-level weighted-average costs, and posts processing-in movements.
+- Records recoverable and discarded waste separately; their combined weight cannot exceed the consumed weight. Discarded waste does not create stock.
+- Combines duplicate finished-fabric output lines. Cost allocation differences are recorded as `consumed_cost - allocated_cost` and do not block processing.
+- Starts the raw item's processing status on its first session. Completion and reopening remain separate audited operations.
+- Verification: `php artisan test tests/Feature/Stock` passed (user-run). Test summary: [90mTests:[39m    [32;1m46 passed[39;22m[90m (244 assertions)[39m
+- PHP syntax checks passed for the action and its feature test. `git diff --check` passed.
+- Verification boundary: automated stock feature tests passed. Browser walkthrough, full application suite after this unit, and production deployment have not been reported. No commit or push recorded.
+
+## Milestone: Integrated Store Management System Design — 2026-11-18
+
+### Architectural direction
+
+Oneyard Store Management is to operate as an integrated, store-centred
+operational system. Each Store page is the entry point for that store's
+operations. Stock, sales, inter-store movements, daily cash records,
+reporting and future store features must work together within this structure.
+
+### 1. Stock and inventory registration
+
+- Stock and inventory records belong to an individual store.
+- Registration captures item details, category, unit, initial quantity,
+  initial unit cost, total initial cost, pictures, creator and recording date.
+- New records begin in Pending status.
+- The admin who created a stock record can edit that record and manage
+  its status, including moving it from Pending through the approval process.
+- Only approved stock is available for normal stock operations.
+
+### 2. Store stock operations
+
+The store's assigned coordinator or assistant handles permitted operations
+from the relevant Store page.
+
+- Sell approved stock and deduct the quantity sold.
+- Dispatch available stock to another store as consignment.
+- Record consignment receipts and discrepancies.
+- Record returns and onward transfers to other stores.
+- Enforce available-quantity limits on every operation.
+- Maintain an auditable history of quantities, costs, values, locations,
+  actors, dates and transaction references.
+
+Stock ownership, physical location and movement must remain distinguishable.
+Every store maintains its own stock records and operational boundaries.
+
+### 3. Store sales and reporting
+
+Sales are recorded against the store and stock item involved. Store reports
+must derive their totals from recorded transactions and support daily, weekly,
+monthly and yearly views, including quantities and sales values.
+
+### 4. Daily opening and closing records
+
+Each store can record daily opening balances for:
+- Cash at hand.
+- Cash in bank.
+
+A day is an eligible market day when a valid opening record exists with both
+opening balances recorded.
+
+The store also records closing cash-at-hand and cash-in-bank balances.
+The system should distinguish calendar days, eligible market days, days with
+sales and days without sales. Sales and payment records should support
+reconciliation against actual closing balances.
+
+### 5. Store-centred access and navigation
+
+- Store operations are initiated and managed from the relevant Store page.
+- Only users actively assigned to that store as coordinator or assistant
+  may perform the operations allowed by their role.
+- Sensitive approvals and actions remain subject to their specific
+  authorization rules.
+- Administrators do not receive automatic store-operator privileges.
+- The admin who created a stock record retains the specified ability to
+  edit and manage its pending/approval status, subject to authorization.
+
+### 6. Planned implementation sequence
+
+1. Stock registration, pictures, initial quantity and cost, editing and approval.
+2. Store sales and automatic stock deduction.
+3. Consignment, receiving, returns and onward inter-store transfers.
+4. Daily opening and closing cash records.
+5. Daily, weekly, monthly and yearly store reporting.
+6. Additional integrated Store features as business requirements develop.
+
+### Delivery principles
+
+This is the agreed architectural direction for the Store Management System.
+Review and reuse existing working implementations where they fit. Do not
+introduce disconnected modules or duplicate existing functionality.
+Implement one production unit at a time, with authorization, validation,
+audit history and automated tests. Record implementation and verification
+separately; do not mark work verified without test evidence.
+
+## 2026-11-18 — Store Stock Registration and Regression Verification
+
+### Implemented
+- Simplified stock registration by removing the separate supplier-intake and stock-review approval steps from the active workflow.
+- Assigned store coordinators can register stock directly from their Store page.
+- Registration captures stock details, category, grade, unit, initial quantity, unit cost, optional selling prices, and up to three product photos.
+- Registration creates the store-owned stock item, its initial store inventory balance and valuation, and an auditable `opening_stock` movement.
+- Stock visibility and operations remain restricted to users with active assignments to the relevant store.
+- Assistants can view stock and perform permitted day-to-day stock operations but cannot create or edit stock-item master records.
+- Legacy approval data and historical intake records remain preserved; legacy approval status does not block the active stock workflow.
+- No separate global stock hub or general stock-item approval workflow is required.
+
+### Verified
+- Focused stock registration, HTTP, review-route, model, schema, processing, and consignment regression tests passed.
+- **75 tests passed, 413 assertions, zero failures.**
+- `git diff --check` was clean during the implementation review.
+
+### Next
+Proceed to the next production unit: coordinator-managed stock-item editing, preserving store ownership, inventory valuation, and the append-only movement ledger.
+
+## 2026-11-18 — Store Stock Item Editing and Regression Verification
+
+### Implemented
+- Added coordinator-managed stock-item editing from the assigned Store's stock list.
+- Coordinators can update item description, category, grade, suggested price, current market price, and add photos within the three-photo limit.
+- Existing photos are retained during edits.
+- Stock ownership, unit, classification, opening cost, inventory quantity, inventory valuation, and movement history are not directly editable through the item form.
+- Inventory quantity and cost changes remain separate audited stock-movement operations.
+- Assistants can view stock but cannot edit stock-item master records.
+- Cross-store item editing is forbidden.
+
+### Verified
+- Focused stock edit tests: 14 passed, 61 assertions.
+- Full stock regression suite: **79 passed, 432 assertions, zero failures.**
+- Blade templates cached successfully and compiled views cleared.
+- `git diff --check` reported no issues.
+
+### Next
+Review and implement the consignment return workflow, preserving stock ownership, store assignment boundaries, available-quantity checks, quarantine/reconciliation, and auditable movements.
+
+## 2026-11-19 — Consignment Returns and Regression Verification
+
+**Status: IMPLEMENTED AND VERIFIED**
+
+Implemented a separate consignment return workflow. Returns do not modify the original dispatch or use the supplier-intake workflow.
+
+- Destination-store coordinator or assistant can dispatch a return, limited to quantities previously acknowledged as good, less earlier returns, and the destination store's currently available stock.
+- Return dispatch deducts destination available stock and records an append-only `consignment_return_out` movement.
+- Source-store coordinator alone can confirm physical receipt.
+- Receipt records the actual quantity received. Only that quantity is credited to the original source store at the original consignment line unit cost, with a `consignment_return_in` movement.
+- Dispatched quantities not physically received remain uncredited and are visible as a return discrepancy.
+- Multiple return events are supported for an original consignment.
+- Added return models, relationships, controller, routes, views, actions, and migration.
+- Applied migration `2026_11_19_120000_create_stock_consignment_returns_tables` successfully in batch 52.
+
+**Verification**
+- Consignment return and existing consignment regression suite: 35 tests passed, 209 assertions.
+- Blade view cache build and clear: passed.
+- `git diff --check`: clean.
+- Return migration status: Ran.
+
+
+## 2026-11-20 to 2026-11-21 — Store Operations and Dashboard
+
+### 1. Store-specific customers and stock sales
+
+**Implemented**
+- Added Store-owned customer records. Store customers are distinct from CRM Contacts and Organizations; a customer belongs to a specific Store.
+- Added Store customer registration and listing workflows.
+- Added stock-sale workflows with sale records, sale lines, quantities, pricing and store-level transaction ownership.
+- Added payment recording and payment history for stock sales.
+- Added separate tip recording so tips are not treated as sale revenue or as payments reducing the sale balance.
+- Added outstanding-balance handling based on recorded sale amounts and payments received.
+- Added Store-scoped customer and sales routes, controllers, actions, models, views and feature tests.
+
+**Verification boundary**
+- Customer and sales feature-test files are present in the worktree.
+- Exact final focused customer/sales test totals were not established by the evidence available for this log entry. Do not treat their presence as proof that the tests passed.
+- Do not reuse CRM Contact or Organization records as Store customers.
+
+### 2. Daily cash records
+
+**Implemented**
+- Added Store daily cash records with opening balances for cash at hand and cash in bank.
+- Added closing balances and daily record history.
+- Added Store-level relationships and routes for daily cash operations.
+- Established the daily operating rule that sales and expenses require an eligible open daily cash record; operations must not continue against a closed day.
+- Added schema support for Store ownership and the daily cash record structure.
+
+**Migration evidence**
+- The customer, stock sales, tip amount, generated stock-item identity and daily cash migrations were reported as run through batch 56.
+- The daily cash Store ID composite-key migration is present in the worktree.
+- No newer migration output is recorded here.
+
+### 3. Store expenses
+
+**Implemented**
+- Added Store expense recording and listing, linked to the relevant daily cash record and business date.
+- Added expense categories and payment-method recording.
+- Restricted expense operations to appropriately assigned Store staff.
+- Applied open-day validation and the agreed exclusions for goods purchases and debt repayments from ordinary expense recording.
+- Added the expense action, controller, model, migration, routes, views and feature tests.
+
+**Verified**
+- Latest focused HTTP test result reported: **8 passed, 30 assertions**.
+- Earlier complete `tests/Feature/Stores` result: **116 passed, 533 assertions**.
+- `git diff --check` was reported clean at the expense implementation stage.
+- Expense Blade view was implemented; mobile visual review was still outstanding.
+
+**Migration status at last report**
+- `2026_11_20_152000_create_store_expenses_table` was reported as **Pending**. Confirm its current status before deployment or claiming the expense schema is applied.
+
+### 4. Store dashboard
+
+**Implemented**
+- Added the Store dashboard route and `StoreDashboardController`.
+- Added a dedicated `StorePolicy::viewDashboard()` authorization rule:
+  - Users with active `stores.manage` permission may view Store dashboards.
+  - An active assigned Store coordinator may view their assigned Store dashboard.
+  - Assistants and users without the required access are not automatically granted dashboard access.
+- Added a dashboard entry point from the Store page, guarded by the dashboard policy.
+- Added date-filtered Store reporting and operational summaries covering:
+  - Sales revenue and transaction count.
+  - Payments collected, grouped by payment date.
+  - Units sold.
+  - Outstanding receivables.
+  - Current inventory value and inventory health.
+  - Fast-moving stock.
+  - Expenses and expense breakdowns.
+  - Daily cash records.
+  - Recent sales, payments, expenses and stock movements.
+- Kept sales revenue distinct from collections. Tips are excluded from receivable reduction; current inventory is reported as current state, not as a historical inventory snapshot.
+- Avoided unsupported profit, cash-flow or reconciliation claims and did not invent low-stock thresholds.
+
+### 5. Chart.js integration
+
+**Implemented**
+- Added Chart.js as a project dependency.
+- Added `resources/js/stores/dashboard.js` and registered it through `resources/js/app.js`.
+- Replaced the dashboard's CSS-only revenue and collections bars with Chart.js canvas charts.
+- Added responsive chart configuration, naira-formatted tooltips and compact value-axis labels.
+- Added empty-data handling so a chart is not required when its corresponding trend dataset is empty.
+
+**Build verification**
+- `npm run build` completed successfully with Vite 8.3.0; 26 modules were transformed.
+- `php artisan view:cache` completed successfully.
+- The optional Fontaine font-fallback warning was non-blocking.
+- Actual chart rendering and dashboard interactions in a browser have not yet been visually confirmed.
+
+### 6. Current production state and outstanding verification
+
+- Store creation, staffing, stock registration/editing, consignment workflows, customer/sales operations, daily cash, expenses and dashboard implementation are represented in the current worktree.
+- The Git snapshot contains modified tracked files and substantial untracked Store, Stock, migration, view and test files. These changes remain uncommitted in the supplied snapshot.
+- The Git snapshot also contains unexpected empty untracked files named `100,`, `200,`, `inactive` and `store`. They have not been deleted or modified.
+- Both `docs/PRODUCTION_LOG.md` and `docs/production_log.md` are modified. This entry is being added only to the uppercase `docs/PRODUCTION_LOG.md`; the lowercase file is not being overwritten or reconciled as part of this update.
+- The dashboard authorization patch using `Gate::authorize()` was previously identified as the correction for the controller's unavailable `$this->authorize()` method. Confirm the current controller and exercise the authorization paths before marking that behavior fully verified.
+- Browser review remains outstanding for the Store operational screens and dashboard charts.
+- Confirm the pending expense migration, run the appropriate focused and regression tests against the current worktree, and record their actual output before declaring the full Store system verified.
+
+### Next production checkpoint
+
+1. Inspect and verify dashboard authorization in the current controller and policy.
+2. Confirm migration status, especially the Store expenses migration.
+3. Run focused customer, sales, daily cash, expense, stock and dashboard tests, followed by the relevant Store regression suite.
+4. Perform browser review of the Store workflows and confirm that Chart.js charts render with both populated and empty datasets.
+5. Update this log with the exact test, migration and browser-verification results.

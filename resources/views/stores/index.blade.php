@@ -62,7 +62,67 @@
                     {{ $search !== '' ? 'No stores match your search.' : 'No stores have been created yet.' }}
                 </div>
             @else
-                <div class="overflow-x-auto">
+                {{-- Mobile cards --}}
+                <div class="space-y-3 p-3 md:hidden">
+                    @foreach ($stores as $store)
+                        <article class="rounded-lg border border-slate-200 bg-white p-4">
+                            <div class="flex items-start justify-between gap-3">
+                                <div class="min-w-0">
+                                    <a
+                                        href="{{ route('stores.show', $store) }}"
+                                        class="break-words text-sm font-semibold text-slate-900 hover:underline"
+                                    >
+                                        {{ $store->name }}
+                                    </a>
+                                    <p class="mt-0.5 text-xs text-slate-500">{{ $store->code }}</p>
+                                </div>
+
+                                <span class="shrink-0 rounded-full px-2.5 py-1 text-xs font-medium {{ $store->is_active ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700' }}">
+                                    {{ $store->is_active ? 'Active' : 'Inactive' }}
+                                </span>
+                            </div>
+
+                            <div class="mt-3 grid grid-cols-2 gap-x-3 gap-y-3 text-sm">
+                                <div>
+                                    <p class="text-xs text-slate-500">Type</p>
+                                    <p class="mt-1 font-medium text-slate-800">
+                                        {{ $store->isWarehouse() ? 'General Store' : 'Store' }}
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <p class="text-xs text-slate-500">Staff</p>
+                                    <p class="mt-1 font-medium tabular-nums text-slate-800">
+                                        {{ $store->active_staff_count }}
+                                    </p>
+                                </div>
+
+                                <div class="col-span-2 min-w-0">
+                                    <p class="text-xs text-slate-500">Coordinator</p>
+                                    @if ($store->coordinatorAssignment)
+                                        <p class="mt-1 break-words font-medium text-slate-800">
+                                            {{ $store->coordinatorAssignment->user->name }}
+                                        </p>
+                                    @else
+                                        <p class="mt-1 text-xs font-medium text-amber-700">No coordinator assigned</p>
+                                    @endif
+                                </div>
+                            </div>
+
+                            <div class="mt-3 border-t border-slate-100 pt-3">
+                                <a
+                                    href="{{ route('stores.show', $store) }}"
+                                    class="inline-flex min-h-9 items-center text-sm font-semibold text-slate-700 hover:text-slate-900"
+                                >
+                                    View store →
+                                </a>
+                            </div>
+                        </article>
+                    @endforeach
+                </div>
+
+                {{-- Tablet and desktop table --}}
+                <div class="hidden overflow-x-auto md:block">
                     <table class="min-w-full divide-y divide-slate-200 text-sm">
                         <thead class="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
                             <tr>
@@ -87,14 +147,12 @@
 
                                     <td class="px-4 py-3">
                                         <span class="rounded-full px-2.5 py-1 text-xs font-medium {{ $store->isWarehouse() ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-100 text-slate-700' }}">
-                                            {{ $store->isWarehouse() ? 'General warehouse' : 'Store' }}
+                                            {{ $store->isWarehouse() ? 'General Store' : 'Store' }}
                                         </span>
                                     </td>
 
                                     <td class="px-4 py-3 text-slate-700">
-                                        @if ($store->isWarehouse())
-                                            <span class="text-slate-500">Operated by administrators</span>
-                                        @elseif ($store->coordinatorAssignment)
+                                        @if ($store->coordinatorAssignment)
                                             {{ $store->coordinatorAssignment->user->name }}
                                         @else
                                             <span class="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700">No coordinator</span>
@@ -102,7 +160,7 @@
                                     </td>
 
                                     <td class="px-4 py-3 text-slate-700">
-                                        {{ $store->isWarehouse() ? '—' : $store->active_staff_count }}
+                                        {{ $store->active_staff_count }}
                                     </td>
 
                                     <td class="px-4 py-3">
