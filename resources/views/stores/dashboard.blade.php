@@ -55,6 +55,265 @@
             @endforeach
         </div>
 
+        @php
+            $remittanceProgress = (float) $expectedRemittance > 0
+                ? min(100, max(0, ((float) $actualRemitted / (float) $expectedRemittance) * 100))
+                : 0;
+
+            $remittanceDifference = abs((float) $remittanceBalance);
+            $remittanceDifferenceLabel = (float) $remittanceBalance < 0
+                ? 'Surplus remitted'
+                : 'Still to remit';
+        @endphp
+
+        <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+            <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                    <h2 class="text-lg font-semibold text-slate-900">Expected revenue and remittance</h2>
+                    <p class="mt-1 text-sm text-slate-500">
+                        Financial position for the selected dashboard period.
+                    </p>
+                </div>
+                <span class="inline-flex w-fit rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+                    Selected period
+                </span>
+            </div>
+
+            <div class="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                <article class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                    <p class="text-sm font-medium text-slate-500">Net expected stock proceeds</p>
+                    <p class="mt-2 break-words text-xl font-bold text-slate-950">
+                        ₦{{ number_format((float) $expectedStockProceeds, 2) }}
+                    </p>
+                    <p class="mt-1 text-xs text-slate-500">Acknowledged good stock less received returns.</p>
+                </article>
+
+                <article class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                    <p class="text-sm font-medium text-slate-500">Confirmed funds received</p>
+                    <p class="mt-2 break-words text-xl font-bold text-slate-950">
+                        ₦{{ number_format((float) $confirmedFundsReceived, 2) }}
+                    </p>
+                    <p class="mt-1 text-xs text-slate-500">Confirmed cash and bank assignments.</p>
+                </article>
+
+                <article class="rounded-xl border border-slate-200 bg-blue-50 p-4">
+                    <p class="text-sm font-medium text-blue-700">Expected remittance</p>
+                    <p class="mt-2 break-words text-xl font-bold text-blue-950">
+                        ₦{{ number_format((float) $expectedRemittance, 2) }}
+                    </p>
+                    <p class="mt-1 text-xs text-blue-700">Stock proceeds + confirmed funds − expenses.</p>
+                </article>
+
+                <article class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                    <p class="text-sm font-medium text-slate-500">Actual remitted</p>
+                    <p class="mt-2 break-words text-xl font-bold text-slate-950">
+                        ₦{{ number_format((float) $actualRemitted, 2) }}
+                    </p>
+                    <p class="mt-1 text-xs text-slate-500">Confirmed cash and bank remittances.</p>
+                </article>
+
+                <article class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                    <p class="text-sm font-medium text-slate-500">{{ $remittanceDifferenceLabel }}</p>
+                    <p class="mt-2 break-words text-xl font-bold {{ (float) $remittanceBalance < 0 ? 'text-emerald-700' : 'text-slate-950' }}">
+                        ₦{{ number_format($remittanceDifference, 2) }}
+                    </p>
+                    <p class="mt-1 text-xs text-slate-500">Difference between expected and actual remittance.</p>
+                </article>
+
+                <article class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                    <p class="text-sm font-medium text-slate-500">Expenses deducted</p>
+                    <p class="mt-2 break-words text-xl font-bold text-slate-950">
+                        ₦{{ number_format((float) $expenseTotal, 2) }}
+                    </p>
+                    <p class="mt-1 text-xs text-slate-500">Recorded expenses in the selected period.</p>
+                </article>
+            </div>
+
+            <div class="mt-6">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <h3 class="text-sm font-semibold text-slate-800">Remittance progress</h3>
+                    <span class="text-sm font-semibold tabular-nums text-slate-900">
+                        {{ number_format($remittanceProgress, 1) }}%
+                    </span>
+                </div>
+
+                <div
+                    class="mt-2 h-3 overflow-hidden rounded-full bg-slate-100"
+                    role="progressbar"
+                    aria-label="Remittance progress"
+                    aria-valuemin="0"
+                    aria-valuemax="100"
+                    aria-valuenow="{{ number_format($remittanceProgress, 1, '.', '') }}">
+                    <div
+                        class="h-full rounded-full bg-blue-600 transition-all"
+                        style="width: {{ $remittanceProgress }}%">
+                    </div>
+                </div>
+
+                <div class="mt-2 flex flex-wrap justify-between gap-2 text-xs text-slate-500">
+                    <span>Remitted: ₦{{ number_format((float) $actualRemitted, 2) }}</span>
+                    <span>Expected: ₦{{ number_format((float) $expectedRemittance, 2) }}</span>
+                </div>
+            </div>
+
+            <div class="mt-5 grid gap-3 sm:grid-cols-2">
+                <div class="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                    <p class="text-sm font-medium text-amber-800">Pending fund requests</p>
+                    <p class="mt-2 text-xl font-bold text-amber-950">
+                        ₦{{ number_format((float) $pendingFundRequests, 2) }}
+                    </p>
+                    <p class="mt-1 text-xs text-amber-800">
+                        Not included in confirmed funds received or expected remittance.
+                    </p>
+                </div>
+
+                <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                    <p class="text-sm font-medium text-slate-600">Funds awaiting receipt confirmation</p>
+                    <p class="mt-2 text-xl font-bold text-slate-900">
+                        ₦{{ number_format((float) $fundsAwaitingConfirmation, 2) }}
+                    </p>
+                    <p class="mt-1 text-xs text-slate-500">
+                        Dispatched assignments not yet confirmed as received.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        @php
+            $stockThroughputChartData = [
+                'labels' => $stockThroughput->map(function ($item) {
+                    return $item->description . ' · ' . ($item->unit ?: 'units');
+                })->values(),
+                'datasets' => [
+                    [
+                        'label' => 'Store-created opening stock',
+                        'data' => $stockThroughput->pluck('opening_stock')->values(),
+                        'backgroundColor' => '#64748b',
+                    ],
+                    [
+                        'label' => 'Net central dispatch',
+                        'data' => $stockThroughput->pluck('net_dispatch_supplied')->values(),
+                        'backgroundColor' => '#2563eb',
+                    ],
+                    [
+                        'label' => 'Total net supplied',
+                        'data' => $stockThroughput->pluck('total_net_supplied')->values(),
+                        'backgroundColor' => '#6366f1',
+                    ],
+                    [
+                        'label' => 'Recorded sales',
+                        'data' => $stockThroughput->pluck('units_sold')->values(),
+                        'backgroundColor' => '#059669',
+                    ],
+                ],
+            ];
+        @endphp
+
+        <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+            <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                    <h2 class="text-lg font-semibold text-slate-900">Lifetime stock throughput</h2>
+                    <p class="mt-1 text-sm text-slate-500">
+                        Store-created opening stock and net central dispatch supply compared with recorded sales.
+                        These cumulative quantities are independent of the selected dashboard dates.
+                    </p>
+                </div>
+                <span class="inline-flex w-fit rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+                    All-time totals
+                </span>
+            </div>
+
+            @if ($stockThroughput->isEmpty())
+                <p class="mt-5 rounded-xl bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">
+                    No opening stock, central dispatch supply or recorded sales are available for this store yet.
+                </p>
+            @else
+                <div class="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-xs text-slate-600">
+                    <span class="inline-flex items-center gap-2">
+                        <span class="h-2.5 w-2.5 rounded-sm bg-slate-500"></span>
+                        Store-created opening stock
+                    </span>
+                    <span class="inline-flex items-center gap-2">
+                        <span class="h-2.5 w-2.5 rounded-sm bg-blue-600"></span>
+                        Net central dispatch
+                    </span>
+                    <span class="inline-flex items-center gap-2">
+                        <span class="h-2.5 w-2.5 rounded-sm bg-indigo-500"></span>
+                        Total net supplied
+                    </span>
+                    <span class="inline-flex items-center gap-2">
+                        <span class="h-2.5 w-2.5 rounded-sm bg-emerald-600"></span>
+                        Recorded sales
+                    </span>
+                </div>
+
+                <div class="relative mt-4 h-96 w-full rounded-xl bg-slate-50 p-3 sm:p-4">
+                    <canvas
+                        data-store-chart="throughput"
+                        data-chart-data='@json($stockThroughputChartData)'
+                        role="img"
+                        aria-label="Lifetime grouped bar chart showing opening stock, net central dispatch, total net supplied and recorded sales for each stock item">
+                    </canvas>
+                </div>
+
+                <div class="mt-6">
+                    <h3 class="text-sm font-semibold text-slate-800">Lifetime quantity breakdown</h3>
+                    <div class="mt-3 overflow-x-auto">
+                        <table class="min-w-full text-left text-sm">
+                            <thead class="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
+                                <tr>
+                                    <th class="px-3 py-3">Stock item</th>
+                                    <th class="px-3 py-3 text-right">Opening stock</th>
+                                    <th class="px-3 py-3 text-right">Net dispatch</th>
+                                    <th class="px-3 py-3 text-right">Total supplied</th>
+                                    <th class="px-3 py-3 text-right">Sold</th>
+                                    <th class="px-3 py-3 text-right">Remaining accountable</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                @foreach ($stockThroughput as $item)
+                                    @php
+                                        $remainingIsNegative = $item->remaining_accountable < 0;
+                                    @endphp
+                                    <tr>
+                                        <td class="px-3 py-3">
+                                            <p class="font-medium text-slate-900">{{ $item->description }}</p>
+                                            <p class="text-xs text-slate-500">{{ $item->unit ?: 'Unit not specified' }}</p>
+                                        </td>
+                                        <td class="px-3 py-3 text-right tabular-nums">
+                                            {{ number_format($item->opening_stock, 3) }}
+                                        </td>
+                                        <td class="px-3 py-3 text-right tabular-nums">
+                                            {{ number_format($item->net_dispatch_supplied, 3) }}
+                                        </td>
+                                        <td class="px-3 py-3 text-right font-semibold tabular-nums">
+                                            {{ number_format($item->total_net_supplied, 3) }}
+                                        </td>
+                                        <td class="px-3 py-3 text-right tabular-nums">
+                                            {{ number_format($item->units_sold, 3) }}
+                                        </td>
+                                        <td class="px-3 py-3 text-right font-semibold tabular-nums {{ $remainingIsNegative ? 'text-red-700' : 'text-slate-900' }}">
+                                            {{ number_format($item->remaining_accountable, 3) }}
+                                            @if ($remainingIsNegative)
+                                                <p class="mt-1 text-xs font-medium text-red-700">
+                                                    Sales exceed supplied quantity by
+                                                    {{ number_format(abs($item->remaining_accountable), 3) }}.
+                                                </p>
+                                            @endif
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                    <p class="mt-3 text-xs text-slate-500">
+                        Remaining accountable quantity is total net supplied less recorded sales.
+                        It is a lifetime accountability figure, not a physical on-hand stock balance.
+                    </p>
+                </div>
+            @endif
+        </section>
+
         <section class="grid gap-4 lg:grid-cols-2">
             <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                 <h2 class="font-semibold text-slate-900">Sales performance</h2>

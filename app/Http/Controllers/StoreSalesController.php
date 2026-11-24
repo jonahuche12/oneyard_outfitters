@@ -10,6 +10,7 @@ use App\Models\StockSale;
 use App\Models\StockSalePayment;
 use App\Models\StoreDailyCashRecord;
 use App\Models\StoreExpense;
+use App\Models\StoreFundAssignment;
 use App\Models\Store;
 use App\Models\StoreStaff;
 use Illuminate\Database\Eloquent\Builder;
@@ -285,10 +286,17 @@ class StoreSalesController extends Controller
         $previousTwentyEightDayStart = $today->copy()->subDays(55)->startOfDay();
         $previousTwentyEightDayEnd = $today->copy()->subDays(28)->endOfDay();
 
+        $money = static function ($amount): string {
+            return number_format((float) $amount, 2, '.', '');
+        };
+
         $paymentsReceived = function ($start, $end) use ($store): string {
             return number_format(
                 (float) StockSalePayment::query()
-                    ->whereHas('sale', fn ($query) => $query->where('store_id', $store->id))
+                    ->whereHas(
+                        'sale',
+                        fn ($query) => $query->where('store_id', $store->id)
+                    )
                     ->whereBetween('paid_at', [$start, $end])
                     ->sum('amount'),
                 2,
@@ -302,9 +310,15 @@ class StoreSalesController extends Controller
             ->whereDate('business_date', $today->toDateString())
             ->first();
 
-        $openingBalance = $dailyCash
-            ? bcadd((string) $dailyCash->opening_cash, (string) $dailyCash->opening_bank, 2)
+        $openingCash = $dailyCash
+            ? $money($dailyCash->opening_cash)
             : '0.00';
+
+        $openingBank = $dailyCash
+            ? $money($dailyCash->opening_bank)
+            : '0.00';
+
+        $openingBalance = bcadd($openingCash, $openingBank, 2);
 
         $todaySales = $paymentsReceived($todayStart, $todayEnd);
         $yesterdaySales = $paymentsReceived($yesterdayStart, $yesterdayEnd);
@@ -321,18 +335,162 @@ class StoreSalesController extends Controller
             $previousTwentyEightDayEnd
         );
 
-        $todayExpenses = $dailyCash
-            ? number_format(
-                (float) StoreExpense::query()
-                    ->where('store_id', $store->id)
-                    ->where('store_daily_cash_record_id', $dailyCash->id)
-                    ->sum('amount'),
-                2,
-                '.',
-                ''
-            )
-            : '0.00';
+        /*
+         * Cash is physical cash.
+         * POS, transfer and other non-cash payment methods are bank-side.
+         * Sales performance continues to use payment amount, not sale value.
+         */
+        $todaySalesCash = '0.00';
+        $todaySalesBank = '0.00';
 
+        if ($dailyCash) {
+            $todaySalesCash = $money(
+                StockSalePayment::query()
+                    ->whereHas(
+                        'sale',
+                        fn ($query) => $query->where('store_id', $store->id)
+                    )
+                    ->whereBetween('paid_at', [$todayStart, $todayEnd])
+                    ->where('payment_method', 'cash')
+                    ->sum('amount')
+            );
+
+            $todaySalesBank = $money(
+                StockSalePayment::query()
+                    ->whereHas(
+                        'sale',
+                        fn ($query) => $query->where('store_id', $store->id)
+                    )
+                    ->whereBetween('paid_at', [$todayStart, $todayEnd])
+                    ->where('payment_method', '<>', 'cash')
+                    ->sum('amount')
+            );
+        }
+
+        $expensesCash = '0.00';
+        $expensesBank = '0.00';
+
+        if ($dailyCash) {
+            $expensesBaseQuery = StoreExpense::query()
+                ->where('store_id', $store->id)
+                ->where('store_daily_cash_record_id', $dailyCash->id);
+
+            $expensesCash = $money(
+                (clone $expensesBaseQuery)
+                    ->where('payment_method', 'cash')
+                    ->sum('amount')
+            );
+
+            $expensesBank = $money(
+                (clone $expensesBaseQuery)
+                    ->where('payment_method', '<>', 'cash')
+                    ->sum('amount')
+            );
+        }
+
+        $todayExpenses = bcadd($expensesCash, $expensesBank, 2);
+
+        /*
+         * Only confirmed assignments linked to this daily record count.
+         *
+         * Step 6 already included pre-opening confirmed assignments in the
+         * opening balances. Subtract those recorded opening allocations here
+         * so they are not counted a second time as intraday receipts.
+         *
+         * Assignments confirmed after opening are linked by the confirmation
+         * action and are counted as intraday funds.
+         */
+        $intradayFundsCash = '0.00';
+        $intradayFundsBank = '0.00';
+
+        if ($dailyCash) {
+            $confirmedAssignments = StoreFundAssignment::query()
+                ->where('store_id', $store->id)
+                ->where('store_daily_cash_record_id', $dailyCash->id)
+                ->where('business_date', $today->toDateString())
+                ->where('status', StoreFundAssignment::STATUS_CONFIRMED);
+
+            $confirmedCash = $money(
+                (clone $confirmedAssignments)->sum('sent_cash')
+            );
+
+            $confirmedBank = $money(
+                (clone $confirmedAssignments)->sum('sent_bank')
+            );
+
+            $assignedOpeningCash = $money(
+                $dailyCash->assigned_opening_cash ?? '0.00'
+            );
+
+            $assignedOpeningBank = $money(
+                $dailyCash->assigned_opening_bank ?? '0.00'
+            );
+
+            $intradayFundsCash = bcsub(
+                $confirmedCash,
+                $assignedOpeningCash,
+                2
+            );
+
+            $intradayFundsBank = bcsub(
+                $confirmedBank,
+                $assignedOpeningBank,
+                2
+            );
+
+            if (bccomp($intradayFundsCash, '0.00', 2) < 0) {
+                $intradayFundsCash = '0.00';
+            }
+
+            if (bccomp($intradayFundsBank, '0.00', 2) < 0) {
+                $intradayFundsBank = '0.00';
+            }
+        }
+
+        $expectedCash = bcsub(
+            bcadd(
+                bcadd($openingCash, $intradayFundsCash, 2),
+                $todaySalesCash,
+                2
+            ),
+            $expensesCash,
+            2
+        );
+
+        $expectedBank = bcsub(
+            bcadd(
+                bcadd($openingBank, $intradayFundsBank, 2),
+                $todaySalesBank,
+                2
+            ),
+            $expensesBank,
+            2
+        );
+
+        $expectedTotal = bcadd($expectedCash, $expectedBank, 2);
+
+        $isClosed = $dailyCash !== null && $dailyCash->closed_by !== null;
+
+        /*
+         * A closed day's recorded counts are the actual closing balances.
+         * Never recalculate or overwrite those values from later activity.
+         */
+        $closingCash = $isClosed
+            ? $money($dailyCash->closing_cash)
+            : null;
+
+        $closingBank = $isClosed
+            ? $money($dailyCash->closing_bank)
+            : null;
+
+        $closingTotal = $isClosed
+            ? bcadd($closingCash, $closingBank, 2)
+            : null;
+
+        /*
+         * Keep the previous dashboard keys available for any existing
+         * consumers. Their definitions remain unchanged.
+         */
         $expectedRevenue = bcadd($openingBalance, $todaySales, 2);
         $expectedNetRevenue = bcsub($expectedRevenue, $todayExpenses, 2);
 
@@ -342,14 +500,40 @@ class StoreSalesController extends Controller
             'today_sales_change' => bcsub($todaySales, $yesterdaySales, 2),
             'last_7_days_sales' => $lastSevenDaysSales,
             'previous_7_days_sales' => $previousSevenDaysSales,
-            'last_7_days_change' => bcsub($lastSevenDaysSales, $previousSevenDaysSales, 2),
+            'last_7_days_change' => bcsub(
+                $lastSevenDaysSales,
+                $previousSevenDaysSales,
+                2
+            ),
             'last_28_days_sales' => $lastTwentyEightDaysSales,
             'previous_28_days_sales' => $previousTwentyEightDaysSales,
-            'last_28_days_change' => bcsub($lastTwentyEightDaysSales, $previousTwentyEightDaysSales, 2),
+            'last_28_days_change' => bcsub(
+                $lastTwentyEightDaysSales,
+                $previousTwentyEightDaysSales,
+                2
+            ),
+
             'opening_balance' => $openingBalance,
             'today_expenses' => $todayExpenses,
             'expected_revenue' => $expectedRevenue,
             'expected_net_revenue' => $expectedNetRevenue,
+
+            'opening_cash' => $openingCash,
+            'opening_bank' => $openingBank,
+            'intraday_funds_cash' => $intradayFundsCash,
+            'intraday_funds_bank' => $intradayFundsBank,
+            'today_sales_cash' => $todaySalesCash,
+            'today_sales_bank' => $todaySalesBank,
+            'expenses_cash' => $expensesCash,
+            'expenses_bank' => $expensesBank,
+            'expected_cash' => $expectedCash,
+            'expected_bank' => $expectedBank,
+            'expected_total' => $expectedTotal,
+
+            'is_closed' => $isClosed,
+            'closing_cash' => $closingCash,
+            'closing_bank' => $closingBank,
+            'closing_total' => $closingTotal,
         ];
     }
 

@@ -105,6 +105,12 @@ class Store extends Model
     }
 
     /** Expenses recorded against this store's daily cash records. */
+    /** Fund assignments requested or assigned to this store. */
+    public function fundAssignments(): HasMany
+    {
+        return $this->hasMany(StoreFundAssignment::class);
+    }
+
     public function expenses(): HasMany
     {
         return $this->hasMany(StoreExpense::class);

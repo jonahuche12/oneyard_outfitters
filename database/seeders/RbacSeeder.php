@@ -283,6 +283,26 @@ class RbacSeeder extends Seeder
                 'slug' => 'stores.manage',
                 'description' => 'Create stores and assign, reassign or remove store staff.',
             ],
+            [
+                'name' => 'Review Store Remittances',
+                'slug' => 'stores.remittances.review',
+                'description' => 'Confirm or reject remissions of store closing balances to finance.',
+            ],
+            [
+                'name' => 'View Assigned Funds',
+                'slug' => 'stores.funds.view',
+                'description' => 'View assigned-fund records and store fund requests within authorized scope.',
+            ],
+            [
+                'name' => 'Review Store Fund Requests',
+                'slug' => 'stores.funds.review',
+                'description' => 'View, approve and reject store-initiated fund requests without dispatch authority.',
+            ],
+            [
+                'name' => 'Manage Assigned Funds',
+                'slug' => 'stores.funds.manage',
+                'description' => 'Create, approve, reject and dispatch assigned funds.',
+            ],
 
             /*
              * Quality Control
@@ -545,6 +565,9 @@ class RbacSeeder extends Seeder
                     'measurements.review',
 
                     'stores.manage',
+                    'stores.remittances.review',
+                    'stores.funds.view',
+                    'stores.funds.manage',
 
                     'quality-control.view',
 
@@ -720,6 +743,9 @@ class RbacSeeder extends Seeder
                     'earnings.contributions.assign',
                     'earnings.pools.finalize',
                     'earnings.adjustments.create',
+                    'stores.remittances.review',
+                    'stores.funds.view',
+                    'stores.funds.review',
 
                     'specifications.view',
                 ],

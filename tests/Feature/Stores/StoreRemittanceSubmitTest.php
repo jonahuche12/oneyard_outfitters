@@ -180,14 +180,17 @@ class StoreRemittanceSubmitTest extends TestCase
         ]), 'method');
     }
 
-    public function test_exactly_the_closing_balance_is_accepted_and_one_cent_more_is_refused(): void
+    public function test_cash_and_bank_cannot_exceed_their_respective_closing_balances(): void
     {
         [$store, $coordinator, $day] = $this->closedStoreDay();
 
         $this->assertInvalid(fn () => $this->submit($coordinator, $store, $day, [
-            'amount_cash' => '3000.00',
-            'amount_bank' => '7000.01',
+            'amount_cash' => '3000.01',
         ]), 'amount_cash');
+
+        $this->assertInvalid(fn () => $this->submit($coordinator, $store, $day, [
+            'amount_bank' => '7000.01',
+        ]), 'amount_bank');
 
         $this->submit($coordinator, $store, $day, [
             'amount_cash' => '3000.00',
@@ -197,30 +200,37 @@ class StoreRemittanceSubmitTest extends TestCase
         $this->assertDatabaseCount('store_remittances', 1);
     }
 
-    public function test_several_partial_remissions_are_allowed_until_the_balance_is_used(): void
+    public function test_several_partial_remissions_are_allowed_until_each_balance_is_used(): void
     {
         [$store, $coordinator, $day] = $this->closedStoreDay();
 
-        $this->submit($coordinator, $store, $day, ['amount_cash' => '4000.00']);
-        $this->submit($coordinator, $store, $day, ['amount_cash' => '5000.00']);
+        $this->submit($coordinator, $store, $day, ['amount_cash' => '1000.00']);
+        $this->submit($coordinator, $store, $day, ['amount_cash' => '1500.00']);
 
         $this->assertInvalid(fn () => $this->submit($coordinator, $store, $day, [
-            'amount_cash' => '1000.01',
+            'amount_cash' => '500.01',
         ]), 'amount_cash');
 
-        $this->submit($coordinator, $store, $day, ['amount_cash' => '1000.00']);
+        $this->submit($coordinator, $store, $day, ['amount_cash' => '500.00']);
+        $this->submit($coordinator, $store, $day, ['amount_cash' => '0.00', 'amount_bank' => '4000.00']);
+        $this->submit($coordinator, $store, $day, ['amount_cash' => '0.00', 'amount_bank' => '3000.00']);
 
-        $this->assertDatabaseCount('store_remittances', 3);
+        $this->assertInvalid(fn () => $this->submit($coordinator, $store, $day, [
+            'amount_cash' => '0.00',
+            'amount_bank' => '0.01',
+        ]), 'amount_bank');
+
+        $this->assertDatabaseCount('store_remittances', 5);
     }
 
     public function test_a_rejected_remission_frees_its_amount(): void
     {
         [$store, $coordinator, $day] = $this->closedStoreDay();
-        $first = $this->submit($coordinator, $store, $day, ['amount_cash' => '10000.00']);
+        $first = $this->submit($coordinator, $store, $day, ['amount_cash' => '3000.00']);
 
         $this->reject($first);
 
-        $second = $this->submit($coordinator, $store, $day, ['amount_cash' => '10000.00']);
+        $second = $this->submit($coordinator, $store, $day, ['amount_cash' => '3000.00']);
 
         $this->assertSame(StoreRemittance::STATUS_PENDING, $second->status);
     }
@@ -228,7 +238,7 @@ class StoreRemittanceSubmitTest extends TestCase
     public function test_a_confirmed_remission_still_counts_toward_the_balance(): void
     {
         [$store, $coordinator, $day] = $this->closedStoreDay();
-        $first = $this->submit($coordinator, $store, $day, ['amount_cash' => '10000.00']);
+        $first = $this->submit($coordinator, $store, $day, ['amount_cash' => '3000.00']);
 
         $this->confirm($first);
 

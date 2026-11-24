@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Actions\Stock\CreateStockItem;
+use App\Actions\Stock\AddStockQuantity;
 use App\Actions\Stock\UpdateStockItem;
 use App\Models\StockItem;
 use App\Models\StockItemPhoto;
@@ -142,6 +143,36 @@ class StockItemController extends Controller
     /**
      * Display an item and its inventory position at the actor's assigned store.
      */
+
+    /**
+     * Add quantity to an existing stock balance without using consignment intake.
+     */
+    public function storeQuantityAddition(
+        Request $request,
+        StockItem $stockItem,
+        AddStockQuantity $action
+    ): RedirectResponse {
+        $assignment = $request->user()->activeStoreAssignment;
+
+        abort_unless(
+            $assignment
+                && $assignment->role === StoreStaff::ROLE_COORDINATOR
+                && $assignment->store?->is_active
+                && (int) $stockItem->store_id === (int) $assignment->store_id,
+            403
+        );
+
+        $action->execute($request->user(), $stockItem, $request->only([
+            'quantity',
+            'unit_cost',
+            'reason',
+        ]));
+
+        return redirect()
+            ->route('stock.items.show', $stockItem)
+            ->with('success', 'Stock quantity added successfully.');
+    }
+
     public function show(Request $request, StockItem $stockItem): View
     {
         $assignment = $request->user()->activeStoreAssignment;

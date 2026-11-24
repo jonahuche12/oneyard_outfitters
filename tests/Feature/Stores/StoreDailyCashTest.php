@@ -4,6 +4,7 @@ namespace Tests\Feature\Stores;
 
 use App\Models\Store;
 use App\Models\StoreDailyCashRecord;
+use App\Models\StoreFundAssignment;
 use App\Models\StoreStaff;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -30,6 +31,10 @@ class StoreDailyCashTest extends TestCase
 
         $this->assertSame($store->id, $record->store_id);
         $this->assertSame(today()->toDateString(), $record->business_date->toDateString());
+        $this->assertSame('1250.50', $record->entered_opening_cash);
+        $this->assertSame('9000.00', $record->entered_opening_bank);
+        $this->assertSame('0.00', $record->assigned_opening_cash);
+        $this->assertSame('0.00', $record->assigned_opening_bank);
         $this->assertSame('1250.50', $record->opening_cash);
         $this->assertSame('9000.00', $record->opening_bank);
         $this->assertSame($coordinator->id, $record->opened_by);
@@ -43,6 +48,90 @@ class StoreDailyCashTest extends TestCase
             ->assertSessionHasErrors('opening_cash');
 
         $this->assertSame(1, StoreDailyCashRecord::query()->count());
+    }
+
+    public function test_opening_adds_only_confirmed_unlinked_funds_for_today(): void
+    {
+        $store = $this->makeStore();
+        $coordinator = $this->assign($store, StoreStaff::ROLE_COORDINATOR);
+
+        $confirmedOne = $this->createFundAssignment(
+            $store,
+            $coordinator,
+            StoreFundAssignment::STATUS_CONFIRMED,
+            today()->toDateString(),
+            '100.25',
+            '2000.00'
+        );
+
+        $confirmedTwo = $this->createFundAssignment(
+            $store,
+            $coordinator,
+            StoreFundAssignment::STATUS_CONFIRMED,
+            today()->toDateString(),
+            '50.75',
+            '300.00'
+        );
+
+        $sent = $this->createFundAssignment(
+            $store,
+            $coordinator,
+            StoreFundAssignment::STATUS_SENT,
+            today()->toDateString(),
+            '500.00',
+            '500.00'
+        );
+
+        $approved = $this->createFundAssignment(
+            $store,
+            $coordinator,
+            StoreFundAssignment::STATUS_APPROVED,
+            today()->toDateString(),
+            null,
+            null
+        );
+
+        $yesterday = $this->createFundAssignment(
+            $store,
+            $coordinator,
+            StoreFundAssignment::STATUS_CONFIRMED,
+            today()->subDay()->toDateString(),
+            '900.00',
+            '900.00'
+        );
+
+        $this->actingAs($coordinator)
+            ->post(route('stores.daily-cash.open', $store), [
+                'opening_cash' => '1000.00',
+                'opening_bank' => '5000.00',
+            ])
+            ->assertRedirect(route('stores.show', $store))
+            ->assertSessionHas('success');
+
+        $record = StoreDailyCashRecord::query()->sole();
+
+        $this->assertSame('1000.00', $record->entered_opening_cash);
+        $this->assertSame('5000.00', $record->entered_opening_bank);
+
+        $this->assertSame('151.00', $record->assigned_opening_cash);
+        $this->assertSame('2300.00', $record->assigned_opening_bank);
+
+        $this->assertSame('1151.00', $record->opening_cash);
+        $this->assertSame('7300.00', $record->opening_bank);
+
+        $this->assertSame(
+            $record->id,
+            $confirmedOne->fresh()->store_daily_cash_record_id
+        );
+
+        $this->assertSame(
+            $record->id,
+            $confirmedTwo->fresh()->store_daily_cash_record_id
+        );
+
+        $this->assertNull($sent->fresh()->store_daily_cash_record_id);
+        $this->assertNull($approved->fresh()->store_daily_cash_record_id);
+        $this->assertNull($yesterday->fresh()->store_daily_cash_record_id);
     }
 
     public function test_assigned_assistant_can_close_an_open_day_and_the_record_is_locked(): void
@@ -167,6 +256,28 @@ class StoreDailyCashTest extends TestCase
             ->assertSee('1,250.50')
             ->assertSee('Opening cash:')
             ->assertSee('Close business day');
+    }
+
+    private function createFundAssignment(
+        Store $store,
+        User $requester,
+        string $status,
+        string $businessDate,
+        ?string $sentCash,
+        ?string $sentBank
+    ): StoreFundAssignment {
+        return StoreFundAssignment::query()->create([
+            'store_id' => $store->id,
+            'business_date' => $businessDate,
+            'source' => StoreFundAssignment::SOURCE_DIRECT_ASSIGNMENT,
+            'purpose' => StoreFundAssignment::PURPOSE_DAILY_TRANSACTIONS,
+            'status' => $status,
+            'requested_cash' => $sentCash ?? '100.00',
+            'requested_bank' => $sentBank ?? '0.00',
+            'sent_cash' => $sentCash,
+            'sent_bank' => $sentBank,
+            'requested_by' => $requester->id,
+        ]);
     }
 
     private function makeStore(array $attributes = []): Store

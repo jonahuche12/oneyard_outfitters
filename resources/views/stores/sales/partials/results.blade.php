@@ -208,15 +208,15 @@
                                 {{-- Total --}}
                                 <td class="whitespace-nowrap px-4 py-3 text-right">
                                     <span class="block text-[10px] font-medium uppercase tracking-wide text-slate-400 md:hidden">Total</span>
-                                    <span class="font-medium text-slate-800 md:font-normal md:text-slate-700">{{ $money($s['total']) }}</span>
+                                    <span class="text-xs font-medium text-slate-800 md:font-normal md:text-slate-700">{{ $money($s['total']) }}</span>
                                 </td>
 
                                 {{-- Paid (desktop) --}}
-                                <td class="hidden whitespace-nowrap text-right text-slate-700 lg:table-cell lg:px-4 lg:py-3">{{ $money($s['paid']) }}</td>
+                                <td class="hidden whitespace-nowrap text-right text-xs text-slate-700 lg:table-cell lg:px-4 lg:py-3">{{ $money($s['paid']) }}</td>
 
                                 {{-- Balance --}}
                                 <td class="whitespace-nowrap border-t border-slate-100 px-4 py-3 text-right">
-                                    <span class="block text-sm font-semibold {{ $s['status'] === 'paid' ? 'text-slate-400' : 'text-slate-900' }}">
+                                    <span class="block text-xs font-semibold {{ $s['status'] === 'paid' ? 'text-slate-400' : 'text-slate-900' }}">
                                         <span class="mr-1 text-[10px] font-medium uppercase tracking-wide text-slate-400 md:hidden">Balance</span>{{ $money($s['balance']) }}
                                     </span>
                                     <span class="inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ring-inset sm:text-xs md:mt-1 {{ $statusStyles[$s['status']][1] }}">

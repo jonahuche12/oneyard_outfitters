@@ -46,20 +46,177 @@
                 </div>
 
                 @if($canManageItems && (int) $item->store_id === (int) $level->store_id)
-                    <a href="{{ route('stock.items.edit', $item) }}"
-                       class="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-bold text-slate-900 shadow-sm transition hover:bg-slate-100">
-                        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="m16 4 4 4L9 19H5v-4L16 4Z"/>
-                            <path d="m14 6 4 4"/>
-                        </svg>
-                        Edit stock details
-                    </a>
+                    <div class="grid w-full gap-3 sm:w-auto sm:grid-cols-2">
+                        <a href="{{ route('stock.items.edit', $item) }}"
+                           class="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-white/25 bg-white/10 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/70">
+                            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="m16 4 4 4L9 19H5v-4L16 4Z"/>
+                                <path d="m14 6 4 4"/>
+                            </svg>
+                            Edit stock details
+                        </a>
+
+                        <button
+                            type="button"
+                            id="open-stock-quantity-modal"
+                            class="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-bold text-slate-950 shadow-sm transition hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-white/70"
+                        >
+                            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 5v14M5 12h14"/>
+                            </svg>
+                            Add quantity
+                        </button>
+                    </div>
                 @endif
             </div>
         </div>
     </div>
 
-    {{-- Current inventory position at this store --}}
+
+{{-- Manual stock quantity addition --}}
+@if($canManageItems && (int) $item->store_id === (int) $level->store_id)
+    <dialog
+        id="stock-quantity-modal"
+        aria-labelledby="stock-quantity-modal-title"
+        class="m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-lg overflow-y-auto rounded-2xl border border-slate-200 bg-white p-0 shadow-2xl backdrop:bg-slate-950/60"
+    >
+        <div class="p-5 sm:p-6">
+            <div class="mb-5 flex items-start justify-between gap-4">
+                <div>
+                    <h2 id="stock-quantity-modal-title" class="text-lg font-bold text-slate-950">Add stock quantity</h2>
+                    <p class="mt-1 text-sm leading-6 text-slate-600">
+                        Add to the existing balance for {{ $item->name }}.
+                        This is recorded separately from consignment receipts.
+                    </p>
+                </div>
+                <button
+                    type="button"
+                    data-close-stock-quantity-modal
+                    class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
+                    aria-label="Close quantity form"
+                >✕</button>
+            </div>
+
+            <div class="mb-5 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+                <div class="flex justify-between gap-4">
+                    <span>Current quantity</span>
+                    <strong>{{ number_format((float) $level->quantity, 3) }} {{ $item->unit }}</strong>
+                </div>
+                <div class="mt-1 flex justify-between gap-4">
+                    <span>Current average cost</span>
+                    <strong>₦{{ number_format((float) $level->average_unit_cost, 2) }}</strong>
+                </div>
+            </div>
+
+            <form method="POST" action="{{ route('stock.items.quantity-additions.store', $item) }}">
+                @csrf
+
+                <div class="space-y-4">
+                    <div>
+                        <label for="addition-quantity" class="mb-1.5 block text-sm font-semibold text-slate-700">
+                            Additional quantity ({{ $item->unit }})
+                        </label>
+                        <input
+                            id="addition-quantity"
+                            name="quantity"
+                            type="number"
+                            min="0.001"
+                            step="0.001"
+                            value="{{ old('quantity') }}"
+                            required
+                            class="min-h-12 w-full rounded-xl border border-slate-300 px-3 py-3 text-base text-slate-900 shadow-sm outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                        >
+                        @error('quantity')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <div>
+                        <label for="addition-unit-cost" class="mb-1.5 block text-sm font-semibold text-slate-700">
+                            Unit cost (₦)
+                        </label>
+                        <input
+                            id="addition-unit-cost"
+                            name="unit_cost"
+                            type="number"
+                            min="0"
+                            step="0.000001"
+                            value="{{ old('unit_cost') }}"
+                            required
+                            class="min-h-12 w-full rounded-xl border border-slate-300 px-3 py-3 text-base text-slate-900 shadow-sm outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                        >
+                        @error('unit_cost')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <div>
+                        <label for="addition-reason" class="mb-1.5 block text-sm font-semibold text-slate-700">
+                            Reason / source
+                        </label>
+                        <textarea
+                            id="addition-reason"
+                            name="reason"
+                            rows="3"
+                            maxlength="500"
+                            required
+                            class="w-full rounded-xl border border-slate-300 px-3 py-3 text-base text-slate-900 shadow-sm outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                            placeholder="Explain where this additional stock came from"
+                        >{{ old('reason') }}</textarea>
+                        @error('reason')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+                </div>
+
+                <div class="mt-6 flex flex-col-reverse gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:justify-end">
+                    <button
+                        type="button"
+                        data-close-stock-quantity-modal
+                        class="inline-flex min-h-12 items-center justify-center rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                    >Cancel</button>
+                    <button
+                        type="submit"
+                        class="inline-flex min-h-12 items-center justify-center rounded-xl bg-indigo-700 px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-indigo-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                    >Add quantity</button>
+                </div>
+            </form>
+        </div>
+    </dialog>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const modal = document.getElementById('stock-quantity-modal');
+            const openButton = document.getElementById('open-stock-quantity-modal');
+
+            if (!modal) {
+                return;
+            }
+
+            openButton?.addEventListener('click', function () {
+                modal.showModal();
+            });
+
+            modal.querySelectorAll('[data-close-stock-quantity-modal]').forEach(function (button) {
+                button.addEventListener('click', function () {
+                    modal.close();
+                });
+            });
+
+            modal.addEventListener('click', function (event) {
+                if (event.target === modal) {
+                    modal.close();
+                }
+            });
+
+            @if($errors->has('quantity') || $errors->has('unit_cost') || $errors->has('reason'))
+                modal.showModal();
+            @endif
+        });
+    </script>
+@endif
+
+{{-- Current inventory position at this store --}}
     <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-5 sm:px-6">
             <div>

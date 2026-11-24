@@ -10,7 +10,7 @@
             <a href="{{ route('stores.show', $store) }}" class="text-sm font-medium text-slate-500 transition hover:text-slate-900">
                 ← {{ $store->name }}
             </a>
-            <h1 class="mt-2 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
+            <h1 class="mt-2 text-lg font-bold tracking-tight text-slate-950 sm:text-xl">
                 {{ $outstandingOnly ? 'Outstanding sales' : 'Sales' }}
             </h1>
             <p class="mt-1 text-sm text-slate-500">Sales recorded at {{ $store->name }}.</p>
@@ -94,10 +94,46 @@
         ];
 
         $cashMetrics = [
-            ['label' => 'Opening balance', 'key' => 'opening_balance', 'note' => 'Cash and bank at opening', 'icon' => 'wallet'],
-            ['label' => "Today's expenses", 'key' => 'today_expenses', 'note' => 'All recorded expenses', 'icon' => 'expenses'],
-            ['label' => 'Expected revenue', 'key' => 'expected_revenue', 'note' => 'Opening balance + collections', 'icon' => 'revenue'],
-            ['label' => 'Expected net revenue', 'key' => 'expected_net_revenue', 'note' => 'After all expenses', 'icon' => 'net'],
+            [
+                'label' => 'Opening cash',
+                'key' => 'opening_cash',
+                'note' => 'Physical cash recorded at opening',
+            ],
+            [
+                'label' => 'Opening bank',
+                'key' => 'opening_bank',
+                'note' => 'Bank balance recorded at opening',
+            ],
+            [
+                'label' => 'Confirmed funds received — cash',
+                'key' => 'intraday_funds_cash',
+                'note' => 'Confirmed after opening',
+            ],
+            [
+                'label' => 'Confirmed funds received — bank',
+                'key' => 'intraday_funds_bank',
+                'note' => 'Confirmed after opening',
+            ],
+            [
+                'label' => 'Sales collections — cash',
+                'key' => 'today_sales_cash',
+                'note' => 'Cash payments received today',
+            ],
+            [
+                'label' => 'Sales collections — bank',
+                'key' => 'today_sales_bank',
+                'note' => 'POS, transfer and other non-cash payments',
+            ],
+            [
+                'label' => 'Expenses — cash',
+                'key' => 'expenses_cash',
+                'note' => 'Expenses paid with physical cash',
+            ],
+            [
+                'label' => 'Expenses — bank',
+                'key' => 'expenses_bank',
+                'note' => 'Expenses paid by POS, transfer or other non-cash method',
+            ],
         ];
     @endphp
 
@@ -112,11 +148,16 @@
             <span class="text-xs font-medium text-slate-500">Store performance</span>
         </div>
 
-        <details open class="group rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+        <details class="group rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
             <summary class="flex cursor-pointer list-none items-center justify-between gap-3">
-                <span class="text-sm font-semibold uppercase tracking-wider text-slate-700">
-                    Sales performance
-                </span>
+                <div class="flex min-w-0 flex-wrap items-center gap-2">
+                    <span class="text-sm font-semibold uppercase tracking-wider text-slate-700">
+                        Sales performance
+                    </span>
+                    <span class="inline-flex items-center rounded-full border border-[var(--oy-primary-border)] bg-[var(--oy-primary-soft)] px-2 py-1 text-[10px] font-semibold leading-none text-[var(--oy-primary)]">
+                        Sales today · ₦{{ number_format((float) $salesDashboard['today_sales'], 2) }}
+                    </span>
+                </div>
                 <span class="flex items-center gap-2 text-xs font-medium text-slate-500">
                     <span class="group-open:hidden">Show</span>
                     <span class="hidden group-open:inline">Hide</span>
@@ -143,7 +184,7 @@
                         <div class="flex items-start justify-between gap-3">
                             <div class="min-w-0">
                                 <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">{{ $metric['label'] }}</p>
-                                <p class="mt-2 break-words text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
+                                <p class="mt-2 break-words text-lg font-bold tracking-tight text-slate-950 sm:text-xl">
                                     ₦{{ number_format((float) $salesDashboard[$metric['key']], 2) }}
                                 </p>
                             </div>
@@ -186,41 +227,120 @@
                 @endforeach
             </div>
 
-        <div class="space-y-3">
-            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500">Cash position</h3>
+        <div class="space-y-4">
+            <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500">
+                    Cash and bank position
+                </h3>
+
+                @if ($salesDashboard['is_closed'])
+                    <span class="text-xs font-semibold text-slate-600">
+                        Business day closed — actual closing count
+                    </span>
+                @else
+                    <span class="text-xs font-medium text-slate-500">
+                        Live expected position
+                    </span>
+                @endif
+            </div>
+
             <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 @foreach ($cashMetrics as $metric)
-                    <article class="rounded-xl border border-[var(--oy-border)] border-t-2 border-t-[var(--oy-primary)] bg-white p-4 shadow-sm">
-                        <div class="flex items-start justify-between gap-3">
-                            <div class="min-w-0">
-                                <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">{{ $metric['label'] }}</p>
-                                <p class="mt-2 break-words text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
-                                    ₦{{ number_format((float) $salesDashboard[$metric['key']], 2) }}
-                                </p>
-                            </div>
-                            <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[var(--oy-primary-soft)] text-[var(--oy-primary)]">
-                                <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                    @switch($metric['icon'])
-                                        @case('wallet')
-                                            <rect x="3" y="5" width="18" height="15" rx="2"/><path d="M3 9h18M16 14h2"/>
-                                            @break
-                                        @case('expenses')
-                                            <path d="M12 3v18M17 7H9.5a3 3 0 0 0 0 6h5a3 3 0 0 1 0 6H6"/>
-                                            @break
-                                        @case('revenue')
-                                            <path d="M3 17l6-6 4 4 8-9"/><path d="M15 6h6v6"/>
-                                            @break
-                                        @case('net')
-                                            <path d="M4 19V5M4 19h16"/><path d="m7 15 4-4 3 2 5-7"/>
-                                            @break
-                                    @endswitch
-                                </svg>
-                            </span>
-                        </div>
-                        <p class="mt-3 text-xs text-slate-500">{{ $metric['note'] }}</p>
+                    <article class="min-w-0 rounded-xl border border-[var(--oy-border)] bg-white p-4 shadow-sm">
+                        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                            {{ $metric['label'] }}
+                        </p>
+
+                        <p class="mt-2 break-words text-lg font-bold tracking-tight text-slate-950 sm:text-xl">
+                            ₦{{ number_format((float) $salesDashboard[$metric['key']], 2) }}
+                        </p>
+
+                        <p class="mt-2 text-xs text-slate-500">
+                            {{ $metric['note'] }}
+                        </p>
                     </article>
                 @endforeach
             </div>
+
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                @if ($salesDashboard['is_closed'])
+                    <article class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                            Actual closing cash
+                        </p>
+                        <p class="mt-2 text-lg font-bold text-slate-950 sm:text-xl">
+                            ₦{{ number_format((float) $salesDashboard['closing_cash'], 2) }}
+                        </p>
+                        <p class="mt-2 text-xs text-slate-500">
+                            Physical cash counted and recorded at closing
+                        </p>
+                    </article>
+
+                    <article class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                            Actual closing bank
+                        </p>
+                        <p class="mt-2 text-lg font-bold text-slate-950 sm:text-xl">
+                            ₦{{ number_format((float) $salesDashboard['closing_bank'], 2) }}
+                        </p>
+                        <p class="mt-2 text-xs text-slate-500">
+                            Bank balance counted and recorded at closing
+                        </p>
+                    </article>
+
+                    <article class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                            Actual closing total
+                        </p>
+                        <p class="mt-2 text-lg font-bold text-slate-950 sm:text-xl">
+                            ₦{{ number_format((float) $salesDashboard['closing_total'], 2) }}
+                        </p>
+                        <p class="mt-2 text-xs text-slate-500">
+                            Recorded closing cash plus recorded closing bank
+                        </p>
+                    </article>
+                @else
+                    <article class="rounded-xl border border-[var(--oy-primary-border)] bg-[var(--oy-primary-soft)] p-4">
+                        <p class="text-xs font-semibold uppercase tracking-wide text-slate-600">
+                            Expected cash
+                        </p>
+                        <p class="mt-2 text-lg font-bold text-slate-950 sm:text-xl">
+                            ₦{{ number_format((float) $salesDashboard['expected_cash'], 2) }}
+                        </p>
+                        <p class="mt-2 text-xs text-slate-600">
+                            Opening cash + confirmed cash funds + cash collections − cash expenses
+                        </p>
+                    </article>
+
+                    <article class="rounded-xl border border-[var(--oy-primary-border)] bg-[var(--oy-primary-soft)] p-4">
+                        <p class="text-xs font-semibold uppercase tracking-wide text-slate-600">
+                            Expected bank
+                        </p>
+                        <p class="mt-2 text-lg font-bold text-slate-950 sm:text-xl">
+                            ₦{{ number_format((float) $salesDashboard['expected_bank'], 2) }}
+                        </p>
+                        <p class="mt-2 text-xs text-slate-600">
+                            Opening bank + confirmed bank funds + non-cash collections − non-cash expenses
+                        </p>
+                    </article>
+
+                    <article class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                            Expected cash and bank total
+                        </p>
+                        <p class="mt-2 text-lg font-bold text-slate-950 sm:text-xl">
+                            ₦{{ number_format((float) $salesDashboard['expected_total'], 2) }}
+                        </p>
+                        <p class="mt-2 text-xs text-slate-500">
+                            Expected cash plus expected bank
+                        </p>
+                    </article>
+                @endif
+            </div>
+
+            <p class="text-xs leading-5 text-slate-500">
+                Only confirmed fund assignments affect this position. Funds included in the opening balance are not counted again as intraday receipts. Closing figures are the actual amounts recorded at close.
+            </p>
         </div>
         </details>
     </section>

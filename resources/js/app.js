@@ -520,3 +520,4 @@ import './measurement-pager';
 import './measurement-review';
 import './store-staff';
 import './stores/dashboard';
+import './stores/remittances';

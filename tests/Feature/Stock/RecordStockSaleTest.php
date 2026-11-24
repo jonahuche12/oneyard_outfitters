@@ -693,12 +693,22 @@ class RecordStockSaleTest extends TestCase
 
     private function makeStore(): Store
     {
-        return Store::query()->create([
+        $store = Store::query()->create([
             'name' => 'Store '.Str::random(8),
             'code' => strtoupper(Str::random(8)),
             'type' => Store::TYPE_STORE,
             'is_active' => true,
         ]);
+
+        // Sales are only allowed on an open business day.
+        $store->dailyCashRecords()->create([
+            'business_date' => today()->toDateString(),
+            'opening_cash' => '1000.00',
+            'opening_bank' => '5000.00',
+            'opened_by' => User::factory()->create(['is_active' => true])->id,
+        ]);
+
+        return $store;
     }
 
     private function makeItem(Store $store, User $creator, string $description): StockItem

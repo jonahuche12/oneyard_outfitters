@@ -12,6 +12,10 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'business_date',
     'opening_cash',
     'opening_bank',
+    'entered_opening_cash',
+    'entered_opening_bank',
+    'assigned_opening_cash',
+    'assigned_opening_bank',
     'closing_cash',
     'closing_bank',
     'opened_by',
@@ -25,6 +29,10 @@ class StoreDailyCashRecord extends Model
             'business_date' => 'date',
             'opening_cash' => 'decimal:2',
             'opening_bank' => 'decimal:2',
+            'entered_opening_cash' => 'decimal:2',
+            'entered_opening_bank' => 'decimal:2',
+            'assigned_opening_cash' => 'decimal:2',
+            'assigned_opening_bank' => 'decimal:2',
             'closing_cash' => 'decimal:2',
             'closing_bank' => 'decimal:2',
         ];
@@ -48,6 +56,15 @@ class StoreDailyCashRecord extends Model
     public function expenses(): HasMany
     {
         return $this->hasMany(StoreExpense::class);
+    }
+
+    /** Fund assignments associated with this daily cash record. */
+    public function fundAssignments(): HasMany
+    {
+        return $this->hasMany(
+            StoreFundAssignment::class,
+            'store_daily_cash_record_id'
+        );
     }
 
     public function remittances(): HasMany

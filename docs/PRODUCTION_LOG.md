@@ -6627,3 +6627,271 @@ Implemented a separate consignment return workflow. Returns do not modify the or
 3. Run focused customer, sales, daily cash, expense, stock and dashboard tests, followed by the relevant Store regression suite.
 4. Perform browser review of the Store workflows and confirm that Chart.js charts render with both populated and empty datasets.
 5. Update this log with the exact test, migration and browser-verification results.
+
+### 2026-11-21 — SCOPE CHANGE: Store Remittance to Finance — DESIGN PRESENTED
+- Requested: each store remits its closing balance to finance; staff with admin, super admin or finance permission confirm or reject; used to show how much each store owes and its performance; a store with no remittance after 2 days is flagged. Opening and closing balances are already collected.
+- Priority: before continuing the Store dashboard (paused).
+- Proposed: store_remittances table (pending/confirmed/rejected), SubmitStoreRemittance and ReviewStoreRemittance actions, permission stores.remittances.review (admin, finance), no self-review, owing and flag computed in Africa/Lagos.
+- Open: definition of expected remittance, 2-day rule, cut-over date, duplicates, resubmission after rejection.
+- Status: DESIGN ONLY, awaiting CONTINUE/IMPROVE/REDO. No code changed.
+
+### 2026-11-21 — Store Remittance Step 1: Schema, Model, Config — IMPLEMENTED (not yet verified)
+- Added migration 2026_11_21_100000 (store_remittances: cash/bank amounts decimal(15,2), method, reference, note, status pending/confirmed/rejected, resubmits_id self-FK, submitted/reviewed audit fields; composite FK (store_daily_cash_record_id, store_id) -> store_daily_cash_records (id, store_id), copying the store_expenses pattern; indexes on store+status, daily record+status, store+date).
+- Added StoreRemittance model (constants, casts, totalAmount via bcmath, relations; append-only guard: only review fields change, once, from pending; deletes blocked), config/stores.php (remittance_flag_days default 2, remittance_cutover_date from env, null = no filter), StoreDailyCashRecord::remittances().
+- Tests: StoreRemittanceSchemaTest (9). Results pending.
+- Deploy note: set STORE_REMITTANCE_CUTOVER_DATE to the deployment date; run migrate.
+- Gaps: zero/negative amount rules arrive in SubmitStoreRemittance (Step 2); Store::remittances() deferred to Step 6.
+
+### 2026-11-21 — Store Remittance Step 2: Tests Written (results pending)
+- Added tests/Feature/Stores/StoreRemittanceSubmitTest.php (20 tests) using the StoreExpenseTest fixture style: coordinator and assistant submit; refusals for unassigned, other-store, inactive user, inactive store, ended assignment; open day and other store's day refused; zero, negative, 3-decimal and unknown-method input refused; closing-balance cap exact/over; partial remissions; rejected frees amount, confirmed still counts; resubmission once, only from a rejected row of the same day.
+- Results pending.
+
+### 2026-11-21 — Store Remittance Step 2: VERIFIED (folder level)
+- `php artisan test tests/Feature/Stores` (user-run): 148 passed / 589 assertions. Previous 126 + StoreRemittanceSubmitTest (22 tests, earlier logged as 20 in error) = 148. Single-file result not separately captured.
+- SubmitStoreRemittance verified: coordinator and assistant submit; refusals for unassigned, other-store, inactive user, inactive store, ended assignment, open day, other store's day, zero/negative/3-decimal amounts and unknown method; closing-balance cap; partial remissions; resubmission once from a rejected row of the same day.
+- Not yet covered: no HTTP entry point, permission or UI; review action (Step 3).
+- Stray-file check after pasting terminal output into the shell: pending.
+- Uncommitted: Step 1 and Step 2 files. Commit recommended after Step 3.
+### 2026-11-21 — Store Remittance Steps 1-2: COMMITTED
+- Commit aa4bc4c on wip/coordinator-check-offers (user-run): 7 files, 877 insertions — SubmitStoreRemittance, StoreRemittance model, StoreDailyCashRecord::remittances(), config/stores.php, store_remittances migration, StoreRemittanceSchemaTest, StoreRemittanceSubmitTest.
+- Not pushed as of this entry (push state unconfirmed; git credential issue open).
+- docs/PRODUCTION_LOG.md remains uncommitted; lowercase duplicate production_log.md unresolved.
+- Next: Step 3 ReviewStoreRemittance.
+
+### 2026-11-21 — Store Remittance Step 3: ReviewStoreRemittance — IMPLEMENTED (not yet verified)
+- Added app/Actions/Stores/ReviewStoreRemittance.php (permission stores.remittances.review; decisions confirm/reject). Rules: reviewer active and holds the permission; submitter cannot review their own remission; only pending remissions; reject needs a 10-1000 character reason, confirm takes an optional note; amount cannot be changed; locks daily record then remission (same order as submit); confirmation re-checks the day's closing-balance cap.
+- php -l and git diff --check results pending. Tests pending: need the permission-granting helper from the Earnings tests.
+- Step 4 will add the permission to RbacSeeder (admin, finance) and update RbacTest.
+- Commit aa4bc4c (Steps 1-2) not pushed.
+
+### 2026-11-21 — Store Remittance Step 4: Permission and Policy — IMPLEMENTED (not yet verified)
+- Added permission stores.remittances.review to RbacSeeder (definition after stores.manage; granted to admin and finance; super-admin automatic) and to the RbacTest expected list, via an anchor-checked patch script.
+- Added app/Policies/StoreRemittancePolicy.php: viewAny and view (reviewers; store staff for their own store), submit (active coordinator or assistant of an active store), review (permission, never on one's own submission).
+- Added tests/Feature/Stores/StoreRemittancePolicyTest.php (7 tests). Results pending.
+- Deploy note: run `php artisan db:seed --class=RbacSeeder` on every environment, or only super-admin can review.
+- Uncommitted: Step 3 files (ReviewStoreRemittance, StoreRemittanceReviewTest) and Step 4 files. Commit aa4bc4c (Steps 1-2) not pushed.
+
+### 2026-11-21 — Store Remittance Step 5: HTTP Endpoints — VERIFIED
+- Added `StoreRemittanceController` and five authenticated, active-user routes: store history, store submission, reviewer queue, confirmation and rejection.
+- Added `StoreRemittancePolicy::viewStore()` for store-level history authorization. Store history is scoped to the requested store; reviewer queue returns pending records only; reviewer decisions derive the store and submitter from the remittance record.
+- HTTP tests: `StoreRemittanceHttpTest` — 7 passed / 18 assertions. Coverage includes store isolation, submission, outsider denial, pending-only queue, confirmation, rejection and self-review prevention.
+- Action, policy and RBAC tests: 58 passed / 225 assertions.
+- Store and RBAC regression command `php artisan test tests/Feature/Stores tests/Feature/RbacTest.php` completed with exit code 0.
+- PHP syntax checks passed for the controller, policy and routes. `git diff --check` clean.
+- Status: HTTP layer implemented and verified. Blade interface and browser review remain outstanding.
+- No staging or commit performed.
+
+
+### 2026-11-22 — Store Assigned Funds: DESIGN APPROVED
+
+**Status: DESIGN APPROVED — IMPLEMENTATION NOT STARTED**
+
+The Store Assigned Funds production unit has completed its design phase.
+The design is approved and frozen for implementation. No assigned-funds
+migration, model, action, controller, policy, route, view, permission,
+or test has been implemented as part of this milestone.
+
+#### 1. Funding purposes and amounts
+
+- Supported purposes:
+  - Daily transactions.
+  - Physical purchases.
+  - Utilities.
+- Cash and bank amounts are separate values, each recorded to two decimal
+  places and never treated as interchangeable.
+- Both amounts must be non-negative.
+- At least one amount must be greater than zero; both cannot be zero.
+- Multiple funding assignments for the same store and business date are
+  allowed.
+
+#### 2. Funding request workflow
+
+- An active Store coordinator or assistant may request funds for their
+  assigned Store.
+- Every request belongs to the current business date. Future-dated and
+  backdated requests are not allowed.
+- Any admin or super admin may approve and handle a Store-initiated request.
+- A rejected request requires a mandatory rejection reason of at least
+  10 characters.
+- A rejected request cannot be edited or resubmitted; a new request must
+  be created.
+
+#### 3. Direct administrator assignments
+
+- Admins and super admins may create direct funding assignments without
+  a preceding Store request.
+- An admin-created direct assignment may be approved and sent by its
+  creating admin or a super admin.
+- Another ordinary admin cannot approve or send an assignment created
+  by a different admin.
+- A super admin may handle an assignment created by any admin.
+- An admin cannot create a direct assignment for a Store where that admin
+  is currently an active coordinator or assistant.
+
+#### 4. Dispatch and discrepancy correction
+
+- Approval alone does not make funds available to a Store.
+- Exact cash and bank amounts sent must be recorded at dispatch.
+- Only the admin handling the assignment or a super admin may correct
+  dispatch details.
+- Dispatch corrections must preserve an audit trail, including the
+  correction actor and timestamp.
+- The Store must not receive a partial confirmation.
+
+#### 5. Receipt confirmation
+
+- Only the active Store coordinator may confirm receipt.
+- The coordinator must confirm the exact cash and bank amounts recorded
+  as sent.
+- If either amount differs, confirmation is refused.
+- The assignment remains awaiting receipt confirmation until the
+  discrepancy is resolved by the handling admin or a super admin.
+- Corrected dispatch details must be auditable before the coordinator
+  can confirm the exact corrected pair.
+- Duplicate and concurrent receipt confirmations must be prevented.
+
+#### 6. Balance integration
+
+- Pending, rejected, approved-but-unsent and sent-but-unconfirmed
+  assignments do not affect Store balances.
+- Only confirmed assignments affect balances.
+- Confirmed assignments received before daily opening are added to the
+  coordinator-entered opening cash and bank balances.
+- The coordinator-entered opening values represent existing balances
+  excluding those confirmed pre-opening assignments.
+- Confirmed assignments received after opening are recorded as additional
+  funds received during that business day. They must not be added
+  retrospectively to opening balances.
+- The daily closing form continues to record the actual cash and bank
+  balances counted by the coordinator, including confirmed assigned
+  funds received during the day and the effect of expenditure.
+- Assignment amounts must never be counted twice.
+- Each assignment must remain independently traceable.
+
+#### 7. Daily closing restriction — DEFERRED IMPLEMENTATION
+
+The agreed rule is to block new Store funding requests and new direct
+funding assignments after the Store's daily cash record has been closed.
+
+**Implementation timing:** This restriction must be implemented only
+after the other assigned-funds components have been built, tested and
+confirmed working. It is an approved requirement, but is deliberately
+deferred from the initial implementation sequence.
+
+All funding requests and assignments remain restricted to the current
+business date.
+
+#### 8. Approved implementation sequence
+
+Implement one production step at a time:
+
+1. Database schema, models and relationships.
+2. Permissions, policies and authorization.
+3. Store funding requests and direct administrator assignments.
+4. Approval, rejection and dispatch.
+5. Receipt confirmation and discrepancy correction.
+6. Opening-balance integration.
+7. Intraday assigned-funds and closing-balance integration.
+8. User interfaces and validation.
+9. Focused automated tests, security checks and regression tests.
+10. Implement the deferred after-closing restriction and verify it.
+
+Do not skip verification between production steps. Do not mark a feature
+verified without actual test or command output.
+
+#### 9. Existing architecture inspected
+
+The design was based on inspection of the existing Store operations,
+including:
+
+- Store and StoreStaff models.
+- StoreDailyCashRecord and StoreRemittance models.
+- StorePolicy and StoreRemittancePolicy.
+- StoreDailyCashController.
+- StoreRemittanceController and StoreRemittancePageController.
+- SubmitStoreRemittance and ReviewStoreRemittance actions.
+- Daily cash and remittance migrations.
+- Store routes.
+
+Existing daily cash opening and closing currently record manually entered
+cash and bank values. The assigned-funds implementation must integrate
+with these records without weakening existing Store access controls or
+remittance accounting.
+
+No assigned-funds files or schema were created during the design phase.
+
+#### 10. Restart point
+
+**Next action: begin implementation Step 1 — schema, models and
+relationships.**
+
+Before editing:
+
+- Inspect the current complete Store model, StoreDailyCashRecord model,
+  relevant migrations, StoreStaff model and current migration conventions.
+- Confirm the current worktree and migration state.
+- Design the assigned-funds schema against the approved workflow.
+- Present the Step 1 scope and design for approval before changing files.
+
+Do not modify the existing remittance workflow or unrelated Store
+operations unless a specific integration change is approved.
+
+**Current milestone boundary:**
+- Design: APPROVED AND FROZEN.
+- Implementation: NOT STARTED.
+- Automated verification of assigned funds: NOT STARTED.
+- After-closing restriction: APPROVED, DEFERRED.
+- No staging, commit or push performed for this milestone.
+
+
+### 2026-11-23 — Store Assigned Funds and Store Sales: Progress Update
+
+#### Store Assigned Funds
+- Repaired the assigned-funds permission configuration.
+- Verified with `php artisan test --filter=StoreFundAssignment`:
+  57 passed / 200 assertions.
+- Cleared compiled Blade views with `php artisan view:clear`.
+- Added the central Store Funds workspace navigation link for an
+  authenticated Store coordinator. The link targets only the Store
+  associated with that user's active coordinator assignment.
+- The coordinator navigation change is implemented; separate test
+  verification for that specific link is not recorded here.
+
+#### Store Sales
+- `php artisan test --filter=StoreSalesCreateHttpTest`:
+  5 passed / 21 assertions.
+- `php artisan test --filter=StoreSales`:
+  15 passed / 49 assertions.
+- These results cover the Store Sales create workflow and its
+  associated filtered tests.
+
+#### Current milestone boundary
+- Assigned Funds permission repair: VERIFIED.
+- Assigned Funds focused test suite: VERIFIED — 57 passed / 200 assertions.
+- Coordinator's own-store navigation link: IMPLEMENTED; separate
+  verification not recorded.
+- Store Sales focused tests: VERIFIED — 20 tests / 70 assertions
+  across the two reported commands.
+- No commit or push status recorded in this update.
+
+
+### 2026-11-23 — Store-Owned Stock Management: APPROVED DESIGN CHECKPOINT (implementation pending)
+
+- Purpose: allow a store's coordinator or assistant to correct the physical quantity and store-specific selling price of stock originally registered and owned by that store.
+- Scope is limited to stock originally registered by the assigned store. Consignment-received stock is explicitly excluded from this first unit. Consignment reversal/correction remains a separate later unit.
+- Existing stock registration and descriptive/master-data editing must remain unchanged.
+- Approved interface direction: a separate "Manage Store Stock" operation on the stock detail page.
+- Quantity input represents the total physical count, including quarantined stock. The system derives available quantity by subtracting quarantined quantity. A physical count below the quarantined quantity must be rejected.
+- Only the difference in available quantity is recorded as an append-only stock movement. The adjustment records the actor, timestamp, reason, unit cost and movement value.
+- Existing average unit cost is used to value the quantity adjustment and must remain unchanged.
+- Quantity and price changes may be made independently. A request that changes neither value must be rejected.
+- Store-specific price is held in `stock_levels.store_price`. A blank price input retains the existing store price. Changes require a dedicated append-only store-price history containing the old price, new price, actor, timestamp and reason.
+- Global `stock_items.suggested_price` and `stock_items.current_market_price` must not be changed. Existing `stock_item_price_history` remains reserved for market-price history.
+- Ownership qualification must require all three conditions: `stock_items.store_id` matches the user's active assigned store; a matching opening-stock movement exists for that item and store with `source_type = StockItem::class` and `source_id = stock_items.id`; and a matching `stock_levels` record exists for that store.
+- Authorization must be enforced server-side for active store coordinators and assistants. Consignment-received stock must not become manageable merely because a destination `stock_levels` record exists.
+- Implementation plan: add the transactional `ManageStoreStock` action; add the dedicated store-price history model and migration; add stock-adjustment movement types; expose a controller endpoint and PATCH route; add the stock-detail partial; then write focused action and HTTP tests.
+- Implementation status: NOT IMPLEMENTED. No feature files were changed by the failed implementation-script preflight attempts.
+- Last stopping point: the implementation script stopped because `resources/views/stock/partials` did not yet exist. The script incorrectly treated the missing destination directory as a preflight failure. The run reported that no files were changed and no backups were created.
+- Script correction required before resuming: allow a not-yet-existing destination directory during preflight, then create parent directories during the write stage after all preflight checks pass and backups are made. Preserve the corrected method-scoped `show()` preflight; do not reintroduce a global occurrence check for `canManageItems`, which appears more than once in the controller.
+- Verification status: NOT TESTED. No migrations, feature tests, full test suite, browser walkthrough, commit, or push have been reported for this unit.
+- Resume instruction: continue with the corrected complete implementation script, inspect its resulting diff, add and run the focused tests, review the implementation, and update this log with actual test output before proceeding to the separate consignment-reversal unit.

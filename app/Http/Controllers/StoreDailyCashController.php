@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Store;
 use App\Models\StoreDailyCashRecord;
+use App\Models\StoreFundAssignment;
 use App\Models\StoreStaff;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -37,12 +38,56 @@ class StoreDailyCashController extends Controller
                 ]);
             }
 
-            $lockedStore->dailyCashRecords()->create([
+            $assignments = StoreFundAssignment::query()
+                ->where('store_id', $lockedStore->id)
+                ->whereDate('business_date', $date)
+                ->where('status', StoreFundAssignment::STATUS_CONFIRMED)
+                ->whereNull('store_daily_cash_record_id')
+                ->orderBy('id')
+                ->lockForUpdate()
+                ->get();
+
+            $assignedCashMinor = 0;
+            $assignedBankMinor = 0;
+
+            foreach ($assignments as $assignment) {
+                $assignedCashMinor += $this->toMinorUnits(
+                    $assignment->sent_cash ?? '0.00'
+                );
+
+                $assignedBankMinor += $this->toMinorUnits(
+                    $assignment->sent_bank ?? '0.00'
+                );
+            }
+
+            $enteredCashMinor = $this->toMinorUnits($data['opening_cash']);
+            $enteredBankMinor = $this->toMinorUnits($data['opening_bank']);
+
+            $record = $lockedStore->dailyCashRecords()->create([
                 'business_date' => $date,
-                'opening_cash' => $data['opening_cash'],
-                'opening_bank' => $data['opening_bank'],
+
+                'entered_opening_cash' => $this->fromMinorUnits($enteredCashMinor),
+                'entered_opening_bank' => $this->fromMinorUnits($enteredBankMinor),
+
+                'assigned_opening_cash' => $this->fromMinorUnits($assignedCashMinor),
+                'assigned_opening_bank' => $this->fromMinorUnits($assignedBankMinor),
+
+                'opening_cash' => $this->fromMinorUnits(
+                    $enteredCashMinor + $assignedCashMinor
+                ),
+
+                'opening_bank' => $this->fromMinorUnits(
+                    $enteredBankMinor + $assignedBankMinor
+                ),
+
                 'opened_by' => $request->user()->id,
             ]);
+
+            foreach ($assignments as $assignment) {
+                $assignment->forceFill([
+                    'store_daily_cash_record_id' => $record->id,
+                ])->save();
+            }
         });
 
         return redirect()
@@ -89,6 +134,33 @@ class StoreDailyCashController extends Controller
         return redirect()
             ->route('stores.show', $store)
             ->with('success', 'Today’s closing balances have been recorded.');
+    }
+
+    /**
+     * Convert a decimal amount to integer minor units without floating-point
+     * arithmetic.
+     */
+    private function toMinorUnits(mixed $amount): int
+    {
+        $value = trim((string) $amount);
+
+        if (! preg_match('/^\+?(\d+)(?:\.(\d{1,2}))?$/D', $value, $matches)) {
+            throw new \InvalidArgumentException(
+                'Invalid monetary amount encountered during opening balance calculation.'
+            );
+        }
+
+        $whole = (int) $matches[1];
+        $fraction = (int) str_pad($matches[2] ?? '', 2, '0');
+
+        return ($whole * 100) + $fraction;
+    }
+
+    private function fromMinorUnits(int $amount): string
+    {
+        return intdiv($amount, 100)
+            . '.'
+            . str_pad((string) ($amount % 100), 2, '0', STR_PAD_LEFT);
     }
 
     private function authorizeStoreAccess(Request $request, Store $store): void

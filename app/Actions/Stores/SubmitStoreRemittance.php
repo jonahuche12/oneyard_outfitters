@@ -149,26 +149,32 @@ class SubmitStoreRemittance
 
     private function assertWithinClosingBalance(StoreDailyCashRecord $record, array $data): void
     {
-        $closing = bcadd((string) $record->closing_cash, (string) $record->closing_bank, 2);
-
-        $committed = '0.00';
+        $committedCash = '0.00';
+        $committedBank = '0.00';
 
         StoreRemittance::query()
             ->where('store_daily_cash_record_id', $record->id)
             ->whereIn('status', [StoreRemittance::STATUS_PENDING, StoreRemittance::STATUS_CONFIRMED])
             ->get(['amount_cash', 'amount_bank'])
-            ->each(function (StoreRemittance $row) use (&$committed): void {
-                $committed = bcadd($committed, $row->totalAmount(), 2);
+            ->each(function (StoreRemittance $row) use (&$committedCash, &$committedBank): void {
+                $committedCash = bcadd($committedCash, (string) $row->amount_cash, 2);
+                $committedBank = bcadd($committedBank, (string) $row->amount_bank, 2);
             });
 
-        $incoming = bcadd($data['amount_cash'], $data['amount_bank'], 2);
+        $remainingCash = bcsub((string) $record->closing_cash, $committedCash, 2);
+        $remainingBank = bcsub((string) $record->closing_bank, $committedBank, 2);
 
-        if (bccomp(bcadd($committed, $incoming, 2), $closing, 2) > 0) {
-            $remaining = bcsub($closing, $committed, 2);
-
+        if (bccomp($data['amount_cash'], $remainingCash, 2) > 0) {
             throw ValidationException::withMessages([
-                'amount_cash' => 'This exceeds the closing balance for the day. Remaining to remit: ₦'
-                    .number_format((float) $remaining, 2).'.',
+                'amount_cash' => 'This exceeds the remaining cash closing balance. Remaining cash to remit: ₦'
+                    .number_format((float) $remainingCash, 2).'.',
+            ]);
+        }
+
+        if (bccomp($data['amount_bank'], $remainingBank, 2) > 0) {
+            throw ValidationException::withMessages([
+                'amount_bank' => 'This exceeds the remaining bank closing balance. Remaining bank to remit: ₦'
+                    .number_format((float) $remainingBank, 2).'.',
             ]);
         }
     }

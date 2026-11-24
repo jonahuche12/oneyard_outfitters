@@ -19,6 +19,8 @@
             ['Earnings', 'earnings.pools.index', 'earnings.pools.*', 'chart', \Illuminate\Support\Facades\Gate::allows('viewAny', \App\Models\OrderEarningsPool::class)],
             ['Staff Wallets', 'earnings.wallets.index', 'earnings.wallets.*', 'wallet', \Illuminate\Support\Facades\Gate::allows('viewAny', \App\Models\StaffWalletEntry::class)],
             ['Withdrawal Requests', 'earnings.withdrawals.index', 'earnings.withdrawals.*', 'download', (bool) $navUser?->hasPermission('earnings.withdrawals.manage')],
+            ['Store Remittances', 'store-remittances.review', 'store-remittances.*', 'wallet', \Illuminate\Support\Facades\Gate::allows('viewAny', \App\Models\StoreRemittance::class)],
+            ['Store Funds', 'store-fund-assignments.index', 'store-fund-assignments.*', 'wallet', \Illuminate\Support\Facades\Gate::allows('viewAny', \App\Models\StoreFundAssignment::class)],
         ],
         'Administration' => [
             ['Staff', 'staff.index', 'staff.*', 'users', \Illuminate\Support\Facades\Gate::allows('viewAny', \App\Models\User::class)],
@@ -58,6 +60,7 @@
                         <x-ui.icon :name="$icon" class="h-5 w-5" />
                         <span>{{ $label }}</span>
                     </a>
+
                 @endforeach
             </div>
         </details>

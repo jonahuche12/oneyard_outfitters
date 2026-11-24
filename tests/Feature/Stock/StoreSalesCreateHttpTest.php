@@ -7,6 +7,7 @@ use App\Models\StockItem;
 use App\Models\StockLevel;
 use App\Models\StockSale;
 use App\Models\StockSalePayment;
+use App\Models\StoreDailyCashRecord;
 use App\Models\StockMovement;
 use App\Models\Store;
 use App\Models\StoreStaff;
@@ -25,6 +26,7 @@ class StoreSalesCreateHttpTest extends TestCase
         $otherStore = $this->makeStore();
         $assistant = User::factory()->create(['is_active' => true]);
         $this->assign($store, $assistant, StoreStaff::ROLE_ASSISTANT);
+        $this->openBusinessDay($store, $assistant);
 
         $localItem = $this->makeItem($store, $assistant, 'Local available fabric');
         $this->makeLevel($store, $localItem, '5.000');
@@ -53,6 +55,7 @@ class StoreSalesCreateHttpTest extends TestCase
         $store = $this->makeStore();
         $coordinator = User::factory()->create(['is_active' => true]);
         $this->assign($store, $coordinator, StoreStaff::ROLE_COORDINATOR);
+        $this->openBusinessDay($store, $coordinator);
 
         $item = $this->makeItem($store, $coordinator, 'HTTP sale fabric');
         $level = $this->makeLevel($store, $item, '5.000');
@@ -151,6 +154,17 @@ class StoreSalesCreateHttpTest extends TestCase
         $this->assertSame(0, StockSale::query()->count());
         $this->assertSame('2.000', $level->fresh()->quantity);
         $this->assertSame(0, StockSalePayment::query()->count());
+    }
+
+    private function openBusinessDay(Store $store, User $user): void
+    {
+        StoreDailyCashRecord::query()->create([
+            'store_id' => $store->id,
+            'business_date' => today()->toDateString(),
+            'opening_cash' => '100.00',
+            'opening_bank' => '200.00',
+            'opened_by' => $user->id,
+        ]);
     }
 
     private function makeStore(): Store

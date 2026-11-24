@@ -26,6 +26,7 @@ class StockMovement extends Model
     public const UPDATED_AT = null;
 
     public const TYPE_OPENING_STOCK = 'opening_stock';
+    public const TYPE_MANUAL_ADDITION = 'manual_addition';
     public const TYPE_INTAKE = 'intake';
     public const TYPE_PROCESSING_OUT = 'processing_out';
     public const TYPE_PROCESSING_IN = 'processing_in';

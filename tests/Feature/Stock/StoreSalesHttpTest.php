@@ -283,7 +283,22 @@ class StoreSalesHttpTest extends TestCase
                     && $dashboard['opening_balance'] === '300.00'
                     && $dashboard['today_expenses'] === '60.00'
                     && $dashboard['expected_revenue'] === '325.00'
-                    && $dashboard['expected_net_revenue'] === '265.00';
+                    && $dashboard['expected_net_revenue'] === '265.00'
+                    && $dashboard['opening_cash'] === '100.00'
+                    && $dashboard['opening_bank'] === '200.00'
+                    && $dashboard['intraday_funds_cash'] === '0.00'
+                    && $dashboard['intraday_funds_bank'] === '0.00'
+                    && $dashboard['today_sales_cash'] === '25.00'
+                    && $dashboard['today_sales_bank'] === '0.00'
+                    && $dashboard['expenses_cash'] === '60.00'
+                    && $dashboard['expenses_bank'] === '0.00'
+                    && $dashboard['expected_cash'] === '65.00'
+                    && $dashboard['expected_bank'] === '200.00'
+                    && $dashboard['expected_total'] === '265.00'
+                    && $dashboard['is_closed'] === false
+                    && $dashboard['closing_cash'] === null
+                    && $dashboard['closing_bank'] === null
+                    && $dashboard['closing_total'] === null;
             });
 
             $this->actingAs($coordinator)

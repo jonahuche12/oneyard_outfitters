@@ -34,6 +34,23 @@
                     </a>
                 @endcan
 
+                @can('viewStore', [\App\Models\StoreRemittance::class, $store])
+                    <a href="{{ route('stores.remittances.manage', $store) }}" class="oy-btn oy-btn-secondary">
+                        Remittances
+                    </a>
+                @endcan
+
+                @can('viewStore', [\App\Models\StoreFundAssignment::class, $store])
+                    <a href="{{ route('stores.fund-assignments.index', $store) }}" class="oy-btn oy-btn-secondary">
+                        Assigned Funds
+                    </a>
+                @endcan
+
+                @can('createDirect', [\App\Models\StoreFundAssignment::class, $store])
+                    <a href="{{ route('stores.fund-assignments.index', $store) }}" class="oy-btn oy-btn-primary">
+                        Assign Funds
+                    </a>
+                @endcan
 
                 @if ($dailyCashToday && $dailyCashToday->closed_by === null)
                     <a href="{{ route('stores.sales.create', $store) }}"
@@ -510,6 +527,7 @@
                         <span class="block font-medium text-slate-900">Sales</span>
                         <span class="mt-1 block text-xs text-slate-500 sm:text-sm">Review this store's sales history and payments</span>
                     </a>
+
 
                     <a href="{{ route('stores.customers.index', $store) }}"
                        class="rounded-lg border border-slate-200 p-3 transition hover:border-slate-400 sm:p-4">

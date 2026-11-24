@@ -291,6 +291,46 @@ class StockItemHttpTest extends TestCase
         ]);
     }
 
+    public function test_coordinator_can_access_separate_stock_details_and_quantity_actions(): void
+    {
+        $coordinator = User::factory()->create(['is_active' => true]);
+        $store = $this->makeStore();
+
+        $this->assign($coordinator, $store, StoreStaff::ROLE_COORDINATOR);
+
+        $item = $this->makeItem($store, $coordinator, 'Stock actions item');
+
+        $this->actingAs($coordinator)
+            ->get(route('stock.items.show', $item))
+            ->assertOk()
+            ->assertSee('Edit stock details')
+            ->assertSee(route('stock.items.update', $item))
+            ->assertSee('Add quantity')
+            ->assertSee('Add stock quantity')
+            ->assertSee(route('stock.items.quantity-additions.store', $item))
+            ->assertSee('stock-quantity-modal')
+            ->assertDontSee('quick-stock-description')
+            ->assertDontSee('stock-update-modal');
+    }
+
+    public function test_assistant_can_view_stock_details_without_quick_update_controls(): void
+    {
+        $assistant = User::factory()->create(['is_active' => true]);
+        $store = $this->makeStore();
+
+        $this->assign($assistant, $store, StoreStaff::ROLE_ASSISTANT);
+
+        $item = $this->makeItem($store, $assistant, 'Assistant stock details');
+
+        $this->actingAs($assistant)
+            ->get(route('stock.items.show', $item))
+            ->assertOk()
+            ->assertSee('Assistant stock details')
+            ->assertDontSee('open-stock-update-modal')
+            ->assertDontSee('stock-update-modal')
+            ->assertDontSee(route('stock.items.update', $item));
+    }
+
     public function test_assistant_cannot_open_or_submit_stock_item_edits(): void
     {
         $assistant = User::factory()->create(['is_active' => true]);

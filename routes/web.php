@@ -52,6 +52,7 @@ Route::middleware(['auth', 'active'])->group(function () {
             'staff' => 'user',
         ]);
 
+
     Route::post('/staff/{user}/resend-onboarding', [StaffController::class, 'resendOnboarding'])
         ->name('staff.resend-onboarding');
 
@@ -63,6 +64,40 @@ Route::middleware(['auth', 'active'])->group(function () {
 
     Route::resource('stores', \App\Http\Controllers\StoreController::class)
         ->except(['destroy']);
+
+    // Store Funds workspace. Legacy GET routes redirect to workspace sections.
+    Route::get('/store-fund-requests', [\App\Http\Controllers\StoreFundAssignmentController::class, 'requests'])
+        ->name('store-fund-requests.index');
+
+    Route::get('/store-fund-assignments/create', [\App\Http\Controllers\StoreFundAssignmentController::class, 'assign'])
+        ->name('store-fund-assignments.create');
+
+    Route::get('/store-fund-assignments', [\App\Http\Controllers\StoreFundAssignmentController::class, 'index'])
+        ->name('store-fund-assignments.index');
+
+    Route::get('/stores/{store}/fund-assignments', [\App\Http\Controllers\StoreFundAssignmentController::class, 'storeIndex'])
+        ->name('stores.fund-assignments.index');
+
+    Route::post('/stores/{store}/fund-assignments/request', [\App\Http\Controllers\StoreFundAssignmentController::class, 'requestFunds'])
+        ->name('stores.fund-assignments.request');
+
+    Route::post('/stores/{store}/fund-assignments/direct', [\App\Http\Controllers\StoreFundAssignmentController::class, 'createDirect'])
+        ->name('stores.fund-assignments.direct');
+
+    Route::post('/store-fund-assignments/{assignment}/approve', [\App\Http\Controllers\StoreFundAssignmentController::class, 'approve'])
+        ->name('store-fund-assignments.approve');
+
+    Route::post('/store-fund-assignments/{assignment}/reject', [\App\Http\Controllers\StoreFundAssignmentController::class, 'reject'])
+        ->name('store-fund-assignments.reject');
+
+    Route::post('/store-fund-assignments/{assignment}/dispatch', [\App\Http\Controllers\StoreFundAssignmentController::class, 'dispatch'])
+        ->name('store-fund-assignments.dispatch');
+
+    Route::post('/store-fund-assignments/{assignment}/correct-dispatch', [\App\Http\Controllers\StoreFundAssignmentController::class, 'correctDispatch'])
+        ->name('store-fund-assignments.correct-dispatch');
+
+    Route::post('/store-fund-assignments/{assignment}/confirm', [\App\Http\Controllers\StoreFundAssignmentController::class, 'confirm'])
+        ->name('store-fund-assignments.confirm');
 
     Route::patch('/stores/{store}/activate', [\App\Http\Controllers\StoreController::class, 'activate'])
         ->name('stores.activate');
@@ -99,6 +134,27 @@ Route::get('/my-store', [\App\Http\Controllers\StoreController::class, 'mine'])
     Route::get('/', [\App\Http\Controllers\StoreExpensesController::class, 'index'])->name('index');
     Route::post('/', [\App\Http\Controllers\StoreExpensesController::class, 'store'])->name('store');
 });
+
+Route::prefix('stores/{store}/remittances')->name('stores.remittances.')->group(function () {
+    Route::get('/', [\App\Http\Controllers\StoreRemittanceController::class, 'index'])->name('index');
+    Route::post('/', [\App\Http\Controllers\StoreRemittanceController::class, 'store'])->name('store');
+});
+
+Route::get('/store-remittances', [\App\Http\Controllers\StoreRemittanceController::class, 'queue'])
+    ->name('store-remittances.index');
+Route::post('/store-remittances/{remittance}/confirm', [\App\Http\Controllers\StoreRemittanceController::class, 'confirm'])
+    ->name('store-remittances.confirm');
+Route::post('/store-remittances/{remittance}/reject', [\App\Http\Controllers\StoreRemittanceController::class, 'reject'])
+    ->name('store-remittances.reject');
+
+Route::get('/stores/{store}/remittances/manage',
+    [\App\Http\Controllers\StoreRemittancePageController::class, 'manage'])
+    ->name('stores.remittances.manage');
+
+Route::get('/store-remittances/review',
+    [\App\Http\Controllers\StoreRemittancePageController::class, 'review'])
+    ->name('store-remittances.review');
+
 
 Route::prefix('stores/{store}/customers')->name('stores.customers.')->group(function () {
         Route::get('/', [\App\Http\Controllers\StoreCustomersController::class, 'index'])
@@ -446,6 +502,8 @@ Route::resource('orders', OrderController::class)
         Route::post('/items', [StockItemController::class, 'store'])->name('items.store');
         Route::get('/items/{stockItem}/edit', [StockItemController::class, 'edit'])->name('items.edit');
         Route::put('/items/{stockItem}', [StockItemController::class, 'update'])->name('items.update');
+    Route::post('/items/{stockItem}/quantity-additions', [StockItemController::class, 'storeQuantityAddition'])
+        ->name('items.quantity-additions.store');
         Route::get('/processings/create', [StockProcessingController::class, 'create'])
             ->name('processings.create');
         Route::post('/processings', [StockProcessingController::class, 'store'])
