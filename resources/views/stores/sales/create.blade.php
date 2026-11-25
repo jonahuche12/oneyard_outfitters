@@ -1,210 +1,283 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="mx-auto max-w-6xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
-    <div>
-        <a href="{{ route('stores.sales.index', $store) }}"
-           class="text-sm font-medium text-slate-500 hover:text-slate-800">
-            ← Sales
-        </a>
-        <h1 class="mt-2 text-2xl font-semibold tracking-tight text-slate-900">Record sale</h1>
-        <p class="mt-1 text-sm text-slate-500">
-            Record items sold at {{ $store->name }}. Only stock with an available balance can be sold.
-        </p>
-    </div>
+<div class="mx-auto max-w-6xl space-y-5 px-3 py-4 sm:space-y-6 sm:px-6 sm:py-8 lg:px-8">
 
+    {{-- Page identity --}}
+    <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div class="bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 px-4 py-5 text-white sm:px-6 sm:py-7">
+            <a href="{{ route('stores.sales.index', $store) }}"
+               class="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-300 transition hover:text-white sm:text-sm">
+                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/><path d="M20 12H9"/></svg>
+                Sales
+            </a>
+
+            <div class="mt-3 sm:mt-4">
+                <div class="flex flex-wrap items-center gap-2">
+                    <span class="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-200 sm:text-xs">
+                        <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h2l2.2 11h9.5l2-7H7"/><circle cx="10" cy="19" r="1.5"/><circle cx="17" cy="19" r="1.5"/></svg>
+                        New sale
+                    </span>
+                    <span class="rounded-full bg-cyan-400/15 px-2.5 py-1 text-[10px] font-bold text-cyan-300 sm:text-xs">
+                        {{ $store->name }}
+                    </span>
+                </div>
+                <h1 class="mt-3 break-words text-2xl font-bold tracking-tight sm:text-3xl">Record sale</h1>
+                <p class="mt-1 max-w-2xl text-xs leading-relaxed text-slate-400 sm:text-sm">
+                    Record items sold at {{ $store->name }}. Only stock with an available balance can be sold.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    {{-- Validation summary --}}
     @if ($errors->any())
-        <div class="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-            <p class="font-semibold">Please correct the following:</p>
-            <ul class="mt-2 list-inside list-disc">
-                @foreach ($errors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>
+        <div class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 sm:px-5 sm:py-4">
+            <div class="flex items-start gap-3">
+                <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-red-100 text-red-700">
+                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3 2 20h20L12 3Z"/><path d="M12 10v4M12 17h.01"/></svg>
+                </span>
+                <div class="min-w-0">
+                    <p class="font-bold">Please correct the following:</p>
+                    <ul class="mt-2 list-inside list-disc space-y-0.5 text-xs sm:text-sm">
+                        @foreach ($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            </div>
         </div>
     @endif
 
     @if ($stockLevels->isEmpty())
-        <div class="rounded-xl border border-amber-200 bg-amber-50 p-6">
-            <h2 class="font-semibold text-amber-900">No available stock</h2>
-            <p class="mt-1 text-sm text-amber-800">
-                This store currently has no stock with a positive available balance.
-                Quarantined stock cannot be sold.
-            </p>
-            <a href="{{ route('stores.sales.index', $store) }}"
-               class="oy-btn oy-btn-secondary mt-4">Back to sales</a>
+        <div class="rounded-xl border border-amber-200 bg-amber-50 p-4 sm:p-5">
+            <div class="flex items-start gap-3">
+                <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-700">
+                    <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3 2 20h20L12 3Z"/><path d="M12 10v4M12 17h.01"/></svg>
+                </span>
+                <div class="min-w-0">
+                    <h2 class="text-sm font-bold text-amber-900">No available stock</h2>
+                    <p class="mt-1 text-xs text-amber-800 sm:text-sm">
+                        This store currently has no stock with a positive available balance.
+                        Quarantined stock cannot be sold.
+                    </p>
+                    <a href="{{ route('stores.sales.index', $store) }}"
+                       class="oy-btn oy-btn-secondary mt-4 w-full justify-center sm:w-auto">Back to sales</a>
+                </div>
+            </div>
         </div>
     @else
         <form id="stock-sale-form" method="POST"
               action="{{ route('stores.sales.store', $store) }}"
-              class="space-y-6"
+              class="space-y-5 sm:space-y-6"
               data-draft-key="oneyard:stock-sale-draft:{{ $store->id }}:{{ auth()->id() }}"
               data-new-customer-id="{{ $selectedCustomerId ?? '' }}">
             @csrf
 
-            <section class="space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-                <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                        <h2 class="font-semibold text-slate-900">Sale items</h2>
-                        <p class="text-sm text-slate-500">Add each stock item once and enter its quantity and selling price.</p>
+            {{-- Sale items --}}
+            <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 bg-gradient-to-r from-indigo-50 via-white to-cyan-50 px-4 py-4 sm:px-6">
+                    <div class="flex items-center gap-3">
+                        <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-100 text-indigo-700 ring-1 ring-indigo-200">
+                            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7.5 12 3l9 4.5-9 4.5-9-4.5Z"/><path d="M3 7.5V17l9 4 9-4V7.5M12 12v9"/></svg>
+                        </span>
+                        <div class="min-w-0">
+                            <h2 class="text-base font-bold tracking-tight text-slate-900 sm:text-lg">Sale items</h2>
+                            <p class="mt-0.5 text-xs text-slate-500 sm:text-sm">Add each stock item once and enter its quantity and selling price.</p>
+                        </div>
                     </div>
-                    <button type="button" id="add-sale-line" class="oy-btn oy-btn-secondary">
+                    <button type="button" id="add-sale-line" class="oy-btn oy-btn-secondary w-full justify-center sm:w-auto">
                         Add item
                     </button>
                 </div>
 
-                <div id="sale-lines" class="space-y-4">
-                    <div class="sale-line rounded-lg border border-slate-200 p-4">
-                        <div class="grid gap-4 md:grid-cols-12">
-                            <div class="md:col-span-5">
-                                <label class="mb-1 block text-sm font-medium text-slate-700">Stock item *</label>
-                                <select name="items[0][stock_item_id]" required
-                                        class="sale-item oy-select">
-                                    <option value="">Select available stock</option>
-                                    @foreach ($stockLevels as $level)
-                                        <option value="{{ $level->stock_item_id }}"
-                                                data-available="{{ $level->quantity }}"
-                                                data-price="{{ $level->effectivePrice() ?? '' }}"
-                                                @selected(old('items.0.stock_item_id') == $level->stock_item_id)>
-                                            {{ $level->item->description }}
-                                            — {{ $level->item->category }}
-                                            — {{ $level->item->grade }}
-                                            ({{ $level->quantity }} {{ $level->item->unit }} available)
-                                        </option>
+                <div class="p-3 sm:p-6">
+                    <div id="sale-lines" class="space-y-3">
+                        <div class="sale-line rounded-xl border border-indigo-100 bg-indigo-50/40 p-3 sm:p-4">
+                            <div class="grid gap-3 md:grid-cols-12 md:gap-4">
+                                <div class="md:col-span-5">
+                                    <label class="block text-xs font-bold text-indigo-800">Stock item *</label>
+                                    <select name="items[0][stock_item_id]" required
+                                            class="sale-item mt-1.5 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                                        <option value="">Select available stock</option>
+                                        @foreach ($stockLevels as $level)
+                                            <option value="{{ $level->stock_item_id }}"
+                                                    data-available="{{ $level->quantity }}"
+                                                    data-price="{{ $level->effectivePrice() ?? '' }}"
+                                                    @selected(old('items.0.stock_item_id') == $level->stock_item_id)>
+                                                {{ $level->item->description }}
+                                                — {{ $level->item->category }}
+                                                — {{ $level->item->grade }}
+                                                ({{ $level->quantity }} {{ $level->item->unit }} available)
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    <p class="sale-availability mt-1 text-xs text-slate-500">Choose an item to see its available quantity.</p>
+                                    @error('items.0.stock_item_id') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                                </div>
+
+                                <div class="md:col-span-2">
+                                    <label class="block text-xs font-bold text-emerald-800">Quantity *</label>
+                                    <input name="items[0][quantity]" type="number" min="0.001" step="0.001" inputmode="decimal"
+                                           value="{{ old('items.0.quantity') }}" required
+                                           class="sale-quantity mt-1.5 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm tabular-nums text-slate-900 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500">
+                                    @error('items.0.quantity') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                                </div>
+
+                                <div class="md:col-span-2">
+                                    <label class="block text-xs font-bold text-emerald-800">Unit price *</label>
+                                    <div class="relative mt-1.5">
+                                        <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-sm text-slate-500">₦</span>
+                                        <input name="items[0][unit_selling_price]" type="number" min="0.01" step="0.01" inputmode="decimal"
+                                               value="{{ old('items.0.unit_selling_price') }}" required
+                                               class="sale-price block w-full rounded-lg border border-slate-300 bg-white py-2.5 pl-8 pr-3 text-sm tabular-nums text-slate-900 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500">
+                                    </div>
+                                    @error('items.0.unit_selling_price') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                                </div>
+
+                                <div class="md:col-span-2">
+                                    <label class="block text-xs font-bold text-emerald-800">Line total</label>
+                                    <p class="sale-total mt-1.5 rounded-lg border border-emerald-100 bg-emerald-50/70 px-3 py-2.5 text-sm font-bold tabular-nums text-emerald-900">₦0.00</p>
+                                </div>
+
+                                <div class="flex items-end md:col-span-1">
+                                    <button type="button" aria-label="Remove item"
+                                            class="remove-sale-line inline-flex min-h-10 w-full items-center justify-center gap-1.5 rounded-lg bg-rose-50 px-2.5 text-xs font-semibold text-rose-800 transition hover:bg-rose-100 focus:outline-none focus:ring-2 focus:ring-rose-300">
+                                        <svg class="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>
+                                        <span class="md:sr-only">Remove</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 flex justify-end border-t border-slate-100 pt-4">
+                        <div class="w-full rounded-xl border border-emerald-100 bg-gradient-to-br from-emerald-50 to-white p-3 text-right shadow-sm sm:w-auto sm:min-w-[260px] sm:p-4">
+                            <p class="text-xs font-bold text-emerald-700">Estimated sale total</p>
+                            <p id="sale-grand-total" class="mt-1 text-xl font-bold tabular-nums tracking-tight text-emerald-950">₦0.00</p>
+                            <p class="mt-1 text-xs text-slate-500">The server calculates the authoritative total.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <div class="grid gap-5 sm:gap-6 lg:grid-cols-2">
+                {{-- Customer --}}
+                <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                    <div class="border-b border-slate-100 bg-gradient-to-r from-sky-50 via-white to-cyan-50 px-4 py-4 sm:px-6">
+                        <div class="flex items-center gap-3">
+                            <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-100 text-sky-700 ring-1 ring-sky-200">
+                                <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3"/><path d="M3 20v-1a6 6 0 0 1 12 0v1M16 5a3 3 0 0 1 0 6M18 14a4 4 0 0 1 3 4v2"/></svg>
+                            </span>
+                            <div class="min-w-0">
+                                <h2 class="text-base font-bold tracking-tight text-slate-900 sm:text-lg">Customer</h2>
+                                <p class="mt-0.5 text-xs text-slate-500 sm:text-sm">A customer is required if any balance will remain unpaid.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-4 p-3 sm:p-6">
+                        <div>
+                            <label for="customer_id" class="block text-sm font-semibold text-sky-800">Select customer</label>
+                            <select id="customer_id" name="customer_id"
+                                    class="mt-1.5 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500">
+                                <option value="">Walk-in / no customer record</option>
+                                @foreach ($customers as $customer)
+                                    <option value="{{ $customer->id }}" @selected(old('customer_id', $selectedCustomerId) == $customer->id)>
+                                        {{ $customer->name }} — {{ $customer->phone }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            @error('customer_id') <p class="mt-1.5 text-xs text-red-600">{{ $message }}</p> @enderror
+                        </div>
+
+                        <a href="{{ route('stores.customers.create', $store) }}?return_to=sale"
+                           class="inline-flex min-h-10 w-full items-center justify-center gap-1.5 rounded-lg bg-sky-50 px-3 text-sm font-semibold text-sky-800 transition hover:bg-sky-100 focus:outline-none focus:ring-2 focus:ring-sky-300 sm:w-auto">
+                            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+                            Register a customer separately
+                        </a>
+                    </div>
+                </section>
+
+                {{-- Initial payment --}}
+                <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                    <div class="border-b border-slate-100 bg-gradient-to-r from-emerald-50 via-white to-blue-50 px-4 py-4 sm:px-6">
+                        <div class="flex items-center gap-3">
+                            <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700 ring-1 ring-emerald-200">
+                                <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v18M17 7H9.5a3 3 0 0 0 0 6H15a3 3 0 0 1 0 6H7"/></svg>
+                            </span>
+                            <div class="min-w-0">
+                                <h2 class="text-base font-bold tracking-tight text-slate-900 sm:text-lg">Initial payment</h2>
+                                <p class="mt-0.5 text-xs text-slate-500 sm:text-sm">Enter the total amount received. Any amount above the sale total is recorded separately as a tip.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-4 p-3 sm:p-6">
+                        <div class="flex items-start gap-3 rounded-xl border border-emerald-100 bg-emerald-50/70 p-3 sm:p-4">
+                            <input
+                                id="initial_payment_full"
+                                name="initial_payment_full"
+                                type="checkbox"
+                                value="1"
+                                @checked(old('initial_payment_full'))
+                                class="mt-0.5 h-5 w-5 shrink-0 rounded border-emerald-300 text-emerald-700 focus:ring-2 focus:ring-emerald-400"
+                            >
+                            <div class="min-w-0">
+                                <label for="initial_payment_full" class="cursor-pointer text-sm font-bold text-emerald-900">Paid in full</label>
+                                <p id="initial-payment-full-help" class="mt-1 text-xs text-emerald-800">Check this when the customer has paid the complete sale total. The amount will be calculated automatically.</p>
+                                @error('initial_payment_full') <p class="mt-1.5 text-xs text-red-600">{{ $message }}</p> @enderror
+                            </div>
+                        </div>
+
+                        <div>
+                            <label for="initial_payment_amount" class="block text-sm font-semibold text-emerald-800">Amount received</label>
+                            <div class="relative mt-1.5">
+                                <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-sm text-slate-500">₦</span>
+                                <input id="initial_payment_amount" name="initial_payment_amount"
+                                       type="number" min="0" step="0.01" inputmode="decimal"
+                                       value="{{ old('initial_payment_amount') }}"
+                                       class="block w-full rounded-lg border border-slate-300 bg-white py-2.5 pl-8 pr-3 text-sm tabular-nums text-slate-900 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 disabled:cursor-not-allowed disabled:bg-slate-100">
+                            </div>
+                            @error('initial_payment_amount') <p class="mt-1.5 text-xs text-red-600">{{ $message }}</p> @enderror
+                        </div>
+
+                        <div class="grid gap-3 sm:grid-cols-2 sm:gap-4">
+                            <div>
+                                <label for="initial_payment_method" class="block text-sm font-semibold text-blue-800">Payment method</label>
+                                <select id="initial_payment_method" name="initial_payment_method"
+                                        class="mt-1.5 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                                    <option value="">Select method if payment received</option>
+                                    @foreach (['cash' => 'Cash', 'bank_transfer' => 'Bank transfer', 'pos' => 'POS', 'other' => 'Other'] as $value => $label)
+                                        <option value="{{ $value }}" @selected(old('initial_payment_method') === $value)>{{ $label }}</option>
                                     @endforeach
                                 </select>
-                                <p class="sale-availability mt-1 text-xs text-slate-500">Choose an item to see its available quantity.</p>
-                                @error('items.0.stock_item_id') <p class="oy-error">{{ $message }}</p> @enderror
+                                @error('initial_payment_method') <p class="mt-1.5 text-xs text-red-600">{{ $message }}</p> @enderror
                             </div>
 
-                            <div class="md:col-span-2">
-                                <label class="mb-1 block text-sm font-medium text-slate-700">Quantity *</label>
-                                <input name="items[0][quantity]" type="number" min="0.001" step="0.001"
-                                       value="{{ old('items.0.quantity') }}" required
-                                       class="sale-quantity oy-input">
-                                @error('items.0.quantity') <p class="oy-error">{{ $message }}</p> @enderror
-                            </div>
-
-                            <div class="md:col-span-2">
-                                <label class="mb-1 block text-sm font-medium text-slate-700">Unit price (₦) *</label>
-                                <input name="items[0][unit_selling_price]" type="number" min="0.01" step="0.01"
-                                       value="{{ old('items.0.unit_selling_price') }}" required
-                                       class="sale-price oy-input">
-                                @error('items.0.unit_selling_price') <p class="oy-error">{{ $message }}</p> @enderror
-                            </div>
-
-                            <div class="md:col-span-2">
-                                <label class="mb-1 block text-sm font-medium text-slate-700">Line total</label>
-                                <p class="sale-total rounded-lg bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-800">₦0.00</p>
-                            </div>
-
-                            <div class="flex items-end md:col-span-1">
-                                <button type="button" class="remove-sale-line text-sm font-medium text-red-600 hover:text-red-800"
-                                        aria-label="Remove item">Remove</button>
+                            <div>
+                                <label for="initial_payment_reference" class="block text-sm font-semibold text-blue-800">Payment reference</label>
+                                <input id="initial_payment_reference" name="initial_payment_reference"
+                                       value="{{ old('initial_payment_reference') }}" maxlength="120"
+                                       class="mt-1.5 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                                @error('initial_payment_reference') <p class="mt-1.5 text-xs text-red-600">{{ $message }}</p> @enderror
                             </div>
                         </div>
-                    </div>
-                </div>
 
-                <div class="flex justify-end border-t border-slate-100 pt-4">
-                    <div class="text-right">
-                        <p class="text-sm text-slate-500">Estimated sale total</p>
-                        <p id="sale-grand-total" class="text-xl font-semibold text-slate-900">₦0.00</p>
-                        <p class="text-xs text-slate-500">The server calculates the authoritative total.</p>
-                    </div>
-                </div>
-            </section>
-
-            <section class="grid gap-6 lg:grid-cols-2">
-                <div class="space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-                    <div>
-                        <h2 class="font-semibold text-slate-900">Customer</h2>
-                        <p class="text-sm text-slate-500">A customer is required if any balance will remain unpaid.</p>
-                    </div>
-
-                    <div>
-                        <label for="customer_id" class="mb-1 block text-sm font-medium text-slate-700">Select customer</label>
-                        <select id="customer_id" name="customer_id"
-                                class="oy-select">
-                            <option value="">Walk-in / no customer record</option>
-                            @foreach ($customers as $customer)
-                                <option value="{{ $customer->id }}" @selected(old('customer_id', $selectedCustomerId) == $customer->id)>
-                                    {{ $customer->name }} — {{ $customer->phone }}
-                                </option>
-                            @endforeach
-                        </select>
-                        @error('customer_id') <p class="oy-error">{{ $message }}</p> @enderror
-                    </div>
-
-                    <a href="{{ route('stores.customers.create', $store) }}?return_to=sale"
-                       class="inline-flex text-sm font-medium text-slate-600 underline hover:text-slate-900">
-                        Register a customer separately
-                    </a>
-                </div>
-
-                <div class="space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-                    <div>
-                        <h2 class="font-semibold text-slate-900">Initial payment</h2>
-                        <p class="text-sm text-slate-500">Enter the total amount received. Any amount above the sale total is recorded separately as a tip.</p>
-                    </div>
-
-                    <div class="flex items-start gap-3">
-                        <input
-                            id="initial_payment_full"
-                            name="initial_payment_full"
-                            type="checkbox"
-                            value="1"
-                            @checked(old('initial_payment_full'))
-                            class="mt-1 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-                        >
                         <div>
-                            <label for="initial_payment_full" class="font-medium text-slate-800">Paid in full</label>
-                            <p class="text-sm text-slate-500">Check this when the customer has paid the complete sale total. The amount will be calculated automatically.</p>
-                            @error('initial_payment_full') <p class="oy-error">{{ $message }}</p> @enderror
+                            <label for="initial_payment_notes" class="block text-sm font-semibold text-slate-800">Payment notes</label>
+                            <textarea id="initial_payment_notes" name="initial_payment_notes" rows="2"
+                                      class="mt-1.5 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500">{{ old('initial_payment_notes') }}</textarea>
+                            @error('initial_payment_notes') <p class="mt-1.5 text-xs text-red-600">{{ $message }}</p> @enderror
                         </div>
                     </div>
+                </section>
+            </div>
 
-                    <div>
-                        <label for="initial_payment_amount" class="mb-1 block text-sm font-medium text-slate-700">Amount received (₦)</label>
-                        <input id="initial_payment_amount" name="initial_payment_amount"
-                               type="number" min="0" step="0.01"
-                               value="{{ old('initial_payment_amount') }}"
-                               class="oy-input">
-                        @error('initial_payment_amount') <p class="oy-error">{{ $message }}</p> @enderror
-                    </div>
-
-                    <div>
-                        <label for="initial_payment_method" class="mb-1 block text-sm font-medium text-slate-700">Payment method</label>
-                        <select id="initial_payment_method" name="initial_payment_method"
-                                class="oy-select">
-                            <option value="">Select method if payment received</option>
-                            @foreach (['cash' => 'Cash', 'bank_transfer' => 'Bank transfer', 'pos' => 'POS', 'other' => 'Other'] as $value => $label)
-                                <option value="{{ $value }}" @selected(old('initial_payment_method') === $value)>{{ $label }}</option>
-                            @endforeach
-                        </select>
-                        @error('initial_payment_method') <p class="oy-error">{{ $message }}</p> @enderror
-                    </div>
-
-                    <div>
-                        <label for="initial_payment_reference" class="mb-1 block text-sm font-medium text-slate-700">Payment reference</label>
-                        <input id="initial_payment_reference" name="initial_payment_reference"
-                               value="{{ old('initial_payment_reference') }}" maxlength="120"
-                               class="oy-input">
-                        @error('initial_payment_reference') <p class="oy-error">{{ $message }}</p> @enderror
-                    </div>
-
-                    <div>
-                        <label for="initial_payment_notes" class="mb-1 block text-sm font-medium text-slate-700">Payment notes</label>
-                        <textarea id="initial_payment_notes" name="initial_payment_notes" rows="2"
-                                  class="oy-textarea">{{ old('initial_payment_notes') }}</textarea>
-                        @error('initial_payment_notes') <p class="oy-error">{{ $message }}</p> @enderror
-                    </div>
-                </div>
-            </section>
-
-            <div class="oy-form-actions">
-                <button type="button" id="discard-sale-draft" class="oy-btn oy-btn-secondary">Discard sale</button>
-                <button type="submit" class="oy-btn oy-btn-primary">Record sale</button>
+            {{-- Actions --}}
+            <div class="flex flex-col-reverse gap-3 rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-end sm:px-6">
+                <button type="button" id="discard-sale-draft" class="oy-btn oy-btn-secondary w-full justify-center sm:w-auto">Discard sale</button>
+                <button type="submit" class="oy-btn oy-btn-primary w-full justify-center sm:w-auto">Record sale</button>
             </div>
         </form>
     @endif
@@ -312,35 +385,41 @@ document.addEventListener('DOMContentLoaded', () => {
     function addLine(draftItem = null) {
         const index = nextIndex++;
         const line = document.createElement('div');
-        line.className = 'sale-line rounded-lg border border-slate-200 p-4';
+        line.className = 'sale-line rounded-xl border border-indigo-100 bg-indigo-50/40 p-3 sm:p-4';
 
         const selectOptions = options.map(option =>
             `<option value="${option.id}" data-available="${option.available}" data-price="${option.price ?? ''}">${escapeHtml(option.label)}</option>`
         ).join('');
 
         line.innerHTML = `
-            <div class="grid gap-4 md:grid-cols-12">
+            <div class="grid gap-3 md:grid-cols-12 md:gap-4">
                 <div class="md:col-span-5">
-                    <label class="mb-1 block text-sm font-medium text-slate-700">Stock item *</label>
-                    <select name="items[${index}][stock_item_id]" required class="sale-item oy-select">
+                    <label class="block text-xs font-bold text-indigo-800">Stock item *</label>
+                    <select name="items[${index}][stock_item_id]" required class="sale-item mt-1.5 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500">
                         <option value="">Select available stock</option>${selectOptions}
                     </select>
                     <p class="sale-availability mt-1 text-xs text-slate-500">Choose an item to see its available quantity.</p>
                 </div>
                 <div class="md:col-span-2">
-                    <label class="mb-1 block text-sm font-medium text-slate-700">Quantity *</label>
-                    <input name="items[${index}][quantity]" type="number" min="0.001" step="0.001" required class="sale-quantity oy-input">
+                    <label class="block text-xs font-bold text-emerald-800">Quantity *</label>
+                    <input name="items[${index}][quantity]" type="number" min="0.001" step="0.001" inputmode="decimal" required class="sale-quantity mt-1.5 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm tabular-nums text-slate-900 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500">
                 </div>
                 <div class="md:col-span-2">
-                    <label class="mb-1 block text-sm font-medium text-slate-700">Unit price (₦) *</label>
-                    <input name="items[${index}][unit_selling_price]" type="number" min="0.01" step="0.01" required class="sale-price oy-input">
+                    <label class="block text-xs font-bold text-emerald-800">Unit price *</label>
+                    <div class="relative mt-1.5">
+                        <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-sm text-slate-500">₦</span>
+                        <input name="items[${index}][unit_selling_price]" type="number" min="0.01" step="0.01" inputmode="decimal" required class="sale-price block w-full rounded-lg border border-slate-300 bg-white py-2.5 pl-8 pr-3 text-sm tabular-nums text-slate-900 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500">
+                    </div>
                 </div>
                 <div class="md:col-span-2">
-                    <label class="mb-1 block text-sm font-medium text-slate-700">Line total</label>
-                    <p class="sale-total rounded-lg bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-800">₦0.00</p>
+                    <label class="block text-xs font-bold text-emerald-800">Line total</label>
+                    <p class="sale-total mt-1.5 rounded-lg border border-emerald-100 bg-emerald-50/70 px-3 py-2.5 text-sm font-bold tabular-nums text-emerald-900">₦0.00</p>
                 </div>
                 <div class="flex items-end md:col-span-1">
-                    <button type="button" class="remove-sale-line text-sm font-medium text-red-600 hover:text-red-800">Remove</button>
+                    <button type="button" aria-label="Remove item" class="remove-sale-line inline-flex min-h-10 w-full items-center justify-center gap-1.5 rounded-lg bg-rose-50 px-2.5 text-xs font-semibold text-rose-800 transition hover:bg-rose-100 focus:outline-none focus:ring-2 focus:ring-rose-300">
+                        <svg class="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>
+                        <span class="md:sr-only">Remove</span>
+                    </button>
                 </div>
             </div>`;
 
