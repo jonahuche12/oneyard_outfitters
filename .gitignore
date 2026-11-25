@@ -34,3 +34,7 @@ scripts/*.py
 
 # Generated Python bytecode
 __pycache__/
+
+# local backups
+*.before_*
+.oneyard-backup-*/
