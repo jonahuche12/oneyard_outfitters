@@ -192,7 +192,7 @@
                     </div>
 
                     <div class="min-w-0">
-                        <h2 class="text-sm font-bold text-violet-950 sm:text-base">Store assistants</h2>
+                        <h2 class="text-sm font-bold text-violet-950 sm:text-base">Assistants</h2>
                         <p class="mt-0.5 text-xs text-violet-700">Supporting store operations</p>
                     </div>
                 </div>
@@ -300,7 +300,7 @@
                     </div>
 
                     <h3 class="mt-3 text-sm font-semibold text-violet-900">No assistants assigned</h3>
-                    <p class="mt-1 text-sm text-violet-700">Add assistants to support daily store activities.</p>
+                    <p class="mt-1 text-sm text-violet-700">Assistants support daily store activities.</p>
                 </div>
             @endif
 
@@ -335,7 +335,7 @@
                     </div>
 
                     <div class="min-w-0">
-                        <h2 class="text-sm font-bold text-slate-900 sm:text-base">Staff assignment history</h2>
+                        <h2 class="text-sm font-bold text-slate-900 sm:text-base">Assignment history</h2>
                         <p class="mt-0.5 text-xs text-slate-500">Previous and current staff assignments</p>
                     </div>
                 </div>

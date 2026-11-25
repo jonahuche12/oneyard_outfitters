@@ -90,7 +90,7 @@
                             <a href="{{ route('stores.fund-assignments.index', $store) }}" class="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg bg-emerald-50 px-2.5 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-100"><svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18M17 7H9.5a3 3 0 0 0 0 6H15a3 3 0 0 1 0 6H7"/></svg>Assigned funds</a>
                         @endcan
                         @can('createDirect', [\App\Models\StoreFundAssignment::class, $store])
-                            <a href="{{ route('stores.fund-assignments.index', $store) }}" class="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg bg-emerald-600 px-2.5 text-xs font-semibold text-white transition hover:bg-emerald-700"><svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Assign funds</a>
+                            <a href="{{ route('stores.fund-assignments.index', $store) }}" class="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg bg-emerald-600 px-2.5 text-xs font-semibold text-white transition hover:bg-emerald-700"><svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Assign Funds</a>
                         @endcan
                     </div>
                 </div>
@@ -104,7 +104,7 @@
                         </div>
                         <div class="mt-3 grid grid-cols-2 gap-2">
                             @can('update', $store)
-                                <a href="{{ route('stores.edit', $store) }}" class="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg bg-slate-100 px-2.5 text-xs font-semibold text-slate-800 transition hover:bg-slate-200"><svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m16 4 4 4L9 19H5v-4L16 4Z"/><path d="m14 6 4 4"/></svg>Edit store</a>
+                                <a href="{{ route('stores.edit', $store) }}" class="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg bg-slate-100 px-2.5 text-xs font-semibold text-slate-800 transition hover:bg-slate-200"><svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m16 4 4 4L9 19H5v-4L16 4Z"/><path d="m14 6 4 4"/></svg>Edit Store</a>
                             @endcan
                             @can('toggleActive', $store)
                                 @if (! $store->is_active)
@@ -172,7 +172,7 @@
             <div class="border-b border-slate-200 bg-gradient-to-r from-emerald-50 via-white to-blue-50 px-4 py-4 sm:px-6 sm:py-5">
                 <div class="flex items-center gap-3">
                     <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700 ring-1 ring-emerald-200"><svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 10h10M7 14h5"/><path d="M12 2v3"/></svg></span>
-                    <div><h2 class="text-base font-bold tracking-tight text-slate-900 sm:text-lg">Daily cash &amp; bank balances</h2><p class="mt-1 text-xs text-slate-500 sm:text-sm">Opening funds, daily activity and end-of-day reconciliation.</p></div>
+                    <div><h2 class="text-base font-bold tracking-tight text-slate-900 sm:text-lg">Daily cash and bank balances</h2><p class="mt-1 text-xs text-slate-500 sm:text-sm">Opening funds, daily activity and end-of-day reconciliation.</p></div>
                 </div>
             </div>
 
@@ -259,7 +259,7 @@
                     @else
                         <div class="mt-4 grid gap-3 sm:mt-5 sm:grid-cols-2">
                             <div class="rounded-xl border border-emerald-100 bg-gradient-to-br from-emerald-50 to-white p-3 shadow-sm sm:p-4">
-                                <p class="flex items-center gap-1.5 text-xs font-bold text-emerald-700"><svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18M17 7H9.5a3 3 0 0 0 0 6H15a3 3 0 0 1 0 6H7"/></svg>Opening cash</p>
+                                <p class="flex items-center gap-1.5 text-xs font-bold text-emerald-700"><svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18M17 7H9.5a3 3 0 0 0 0 6H15a3 3 0 0 1 0 6H7"/></svg>Opening cash:</p>
                                 <p class="mt-2 text-lg font-bold tracking-tight text-emerald-950 sm:text-xl">
                                     ₦{{ number_format((float) $dailyCashToday->opening_cash, 2) }}
                                 </p>
